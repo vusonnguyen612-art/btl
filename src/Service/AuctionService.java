@@ -30,4 +30,8 @@ public class AuctionService {
         this.auction = new Auction(item);
         System.out.println("Tạo auction: " + item.getName());
     }
+    public void endAuction() {
+        auction.close();
+        System.out.println("Winner: " + auction.getHighestBidder());
+    }
 }
