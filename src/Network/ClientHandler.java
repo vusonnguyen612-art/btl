@@ -49,8 +49,11 @@ public class ClientHandler extends Thread {
                                 amount
                         );
 
-                        if (ok) out.println("Bid OK");
-                        else out.println("Bid fail");
+                        if (ok) {
+                            Server.broadcast("🔥 " + socket + " bid " + amount);
+                        } else {
+                            send("Bid fail");
+                        }
                         break;
 
                     case "END":
@@ -66,5 +69,8 @@ public class ClientHandler extends Thread {
         } catch (Exception e) {
             System.out.println("Client rời");
         }
+    }
+    public void send(String msg) {
+        out.println(msg);
     }
 }
