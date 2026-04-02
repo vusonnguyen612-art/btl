@@ -2,18 +2,17 @@ package Network;
 
 import java.net.*;
 import java.util.*;
-
 import Service.*;
-import Model.*;
 
 public class Server {
 
     public static List<ClientHandler> clients = new ArrayList<>();
+    public static AuctionService auctionService = new AuctionService();
 
     public static void main(String[] args) throws Exception {
 
         ServerSocket server = new ServerSocket(1234);
-        System.out.println("Server đang chạy...");
+        System.out.println("Server chạy...");
 
         while (true) {
             Socket socket = server.accept();
