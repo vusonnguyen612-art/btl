@@ -4,25 +4,25 @@ import java.util.*;
 
 public class Auction {
 
-    private Item item;
+    private String itemName;
     private int highestBid;
     private String highestBidder;
-    private boolean isOpen = true;
+    private boolean open = true;
+    private long endTime;
 
-    private List<Bid> history;
+    private List<Bid> history = new ArrayList<>();
 
-    public Auction(Item item) {
-        this.item = item;
-        this.highestBid = item.getStartPrice();
+    public Auction(String itemName, int startPrice) {
+        this.itemName = itemName;
+        this.highestBid = startPrice;
         this.highestBidder = "None";
-        this.history = new ArrayList<>();
     }
 
-    public boolean placeBid(String user, int amount) {
+    public synchronized boolean placeBid(String user, int amount) {
 
-        if (amount <= highestBid) {
-            return false;
-        }
+        if (!open) return false;
+
+        if (amount <= highestBid) return false;
 
         highestBid = amount;
         highestBidder = user;
@@ -30,6 +30,14 @@ public class Auction {
         history.add(new Bid(user, amount));
 
         return true;
+    }
+
+    public synchronized void close() {
+        open = false;
+    }
+
+    public boolean isOpen() {
+        return open;
     }
 
     public int getHighestBid() {
@@ -40,14 +48,7 @@ public class Auction {
         return highestBidder;
     }
 
-    public List<Bid> getHistory() {
-        return history;
-    }
-    public boolean isOpen() {
-        return isOpen;
-    }
-
-    public void close() {
-        isOpen = false;
+    public String getItemName() {
+        return itemName;
     }
 }

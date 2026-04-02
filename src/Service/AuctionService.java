@@ -1,37 +1,44 @@
 package Service;
+
 import Model.*;
 
 public class AuctionService {
+
     private Auction auction;
 
-    public AuctionService(Auction auction) {
-        this.auction = auction;
+    public void createAuction(String item, int price) {
+        auction = new Auction(item, price);
     }
 
-    public boolean placeBid(String user, int amount) {
+    public synchronized String placeBid(String user, int amount) {
+
+        if (auction == null) {
+            return "❌ Chưa có auction";
+        }
+
         if (!auction.isOpen()) {
-            System.out.println("Auction đã đóng!");
-            return false;
+            return "❌ Auction đã đóng";
         }
 
         if (amount <= auction.getHighestBid()) {
-            System.out.println("Bid phải cao hơn!");
-            return false;
-        }
-        boolean success = auction.placeBid(user, amount);
-
-        if (success) {
-            System.out.println( user + " bid " + amount);
+            return "❌ Bid phải > " + auction.getHighestBid();
         }
 
-        return success;
+        boolean ok = auction.placeBid(user, amount);
+
+        if (ok) {
+            return "🔥 " + user + " bid " + amount;
+        }
+
+        return "❌ Bid fail";
     }
-    public void createAuction(Item item) {
-        this.auction = new Auction(item);
-        System.out.println("Tạo auction: " + item.getName());
-    }
-    public void endAuction() {
+
+    public String endAuction() {
+        if (auction == null) return "Không có auction";
+
         auction.close();
-        System.out.println("Winner: " + auction.getHighestBidder());
+
+        return "🏁 Winner: " + auction.getHighestBidder() +
+                " | Giá: " + auction.getHighestBid();
     }
 }

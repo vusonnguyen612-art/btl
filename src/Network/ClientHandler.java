@@ -29,7 +29,7 @@ public class ClientHandler extends Thread {
                     socket.getOutputStream(), true
             );
 
-            Server.broadcast("🔌 " + username + " đã vào");
+            Server.broadcast("🔌 " + username + " vào");
 
             String msg;
 
@@ -41,30 +41,34 @@ public class ClientHandler extends Thread {
 
                     case "CREATE":
                         String item = parts[1];
-                        String price = parts[2];
+                        int price = Integer.parseInt(parts[2]);
 
-                        Server.broadcast("📦 Auction: " + item + " giá " + price);
+                        Server.auctionService.createAuction(item, price);
+
+                        Server.broadcast("📦 Auction: " + item + " | Giá: " + price);
                         break;
 
                     case "BID":
                         int amount = Integer.parseInt(parts[1]);
 
-                        Server.broadcast("🔥 " + username + " bid " + amount);
+                        String result = Server.auctionService.placeBid(username, amount);
+
+                        Server.broadcast(result);
                         break;
 
-                    case "EXIT":
-                        Server.clients.remove(this);
-                        Server.broadcast("❌ " + username + " rời");
-                        socket.close();
-                        return;
+                    case "END":
+                        String res = Server.auctionService.endAuction();
+
+                        Server.broadcast(res);
+                        break;
 
                     default:
-                        send("Sai lệnh!");
+                        send("❌ Sai lệnh");
                 }
             }
 
         } catch (Exception e) {
-            System.out.println(username + " mất kết nối");
+            System.out.println(username + " rời");
         }
     }
 }
