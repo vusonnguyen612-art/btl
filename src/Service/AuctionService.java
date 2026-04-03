@@ -6,7 +6,7 @@ public class AuctionService {
 
     private Auction auction;
 
-    public void createAuction(String item, int price) {
+    public void createAuction(String item, int price,String sellerName) {
         auction = new Auction(item, price);
     }
 
@@ -33,7 +33,7 @@ public class AuctionService {
         return "❌ Bid fail";
     }
 
-    public String endAuction() {
+    public String endAuction(String requesterName) {
         if (auction == null) return "Không có auction";
 
         auction.close();

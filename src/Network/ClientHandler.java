@@ -21,13 +21,9 @@ public class ClientHandler extends Thread {
 
     public void run() {
         try {
-            in = new BufferedReader(
-                    new InputStreamReader(socket.getInputStream())
-            );
+            in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
-            out = new PrintWriter(
-                    socket.getOutputStream(), true
-            );
+            out = new PrintWriter(socket.getOutputStream(), true);
 
             Server.broadcast("🔌 " + username + " vào");
 
@@ -40,15 +36,23 @@ public class ClientHandler extends Thread {
                 switch (parts[0]) {
 
                     case "CREATE":
+                        if (parts.length<3){
+                            send("❌ Lệnh CREATE thiếu tham số. Cú pháp đúng là: CREATE <tên sản phẩm> <giá>");
+                            break;
+                        }
                         String item = parts[1];
                         int price = Integer.parseInt(parts[2]);
 
-                        Server.auctionService.createAuction(item, price);
+                        Server.auctionService.createAuction(item, price, username);
 
-                        Server.broadcast("📦 Auction: " + item + " | Giá: " + price);
+                        Server.broadcast("📦"+username+" đã tạo phiên đấu giá sản phẩm:  " + item + " | Giá: " + price);
                         break;
 
                     case "BID":
+                        if(parts.length<2){
+                            send("❌ Lệnh BID thiếu số tiền. Cú pháp đúng là : BID <Số Tiền>");
+                            break;
+                        }
                         int amount = Integer.parseInt(parts[1]);
 
                         String result = Server.auctionService.placeBid(username, amount);
@@ -57,13 +61,14 @@ public class ClientHandler extends Thread {
                         break;
 
                     case "END":
-                        String res = Server.auctionService.endAuction();
+                        String res = Server.auctionService.endAuction(username);
 
-                        Server.broadcast(res);
-                        break;
-
+                        if (res.contains("thành công")) {
+                            Server.broadcast(res);
+                            break;
+                        }
                     default:
-                        send("❌ Sai lệnh");
+                        send("❌ Sai lệnh hoặc không có quyền thức hiện");
                 }
             }
 
