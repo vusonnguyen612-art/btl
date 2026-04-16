@@ -7,6 +7,7 @@ import Service.*;
 public class Server {
 
     public static List<ClientHandler> clients = new ArrayList<>();
+    public static List<ClientHandler> clientHandlers = new ArrayList<>();
     public static AuctionService auctionService = new AuctionService();
 
     public static void main(String[] args) throws Exception {
@@ -19,6 +20,7 @@ public class Server {
 
             ClientHandler client = new ClientHandler(socket);
             clients.add(client);
+            clientHandlers.add(client);
 
             client.start();
         }

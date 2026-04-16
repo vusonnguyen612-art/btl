@@ -1,11 +1,11 @@
 package Model;
 
-public class Item {
-    private String name;
-    private String description;
-    private int startPrice;
-    private String sellerID;
-    private boolean isEnded;
+public abstract class Item {
+    protected String name;
+    protected String description;
+    protected int startPrice;
+    protected String sellerID;
+    protected boolean isEnded;
 
     public Item(String name, String description, int startPrice, String sellerID) {
         this.name = name;

@@ -5,6 +5,7 @@ import java.util.*;
 public class Auction {
 
     private String itemName;
+    private String seller;
     private int highestBid;
     private String highestBidder;
     private boolean open = true;
@@ -12,10 +13,15 @@ public class Auction {
 
     private List<Bid> history = new ArrayList<>();
 
-    public Auction(String itemName, int startPrice) {
+    public Auction(String itemName, String seller, int startPrice) {
         this.itemName = itemName;
+        this.seller = seller;
         this.highestBid = startPrice;
         this.highestBidder = "None";
+    }
+
+    public String getSeller() {
+        return seller;
     }
 
     public synchronized boolean placeBid(String user, int amount) {

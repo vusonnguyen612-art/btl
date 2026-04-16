@@ -35,7 +35,28 @@ public class ClientHandler extends Thread {
 
                 switch (parts[0]) {
 
+                    case "LOGIN":
+                        if (parts.length < 2) {
+                            send("❌ Cú pháp: LOGIN <username>");
+                            break;
+                        }
+                        String newUsername = parts[1];
+                        boolean usernameTaken = Server.clientHandlers.stream()
+                            .anyMatch(h -> h != this && h.username.equals(newUsername));
+                        if (usernameTaken) {
+                            send("❌ Username đã được sử dụng");
+                            break;
+                        }
+                        Server.broadcast("🔌 " + username + " đổi tên thành " + newUsername);
+                        this.username = newUsername;
+                        send("✅ Đăng nhập thành công với username: " + username);
+                        break;
+
                     case "CREATE":
+                        if (username.startsWith("User")) {
+                            send("❌ Bạn cần đăng nhập trước bằng lệnh LOGIN <username>");
+                            break;
+                        }
                         if (parts.length<3){
                             send("❌ Lệnh CREATE thiếu tham số. Cú pháp đúng là: CREATE <tên sản phẩm> <giá>");
                             break;
@@ -60,15 +81,33 @@ public class ClientHandler extends Thread {
                         Server.broadcast(result);
                         break;
 
+                    case "AUTOBID":
+                        if(parts.length<4){
+                            send("❌ Cú pháp: AUTOBID <max_price> <step>");
+                            send("   Ví dụ: AUTOBID 10000 500 (tự động bid tối đa 10000, mỗi lần +500)");
+                            break;
+                        }
+                        int maxPrice = Integer.parseInt(parts[1]);
+                        int step = Integer.parseInt(parts[2]);
+                        String autoResult = Server.auctionService.registerAutoBid(username, maxPrice, step);
+                        send(autoResult);
+                        Server.broadcast(autoResult);
+                        break;
+
+                    case "CANCELAUTO":
+                        String cancelResult = Server.auctionService.cancelAutoBid(username);
+                        send(cancelResult);
+                        Server.broadcast(cancelResult);
+                        break;
+
                     case "END":
                         String res = Server.auctionService.endAuction(username);
 
-                        if (res.contains("thành công")) {
+                        send(res);
+                        if (!res.startsWith("❌")) {
                             Server.broadcast(res);
-                            break;
                         }
-                    default:
-                        send("❌ Sai lệnh hoặc không có quyền thức hiện");
+                        break;
                 }
             }
 
