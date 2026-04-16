@@ -10,6 +10,7 @@ public class ClientHandler extends Thread {
     private PrintWriter out;
     private String username;
 
+
     public ClientHandler(Socket socket) {
         this.socket = socket;
         this.username = "User" + (int)(Math.random() * 1000);
