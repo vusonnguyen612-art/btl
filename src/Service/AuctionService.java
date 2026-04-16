@@ -5,6 +5,7 @@ import Model.*;
 public class AuctionService {
 
     private Auction auction;
+    private String SellerName;
 
     public void createAuction(String item, int price,String sellerName) {
         auction = new Auction(item, price);
@@ -35,7 +36,7 @@ public class AuctionService {
 
     public String endAuction(String requesterName) {
         if (auction == null) return "Không có auction";
-
+        if (requesterName.equals(this.SellerName))
         auction.close();
 
         return "🏁 Winner: " + auction.getHighestBidder() +
