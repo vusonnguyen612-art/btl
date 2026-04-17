@@ -1,21 +1,44 @@
 package Model;
 
-public class Bid {
-    private String bidder;
-    private int amount;
-    private long time;
+import java.io.Serializable;
+import java.time.LocalDateTime;
 
-    public Bid(String bidder, int amount) {
-        this.bidder = bidder;
+public class Bid implements Serializable {
+    private static final long serialVersionUID = 1L;
+    private String id;
+    private String auctionId;
+    private String bidderId;
+    private double amount;
+    private LocalDateTime timestamp;
+
+    public Bid(String auctionId, String bidderId, double amount) {
+        this.auctionId = auctionId;
+        this.bidderId = bidderId;
         this.amount = amount;
-        this.time = System.currentTimeMillis();
+        this.timestamp = LocalDateTime.now();
     }
 
-    public int getAmount() {
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getAuctionId() {
+        return auctionId;
+    }
+
+    public String getBidderId() {
+        return bidderId;
+    }
+
+    public double getAmount() {
         return amount;
     }
 
-    public String getBidder() {
-        return bidder;
+    public LocalDateTime getTimestamp() {
+        return timestamp;
     }
 }

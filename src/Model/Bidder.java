@@ -1,7 +1,32 @@
 package Model;
 
 public class Bidder extends User {
-    public Bidder(String username, String id) {
-        super(username, id);
+    private static final long serialVersionUID = 1L;
+    private double balance;
+
+    public Bidder(String id, String username, String password) {
+        super(id, username, password);
+    }
+
+    @Override
+    public String getRole() {
+        return "BIDDER";
+    }
+
+    @Override
+    public boolean isBidder() {
+        return true;
+    }
+
+    public double getBalance() {
+        return balance;
+    }
+
+    public void setBalance(double balance) {
+        this.balance = balance;
+    }
+
+    public void addBalance(double amount) {
+        this.balance += amount;
     }
 }
