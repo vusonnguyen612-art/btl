@@ -200,8 +200,18 @@ public class AuctionClient {
         String role = scanner.nextLine().trim();
         System.out.print("Enter username: ");
         String username = scanner.nextLine().trim();
-        System.out.print("Enter password: ");
-        String password = scanner.nextLine().trim();
+        
+        String password;
+        while (true) {
+            System.out.print("Enter password (min 6 chars, no whitespace): ");
+            password = scanner.nextLine();
+            String error = UserFactory.getPasswordError(password);
+            if (error != null) {
+                System.out.println("Error: " + error);
+                continue;
+            }
+            break;
+        }
         
         Message response = client.register(role, username, password);
         System.out.println(response.getType() + ": " + response.getContent());

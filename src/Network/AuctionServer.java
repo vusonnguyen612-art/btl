@@ -136,6 +136,11 @@ public class AuctionServer {
         }
 
         private Message handleRegister(Message message) {
+            String passwordError = UserFactory.getPasswordError(message.getContent());
+            if (passwordError != null) {
+                return createErrorMessage(passwordError);
+            }
+            
             User newUser = UserFactory.createUser(
                 message.getAuctionId(),
                 (String) message.getData(),
