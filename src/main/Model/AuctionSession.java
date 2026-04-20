@@ -117,7 +117,6 @@ public class AuctionSession implements Serializable {
             return;
         }
 
-        Status oldStatus = status;
         status = Status.FINISHED;
         
         if (highestBidderId != null) {
@@ -133,7 +132,6 @@ public class AuctionSession implements Serializable {
             return;
         }
 
-        Status oldStatus = status;
         status = Status.CANCELED;
         
         cleanup();
