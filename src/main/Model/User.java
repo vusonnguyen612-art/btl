@@ -2,17 +2,21 @@ package Model;
 
 import java.io.Serializable;
 
-public abstract class User implements Serializable {
+public class User implements Serializable {
     private static final long serialVersionUID = 1L;
     private String id;
     private String username;
     private String password;
     private String email;
+    private boolean isSeller;
+    private boolean isBidder;
 
     public User(String id, String username, String password) {
         this.id = id;
         this.username = username;
         this.password = password;
+        this.isSeller = true;
+        this.isBidder = true;
     }
 
     public String getId() {
@@ -43,17 +47,19 @@ public abstract class User implements Serializable {
         this.email = email;
     }
 
-    public abstract String getRole();
+    public String getRole() {
+        return "BIDDER_SELLER";
+    }
 
     public boolean isAdmin() {
         return false;
     }
 
     public boolean isSeller() {
-        return false;
+        return isSeller;
     }
 
     public boolean isBidder() {
-        return false;
+        return isBidder;
     }
 }

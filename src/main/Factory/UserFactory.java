@@ -3,9 +3,7 @@ package Factory;
 import Model.User;
 
 public class UserFactory {
-    private static int bidderCounter = 0;
-    private static int sellerCounter = 0;
-    private static int adminCounter = 0;
+    private static int userCounter = 0;
 
     public static boolean isValidPassword(String password) {
         if (password == null || password.length() < 6) {
@@ -32,31 +30,8 @@ public class UserFactory {
         return null;
     }
 
-    public static User createBidder(String username, String password) {
-        String id = "BID" + String.format("%04d", ++bidderCounter);
-        return new Model.Bidder(id, username, password);
-    }
-
-    public static User createSeller(String username, String password) {
-        String id = "SEL" + String.format("%04d", ++sellerCounter);
-        return new Model.Seller(id, username, password);
-    }
-
-    public static User createAdmin(String username, String password) {
-        String id = "ADM" + String.format("%04d", ++adminCounter);
-        return new Model.Admin(id, username, password);
-    }
-
-    public static User createUser(String role, String username, String password) {
-        switch (role.toUpperCase()) {
-            case "BIDDER":
-                return createBidder(username, password);
-            case "SELLER":
-                return createSeller(username, password);
-            case "ADMIN":
-                return createAdmin(username, password);
-            default:
-                throw new IllegalArgumentException("Unknown role: " + role);
-        }
+    public static User createUser(String username, String password) {
+        String id = "USR" + String.format("%04d", ++userCounter);
+        return new Model.User(id, username, password);
     }
 }

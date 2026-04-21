@@ -17,7 +17,7 @@ public class AuctionManager implements Serializable {
     private final Map<String, User> users;
     private final Map<String, Item> items;
     private final Map<String, AuctionSession> auctions;
-    private final List<AuctionObserver> globalObservers;
+    private transient List<AuctionObserver> globalObservers;
     private final ReentrantReadWriteLock lock;
     private int auctionCounter;
     private static final String DATA_FILE = "auction_data.ser";
@@ -284,6 +284,13 @@ public class AuctionManager implements Serializable {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
             instance = (AuctionManager) ois.readObject();
             return instance;
+        }
+    }
+
+    private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
+        in.defaultReadObject();
+        if (globalObservers == null) {
+            globalObservers = new CopyOnWriteArrayList<>();
         }
     }
 }
