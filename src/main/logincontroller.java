@@ -12,6 +12,10 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
+import Network.AuctionClient;
+import Network.Message;
+import Model.User;
+
 public class logincontroller {
     @FXML
     private TextField loginUsernameField;
@@ -37,6 +41,42 @@ public class logincontroller {
     @FXML
     private Label messageLabel;
 
+    private static AuctionClient client;
+    private static User currentUser;
+    private static final String SERVER_ADDRESS = "localhost";
+    private static final int SERVER_PORT = 8989;
+
+    private boolean ensureConnection() {
+        if (client == null) {
+            client = new AuctionClient(SERVER_ADDRESS, SERVER_PORT);
+        }
+        try {
+            if (client.connect()) {
+                return true;
+            }
+        } catch (Exception e) {
+            showMessage("Khong the ket noi toi server: " + e.getMessage());
+        }
+        showMessage("Khong the ket noi toi server.");
+        return false;
+    }
+
+    public static User getCurrentUser() {
+        return currentUser;
+    }
+
+    public static AuctionClient getClient() {
+        return client;
+    }
+
+    public static void logout() {
+        if (client != null) {
+            client.disconnect();
+            client = null;
+        }
+        currentUser = null;
+    }
+
     @FXML
     private void Login(ActionEvent event) {
         String username = read(loginUsernameField);
@@ -47,7 +87,23 @@ public class logincontroller {
             return;
         }
 
-        showMessage("Dang nhap hop le. Hay ket noi logic backend tai day.");
+        if (!ensureConnection()) {
+            return;
+        }
+
+        try {
+            Message response = client.login(username, password);
+
+            if (response.getType() == Message.Type.SUCCESS) {
+                currentUser = (User) response.getData();
+                showMessage("Dang nhap thanh cong! Xin chao " + currentUser.getUsername());
+                navigateToMain(event);
+            } else {
+                showMessage(response.getContent());
+            }
+        } catch (Exception e) {
+            showMessage("Loi dang nhap: " + e.getMessage());
+        }
     }
 
     @FXML
@@ -68,7 +124,22 @@ public class logincontroller {
             return;
         }
 
-        showMessage("Dang ky hop le. Hay ket noi logic luu tai khoan tai day.");
+        if (!ensureConnection()) {
+            return;
+        }
+
+        try {
+            Message response = client.register(fullName, password);
+
+            if (response.getType() == Message.Type.SUCCESS) {
+                showMessage("Dang ky thanh cong! Vui long dang nhap.");
+                ComeLogin(event);
+            } else {
+                showMessage(response.getContent());
+            }
+        } catch (Exception e) {
+            showMessage("Loi dang ky: " + e.getMessage());
+        }
     }
 
     @FXML
@@ -112,5 +183,9 @@ public class logincontroller {
         } catch (IOException e) {
             showMessage("Khong the mo giao dien: " + e.getMessage());
         }
+    }
+
+    private void navigateToMain(ActionEvent event) {
+        switchScene(event, "/Indivisual.fxml", 900, 600);
     }
 }
