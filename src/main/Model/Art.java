@@ -8,6 +8,16 @@ public class Art extends Item {
     private String style;
     private boolean isAuthenticated;
 
+    public Art(String id, String name, String description, double startPrice, String sellerId) {
+        super(id, name, description, startPrice, sellerId);
+        this.category = "Art";
+        this.artist = "";
+        this.yearCreated = 0;
+        this.medium = "";
+        this.style = "";
+        this.isAuthenticated = false;
+    }
+
     public Art(String id, String name, String description, double startPrice,
                String sellerId, String artist, int yearCreated, String medium, String style) {
         super(id, name, description, startPrice, sellerId);

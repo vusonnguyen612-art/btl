@@ -15,6 +15,8 @@ import javafx.stage.Stage;
 import Network.AuctionClient;
 import Network.Message;
 import Model.User;
+import DAO.UserDAO;
+import java.util.UUID;
 
 public class logincontroller {
     @FXML
@@ -45,6 +47,7 @@ public class logincontroller {
     private static User currentUser;
     private static final String SERVER_ADDRESS = "localhost";
     private static final int SERVER_PORT = 8989;
+    private final UserDAO userDAO = new UserDAO();
 
     private boolean ensureConnection() {
         if (client == null) {
@@ -87,19 +90,14 @@ public class logincontroller {
             return;
         }
 
-        if (!ensureConnection()) {
-            return;
-        }
-
         try {
-            Message response = client.login(username, password);
-
-            if (response.getType() == Message.Type.SUCCESS) {
-                currentUser = (User) response.getData();
+            var userOpt = userDAO.login(username, password);
+            if (userOpt.isPresent()) {
+                currentUser = userOpt.get();
                 showMessage("Dang nhap thanh cong! Xin chao " + currentUser.getUsername());
                 navigateToMain(event);
             } else {
-                showMessage(response.getContent());
+                showMessage("Tai khoan hoac mat khau khong dung.");
             }
         } catch (Exception e) {
             showMessage("Loi dang nhap: " + e.getMessage());
@@ -124,18 +122,21 @@ public class logincontroller {
             return;
         }
 
-        if (!ensureConnection()) {
-            return;
-        }
-
         try {
-            Message response = client.register(fullName, password);
+            if (userDAO.existsByUsername(fullName)) {
+                showMessage("Tai khoan da ton tai.");
+                return;
+            }
 
-            if (response.getType() == Message.Type.SUCCESS) {
+            String userId = UUID.randomUUID().toString();
+            User newUser = new User(userId, fullName, password);
+            newUser.setEmail(email);
+            
+            if (userDAO.register(newUser)) {
                 showMessage("Dang ky thanh cong! Vui long dang nhap.");
                 ComeLogin(event);
             } else {
-                showMessage(response.getContent());
+                showMessage("Dang ky that bai.");
             }
         } catch (Exception e) {
             showMessage("Loi dang ky: " + e.getMessage());

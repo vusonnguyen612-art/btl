@@ -7,6 +7,15 @@ public class Electronics extends Item {
     private String model;
     private String condition;
 
+    public Electronics(String id, String name, String description, double startPrice, String sellerId) {
+        super(id, name, description, startPrice, sellerId);
+        this.category = "Electronics";
+        this.brand = "";
+        this.warrantyMonths = 0;
+        this.model = "";
+        this.condition = "";
+    }
+
     public Electronics(String id, String name, String description, double startPrice,
                        String sellerId, String brand, int warrantyMonths, String model, String condition) {
         super(id, name, description, startPrice, sellerId);
