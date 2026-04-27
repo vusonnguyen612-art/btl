@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.URL;
 
 import javafx.event.ActionEvent;
@@ -6,10 +7,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Label;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 import javafx.stage.Stage;
 
 public class logincontroller {
@@ -38,7 +36,10 @@ public class logincontroller {
     private Label messageLabel;
 
     @FXML
-    private void Login(ActionEvent event) {
+    private Button loginButton;
+
+    @FXML
+    private void Login(ActionEvent event) throws IOException {
         String username = read(loginUsernameField);
         String password = read(loginPasswordField);
 
@@ -46,7 +47,21 @@ public class logincontroller {
             showMessage("Vui long nhap day du tai khoan va mat khau.");
             return;
         }
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/User.fxml"));
+        Parent root = loader.load();
 
+        UserController userController = loader.getController();
+
+        userController.setUserData(
+                "Nguyễn Duy Quang",
+                new BigDecimal("300000")
+        );
+
+        Stage stage = (Stage) loginButton.getScene().getWindow();
+        stage.setScene(new Scene(root));
+        stage.setTitle("Trang người dùng");
+        stage.centerOnScreen();
+        stage.show();
         showMessage("Dang nhap hop le. Hay ket noi logic backend tai day.");
     }
 
