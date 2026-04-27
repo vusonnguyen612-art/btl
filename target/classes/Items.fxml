@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.AnchorPane?>
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="456.0" prefWidth="352.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
+   <children>
+      <ImageView fitHeight="150.0" fitWidth="99.0" layoutX="134.0" layoutY="14.0" pickOnBounds="true" preserveRatio="true">
+         <image>
+            <Image url="@../../image/590093915_1836383180309439_3582727971805916003_n.jpg" />
+         </image>
+      </ImageView>
+      <TextField alignment="CENTER" layoutX="85.0" layoutY="177.0" prefHeight="42.0" prefWidth="182.0" promptText="Tên sản phẩm" style="-fx-background-color: #111111; -fx-background-radius: 30; -fx-border-radius: 30; -fx-border-color: #d4af5a;" />
+      <TextField alignment="CENTER" layoutX="85.0" layoutY="236.0" prefHeight="42.0" prefWidth="182.0" promptText="Giá khởi đầu" style="-fx-background-color: #111111; -fx-background-radius: 30; -fx-border-color: #d4af5a; -fx-border-radius: 30;" />
+      <TextArea layoutX="76.0" layoutY="294.0" prefHeight="108.0" prefWidth="200.0" promptText="Mô tả sản phẩm" style="-fx-background-color: #111111; -fx-border-color: #d4af5a;" />
+   </children>
+</AnchorPane>
