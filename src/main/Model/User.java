@@ -1,6 +1,7 @@
 package Model;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 
 public class User implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -10,6 +11,7 @@ public class User implements Serializable {
     private String email;
     private boolean isSeller;
     private boolean isBidder;
+    private BigDecimal balance;
 
     public User(String id, String username, String password) {
         this.id = id;
@@ -17,6 +19,15 @@ public class User implements Serializable {
         this.password = password;
         this.isSeller = true;
         this.isBidder = true;
+        this.balance = new BigDecimal("300000");
+    }
+
+    public BigDecimal getBalance() {
+        return balance;
+    }
+
+    public void setBalance(BigDecimal balance) {
+        this.balance = balance;
     }
 
     public String getId() {

@@ -1,4 +1,4 @@
-
+package Controller;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -11,6 +11,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -19,7 +20,14 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+
+import Model.Item;
+import Model.User;
+import DAO.UserDAO;
+import DAO.ItemDAO;
 
 public class UserController {
 
@@ -77,8 +85,20 @@ public class UserController {
     @FXML
     private TextField Sotiencannap;
 
+    @FXML
+    private TextField Matkhauhientai;
+
+    @FXML
+    private TextField Matkhaumoi;
+
+    @FXML
+    private TextField Nhaplaimatkhaumoi;
+
     private final ToggleGroup menuGroup = new ToggleGroup();
 
+    private User currentUser;
+    private final UserDAO userDAO = new UserDAO();
+    private final ItemDAO itemDAO = new ItemDAO();
     private BigDecimal soDuTaiKhoan = new BigDecimal("300000");
 
     private static final String MENU_STYLE =
@@ -91,8 +111,8 @@ public class UserController {
                     "-fx-font-weight: bold;" +
                     "-fx-background-radius: 20;";
 
-    private static final String CREATE_ITEM_FXML = "/view/CreateItems.fxml";
-    private static final String LOGIN_FXML = "/view/Login.fxml";
+    private static final String CREATE_ITEM_FXML = "/CreateItems.fxml";
+    private static final String LOGIN_FXML = "/login.fxml";
 
     @FXML
     private void initialize() {
@@ -249,6 +269,11 @@ public class UserController {
             BigDecimal soTienNap = parseMoney(soTienRaw);
 
             soDuTaiKhoan = soDuTaiKhoan.add(soTienNap);
+            
+            if (currentUser != null) {
+                userDAO.updateBalance(currentUser.getUsername(), soDuTaiKhoan);
+            }
+            
             syncBalanceLabels();
 
             Nganhangnaptien.clear();
@@ -261,6 +286,44 @@ public class UserController {
             showWarning("Dữ liệu không hợp lệ", e.getMessage());
         } catch (Exception e) {
             showError("Lỗi", "Không thể nạp tiền. Chi tiết: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void Doimatkhau(ActionEvent event) {
+        if (currentUser == null) {
+            showWarning("Lỗi", "Vui lòng đăng nhập.");
+            return;
+        }
+
+        String matKhauHienTai = Matkhauhientai.getText();
+        String matKhauMoi = Matkhaumoi.getText();
+        String nhapLaiMatKhauMoi = Nhaplaimatkhaumoi.getText();
+
+        if (matKhauHienTai.isBlank() || matKhauMoi.isBlank() || nhapLaiMatKhauMoi.isBlank()) {
+            showWarning("Dữ liệu thiếu", "Vui lòng nhập đầy đủ thông tin.");
+            return;
+        }
+
+        if (!matKhauMoi.equals(nhapLaiMatKhauMoi)) {
+            showWarning("Lỗi", "Mật khẩu mới không khớp.");
+            return;
+        }
+
+        if (matKhauMoi.length() < 6) {
+            showWarning("Lỗi", "Mật khẩu mới phải có ít nhất 6 ký tự.");
+            return;
+        }
+
+        boolean success = userDAO.changePassword(currentUser.getUsername(), matKhauHienTai, matKhauMoi);
+
+        if (success) {
+            Matkhauhientai.clear();
+            Matkhaumoi.clear();
+            Nhaplaimatkhaumoi.clear();
+            showInfo("Thành công", "Đổi mật khẩu thành công!");
+        } else {
+            showWarning("Lỗi", "Mật khẩu hiện tại không đúng.");
         }
     }
 
@@ -303,12 +366,16 @@ public class UserController {
         }
     }
 
-    public void setUserData(String userName, BigDecimal balance) {
-        if (userName != null && !userName.isBlank()) {
-            Name.setText(userName);
+    public void setUserData(User user, BigDecimal balance) {
+        this.currentUser = user;
+        
+        if (user != null && user.getUsername() != null) {
+            Name.setText(user.getUsername());
         }
 
-        if (balance != null) {
+        if (user != null && user.getBalance() != null) {
+            this.soDuTaiKhoan = user.getBalance();
+        } else if (balance != null) {
             this.soDuTaiKhoan = balance;
         }
 
@@ -335,6 +402,10 @@ public class UserController {
         return soDuTaiKhoan;
     }
 
+    public User getCurrentUser() {
+        return currentUser;
+    }
+
     public void setSoDuTaiKhoan(BigDecimal soDuTaiKhoan) {
         if (soDuTaiKhoan == null) {
             return;
@@ -358,18 +429,36 @@ public class UserController {
 
         AllItems.getChildren().clear();
 
-        Label emptyLabel = createEmptyLabel("Chưa có sản phẩm đấu giá nào.");
-        AllItems.getChildren().add(emptyLabel);
+        try {
+            List<Model.Item> allItems = itemDAO.findAll();
+            if (allItems.isEmpty()) {
+                Label emptyLabel = createEmptyLabel("Chưa có sản phẩm đấu giá nào.");
+                AllItems.getChildren().add(emptyLabel);
+            } else {
+                for (Model.Item item : allItems) {
+                    HBox itemBox = createItemCard(item);
+                    AllItems.getChildren().add(itemBox);
+                }
+            }
+        } catch (Exception e) {
+            Label errorLabel = createEmptyLabel("Lỗi tải sản phẩm.");
+            AllItems.getChildren().add(errorLabel);
+        }
+    }
 
-        /*
-         * Nếu bạn đã có ProductService hoặc ItemService, có thể thay đoạn trên bằng:
-         *
-         * List<Item> allItems = itemService.getAllAuctionItems();
-         * for (Item item : allItems) {
-         *     Parent card = loadItemCard(item);
-         *     AllItems.getChildren().add(card);
-         * }
-         */
+    private HBox createItemCard(Model.Item item) {
+        HBox hbox = new HBox(10);
+        hbox.setStyle("-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-padding: 10;");
+
+        Label nameLabel = new Label(item.getName());
+        nameLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 16px;");
+
+        BigDecimal price = new BigDecimal(String.valueOf(item.getStartPrice()));
+        Label priceLabel = new Label(formatMoney(price) + " $");
+        priceLabel.setStyle("-fx-text-fill: white; -fx-font-size: 14px;");
+
+        hbox.getChildren().addAll(nameLabel, priceLabel);
+        return hbox;
     }
 
     private void loadWarehouseItems() {
