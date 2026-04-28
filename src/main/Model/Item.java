@@ -52,6 +52,10 @@ public abstract class Item implements Serializable {
         return sellerId;
     }
 
+    public void setSellerId(String sellerId) {
+        this.sellerId = sellerId;
+    }
+
     public String getCategory() {
         return category;
     }
