@@ -1,3 +1,5 @@
+package Controller;
+
 import java.io.IOException;
 import java.net.URL;
 
@@ -13,9 +15,10 @@ import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
 import Network.AuctionClient;
-import Network.Message;
 import Model.User;
 import DAO.UserDAO;
+
+import java.math.BigDecimal;
 import java.util.UUID;
 
 public class logincontroller {
@@ -187,6 +190,18 @@ public class logincontroller {
     }
 
     private void navigateToMain(ActionEvent event) {
-        switchScene(event, "/Indivisual.fxml", 900, 600);
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/Indivisual.fxml"));
+            Parent root = loader.load();
+            
+            UserController userController = loader.getController();
+            userController.setUserData(currentUser, new BigDecimal("300000"));
+            
+            Stage stage = (Stage) ((javafx.scene.Node) event.getSource()).getScene().getWindow();
+            stage.setScene(new Scene(root, 900, 600));
+            stage.show();
+        } catch (IOException e) {
+            showMessage("Khong the mo giao dien: " + e.getMessage());
+        }
     }
 }

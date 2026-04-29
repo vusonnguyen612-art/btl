@@ -1,8 +1,10 @@
 package Model;
 
+import java.math.BigDecimal;
+
 public class Bidder extends User {
     private static final long serialVersionUID = 1L;
-    private double balance;
+    private BigDecimal balance;
 
     public Bidder(String id, String username, String password) {
         super(id, username, password);
@@ -18,15 +20,16 @@ public class Bidder extends User {
         return true;
     }
 
-    public double getBalance() {
+    @Override
+    public BigDecimal getBalance() {
         return balance;
     }
 
-    public void setBalance(double balance) {
+    public void setBalance(BigDecimal balance) {
         this.balance = balance;
     }
 
-    public void addBalance(double amount) {
-        this.balance += amount;
+    public void addBalance(BigDecimal amount) {
+        this.balance = this.balance.add(amount);
     }
 }
