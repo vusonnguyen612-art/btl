@@ -13,7 +13,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane fx:controller="Controller.UserController" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="608.0" prefWidth="823.0" style="-fx-background-color: #1E1E1D;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
+<AnchorPane fx:controller="UserController" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="608.0" prefWidth="823.0" style="-fx-background-color: #1E1E1D;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
    <children>
       <BorderPane layoutX="1.0" layoutY="1.0" prefHeight="608.0" prefWidth="823.0">
          <left>
@@ -169,14 +169,9 @@
                         <TextField fx:id="Nhaplaimatkhaumoi" layoutX="48.0" layoutY="236.0" prefHeight="50.0" prefWidth="486.0" promptText="Nhập lại mật khẩu mới" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-text-fill: white; -fx-prompt-text-fill: #a6a6a6;">
                            <font>
                               <Font name="Arial" size="22.0" />
-</font>
-                         </TextField>
-                         <Button layoutX="48.0" layoutY="310.0" mnemonicParsing="false" onAction="#Doimatkhau" prefHeight="50.0" prefWidth="486.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Đổi mật khẩu">
-                            <font>
-                               <Font name="Arial" size="22.0" />
-                            </font>
-                         </Button>
-                         <Button layoutX="319.0" layoutY="432.0" mnemonicParsing="false" onAction="#Exit" prefHeight="59.0" prefWidth="214.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Thoát">
+                           </font>
+                        </TextField>
+                        <Button layoutX="319.0" layoutY="432.0" mnemonicParsing="false" onAction="#Exit" prefHeight="59.0" prefWidth="214.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Thoát">
                            <font>
                               <Font name="Arial" size="25.0" />
                            </font>
