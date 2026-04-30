@@ -1,4 +1,5 @@
 package Controller;
+
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -232,7 +233,7 @@ public class UserController {
 
     private BigDecimal parseMoney(String rawText) {
         if (rawText == null || rawText.trim().isEmpty()) {
-            throw new IllegalArgumentException("Vui long nhap so tien can nap.");
+            throw new IllegalArgumentException("Vui lòng nhập số tiền cần nạp.");
         }
 
         String normalized = rawText
@@ -244,13 +245,13 @@ public class UserController {
                 .replace("\u20ab", "");
 
         if (!normalized.matches("\\d+")) {
-            throw new IllegalArgumentException("So tien khong hop le.");
+            throw new IllegalArgumentException("Số tiền không hợp lệ.");
         }
 
         BigDecimal amount = new BigDecimal(normalized);
 
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("So tien phai lon hon 0.");
+            throw new IllegalArgumentException("Số tiền nạp phải lớn hơn 0.");
         }
 
         return amount;
@@ -264,42 +265,42 @@ public class UserController {
             String soTienRaw = Sotiencannap.getText().trim();
 
             if (nganHang.isEmpty()) {
-                showWarning("Thieu thong tin", "Vui long nhap ten ngan hang.");
+                showWarning("Thiếu thông tin", "Vui lòng nhập tên ngân hàng.");
                 return;
             }
 
             if (soTaiKhoan.isEmpty()) {
-                showWarning("Thieu thong tin", "Vui long nhap so tai khoan.");
+                showWarning("Thiếu thông tin", "Vui lòng nhập số tài khoản.");
                 return;
             }
 
             BigDecimal soTienNap = parseMoney(soTienRaw);
 
             soDuTaiKhoan = soDuTaiKhoan.add(soTienNap);
-            
+
             if (currentUser != null) {
                 userDAO.updateBalance(currentUser.getUsername(), soDuTaiKhoan);
             }
-            
+
             syncBalanceLabels();
 
             Nganhangnaptien.clear();
             Sotaikhoannaptien.clear();
             Sotiencannap.clear();
 
-            showInfo("Nap tien thanh cong", "Ban da nap them " + formatMoney(soTienNap) + " $ vao tai khoan.");
+            showInfo("Nạp tiền thành công", "Bạn đã nạp thêm " + formatMoney(soTienNap) + " $ vào tài khoản.");
 
         } catch (IllegalArgumentException e) {
-            showWarning("Du lieu khong hop le", e.getMessage());
+            showWarning("Dữ liệu không hợp lệ", e.getMessage());
         } catch (Exception e) {
-            showError("Loi", "Khong the nap tien. Chi tiet: " + e.getMessage());
+            showError("Lỗi giao dịch", "Không thể nạp tiền. Chi tiết lỗi: " + e.getMessage());
         }
     }
 
     @FXML
     private void Doimatkhau(ActionEvent event) {
         if (currentUser == null) {
-            showWarning("Loi", "Vui long dang nhap.");
+            showWarning("Lỗi xác thực", "Vui lòng đăng nhập để thực hiện chức năng này.");
             return;
         }
 
@@ -308,17 +309,17 @@ public class UserController {
         String nhapLaiMatKhauMoi = Nhaplaimatkhaumoi.getText();
 
         if (matKhauHienTai.isBlank() || matKhauMoi.isBlank() || nhapLaiMatKhauMoi.isBlank()) {
-            showWarning("Du lieu thieu", "Vui long nhap day du thong tin.");
+            showWarning("Thiếu thông tin", "Vui lòng điền đầy đủ thông tin mật khẩu.");
             return;
         }
 
         if (!matKhauMoi.equals(nhapLaiMatKhauMoi)) {
-            showWarning("Loi", "Mat khau moi khong khop.");
+            showWarning("Lỗi mật khẩu", "Mật khẩu mới không khớp. Vui lòng nhập lại.");
             return;
         }
 
         if (matKhauMoi.length() < 6) {
-            showWarning("Loi", "Mat khau moi phai co it nhat 6 ky tu.");
+            showWarning("Lỗi bảo mật", "Mật khẩu mới phải có ít nhất 6 ký tự.");
             return;
         }
 
@@ -328,15 +329,15 @@ public class UserController {
             Matkhauhientai.clear();
             Matkhaumoi.clear();
             Nhaplaimatkhaumoi.clear();
-            showInfo("Thanh cong", "Doi mat khau thanh cong!");
+            showInfo("Thành công", "Đổi mật khẩu thành công!");
         } else {
-            showWarning("Loi", "Mat khau hien tai khong dung.");
+            showWarning("Lỗi xác thực", "Mật khẩu hiện tại không chính xác.");
         }
     }
 
     @FXML
     private void CreateItems(ActionEvent event) {
-        openModalFXML(CREATE_ITEM_FXML, "Tao san pham");
+        openModalFXML(CREATE_ITEM_FXML, "Tạo Sản Phẩm");
 
         loadHomeItems();
         loadWarehouseItems();
@@ -352,7 +353,7 @@ public class UserController {
             auctionRoomController.setCurrentUser(currentUser);
 
             Stage stage = new Stage();
-            stage.setTitle("Phong Dau Gia");
+            stage.setTitle("Phòng Đấu Giá");
             stage.setScene(new Scene(root, 900, 600));
             stage.initOwner(getCurrentStage());
             stage.initModality(Modality.WINDOW_MODAL);
@@ -361,29 +362,29 @@ public class UserController {
 
             refreshAllData();
         } catch (Exception e) {
-            showError("Loi", "Khong the mo phong dau gia: " + e.getMessage());
+            showError("Lỗi hệ thống", "Không thể mở phòng đấu giá: " + e.getMessage());
         }
     }
 
     @FXML
     private void Doitaikhoan(ActionEvent event) {
         boolean confirmed = showConfirm(
-                "Doi tai khoan",
-                "Ban co chac muon dang xuat va doi tai khoan khong?"
+                "Đổi tài khoản",
+                "Bạn có chắc chắn muốn đăng xuất và đổi tài khoản không?"
         );
 
         if (!confirmed) {
             return;
         }
 
-        switchScene(LOGIN_FXML, "Dang nhap");
+        switchScene(LOGIN_FXML, "Đăng nhập");
     }
 
     @FXML
     private void Exit(ActionEvent event) {
         boolean confirmed = showConfirm(
-                "Thoat",
-                "Ban co chac muon thoat chuong trinh khong?"
+                "Thoát chương trình",
+                "Bạn có chắc chắn muốn thoát chương trình không?"
         );
 
         if (!confirmed) {
@@ -398,7 +399,7 @@ public class UserController {
 
     public void setUserData(User user, BigDecimal balance) {
         this.currentUser = user;
-        
+
         if (user != null && user.getUsername() != null) {
             Name.setText(user.getUsername());
         }
@@ -462,10 +463,10 @@ public class UserController {
         try {
             List<Item> allItems = itemDAO.findAll();
             if (allItems.isEmpty()) {
-                Label emptyLabel = createEmptyLabel("Chua co san pham dau gia nao.");
+                Label emptyLabel = createEmptyLabel("Chưa có sản phẩm đấu giá nào trên hệ thống.");
                 AllItems.getChildren().add(emptyLabel);
             } else {
-                Label headerLabel = new Label("San pham dang dau gia");
+                Label headerLabel = new Label("Sản phẩm đang đấu giá");
                 headerLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 20px; -fx-font-weight: bold;");
                 headerLabel.setPadding(new Insets(0, 0, 10, 0));
                 AllItems.getChildren().add(headerLabel);
@@ -476,7 +477,7 @@ public class UserController {
                 }
             }
         } catch (Exception e) {
-            Label errorLabel = createEmptyLabel("Loi tai san pham.");
+            Label errorLabel = createEmptyLabel("Có lỗi xảy ra khi tải danh sách sản phẩm.");
             AllItems.getChildren().add(errorLabel);
         }
     }
@@ -505,7 +506,7 @@ public class UserController {
         Items.getChildren().clear();
 
         if (currentUser == null) {
-            Label emptyLabel = createEmptyLabel("Vui long dang nhap.");
+            Label emptyLabel = createEmptyLabel("Vui lòng đăng nhập để xem kho.");
             Items.getChildren().add(emptyLabel);
             return;
         }
@@ -515,10 +516,10 @@ public class UserController {
             List<AuctionSession> userAuctions = auctionDAO.findAllAuctions();
 
             if (userItems.isEmpty() && userAuctions.isEmpty()) {
-                Label emptyLabel = createEmptyLabel("Kho cua ban hien chua co san pham.");
+                Label emptyLabel = createEmptyLabel("Kho của bạn hiện chưa có sản phẩm nào.");
                 Items.getChildren().add(emptyLabel);
             } else {
-                Label headerLabel = new Label("Phien dau gia cua ban");
+                Label headerLabel = new Label("Phiên đấu giá của bạn");
                 headerLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 18px; -fx-font-weight: bold;");
                 headerLabel.setPadding(new Insets(0, 0, 10, 0));
                 Items.getChildren().add(headerLabel);
@@ -533,14 +534,14 @@ public class UserController {
                 }
 
                 if (!hasAuctions && !userItems.isEmpty()) {
-                    Label noAuctionLabel = new Label("Chua tao phien dau gia. Nhan 'Tao san pham' de bat dau.");
+                    Label noAuctionLabel = new Label("Chưa tạo phiên đấu giá. Nhấn 'Tạo Sản Phẩm' để bắt đầu.");
                     noAuctionLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 14px;");
                     noAuctionLabel.setPadding(new Insets(10, 0, 10, 0));
                     Items.getChildren().add(noAuctionLabel);
                 }
             }
         } catch (Exception e) {
-            Label errorLabel = createEmptyLabel("Loi tai kho: " + e.getMessage());
+            Label errorLabel = createEmptyLabel("Lỗi khi tải dữ liệu kho: " + e.getMessage());
             Items.getChildren().add(errorLabel);
         }
     }
@@ -558,11 +559,11 @@ public class UserController {
             controller.setOnStartAuction(() -> {
                 boolean success = auctionDAO.startAuction(auction.getId());
                 if (success) {
-                    showInfo("Thanh cong", "Da bat dau phien dau gia.");
+                    showInfo("Thành công", "Đã bắt đầu phiên đấu giá.");
                     loadWarehouseItems();
                     loadHomeItems();
                 } else {
-                    showError("Loi", "Khong the bat dau phien dau gia.");
+                    showError("Lỗi hệ thống", "Không thể khởi động phiên đấu giá. Vui lòng thử lại.");
                 }
             });
 
@@ -581,7 +582,7 @@ public class UserController {
         LichsudaugiaPane.getChildren().clear();
 
         if (currentUser == null) {
-            Label label = createEmptyLabel("Vui long dang nhap de xem lich su.");
+            Label label = createEmptyLabel("Vui lòng đăng nhập để xem lịch sử đấu giá.");
             label.setLayoutX(150);
             label.setLayoutY(250);
             LichsudaugiaPane.getChildren().add(label);
@@ -592,7 +593,7 @@ public class UserController {
             List<Bid> bids = auctionDAO.getUserBidHistory(currentUser.getId());
 
             if (bids.isEmpty()) {
-                Label label = createEmptyLabel("Chua co lich su dau gia.");
+                Label label = createEmptyLabel("Chưa có lịch sử tham gia đấu giá.");
                 label.setLayoutX(220);
                 label.setLayoutY(250);
                 LichsudaugiaPane.getChildren().add(label);
@@ -618,7 +619,7 @@ public class UserController {
                 LichsudaugiaPane.getChildren().add(scrollPane);
             }
         } catch (Exception e) {
-            Label label = createEmptyLabel("Loi tai lich su: " + e.getMessage());
+            Label label = createEmptyLabel("Lỗi khi tải lịch sử: " + e.getMessage());
             label.setLayoutX(150);
             label.setLayoutY(250);
             LichsudaugiaPane.getChildren().add(label);
@@ -653,7 +654,7 @@ public class UserController {
             }
             return hours + "h";
         }
-        return minutes + " phut";
+        return minutes + " phút";
     }
 
     private String getRemainingTime(AuctionSession auction) {
@@ -663,7 +664,7 @@ public class UserController {
 
         LocalDateTime now = LocalDateTime.now();
         if (now.isAfter(auction.getEndTime())) {
-            return "Da ket thuc";
+            return "Đã kết thúc";
         }
 
         long minutes = java.time.Duration.between(now, auction.getEndTime()).toMinutes();
@@ -693,8 +694,8 @@ public class UserController {
 
         } catch (Exception e) {
             showError(
-                    "Khong the mo giao dien",
-                    "Khong tim thay hoac khong load duoc file: " + fxmlPath + "\n\nChi tiet: " + e.getMessage()
+                    "Không thể mở giao diện",
+                    "Không tìm thấy hoặc không tải được file: " + fxmlPath + "\n\nChi tiết: " + e.getMessage()
             );
         }
     }
@@ -720,8 +721,8 @@ public class UserController {
 
         } catch (IOException e) {
             showError(
-                    "Khong the chuyen giao dien",
-                    "Khong tim thay hoac khong load duoc file: " + fxmlPath + "\n\nChi tiet: " + e.getMessage()
+                    "Không thể chuyển giao diện",
+                    "Không tìm thấy hoặc không tải được file: " + fxmlPath + "\n\nChi tiết: " + e.getMessage()
             );
         }
     }
@@ -744,8 +745,8 @@ public class UserController {
 
         } catch (IOException e) {
             showError(
-                    "Khong the load giao dien",
-                    "Khong load duoc file: " + fxmlPath + "\n\nChi tiet: " + e.getMessage()
+                    "Không thể tải giao diện",
+                    "Không tải được file: " + fxmlPath + "\n\nChi tiết: " + e.getMessage()
             );
         }
     }

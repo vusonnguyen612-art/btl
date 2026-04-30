@@ -53,20 +53,20 @@ public class AuctionCardController {
         String itemName = auction.getItem() != null ? auction.getItem().getName() : "Unknown";
         nameLabel.setText(itemName);
 
-        priceLabel.setText("Gia hien tai: " + moneyFormat.format(auction.getCurrentPrice()) + " $");
+        priceLabel.setText("GIÁ HIỆN TẠI: " + moneyFormat.format(auction.getCurrentPrice()) + " $");
 
-        String statusText = isRunning ? "DANG DIEN RA" : "CHUA BAT DAU";
+        String statusText = isRunning ? "ĐANG DIỄN RA" : "CHƯA BẮT ĐẦU";
         String statusColor = isRunning ? "#4CAF50" : "#FF9800";
         statusLabel.setText(statusText);
         statusLabel.setStyle("-fx-text-fill: " + statusColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
 
         String durationText = formatDuration(auction.getDurationMinutes());
-        timeInfoLabel.setText("Thoi gian: " + durationText);
+        timeInfoLabel.setText("THỜI GIAN: " + durationText);
 
         actionBox.getChildren().clear();
 
         if (isRunning) {
-            Button joinBtn = new Button("Vao phong");
+            Button joinBtn = new Button("VÀO PHÒNG");
             joinBtn.setStyle("-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30; -fx-font-size: 14px;");
             joinBtn.setPrefSize(100, 35);
             joinBtn.setOnAction(e -> {
@@ -79,7 +79,7 @@ public class AuctionCardController {
             timeLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 13px; -fx-font-weight: bold;");
             actionBox.getChildren().add(timeLabel);
         } else {
-            Button startBtn = new Button("Bat dau");
+            Button startBtn = new Button("BẮT ĐẦU");
             startBtn.setStyle("-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30; -fx-font-size: 14px;");
             startBtn.setPrefSize(100, 35);
             if (canStart) {
@@ -103,7 +103,7 @@ public class AuctionCardController {
             }
             return hours + "h";
         }
-        return minutes + " phut";
+        return minutes + " phút";
     }
 
     private String getTimeRemaining(AuctionSession auction) {
@@ -113,7 +113,7 @@ public class AuctionCardController {
 
         LocalDateTime now = LocalDateTime.now();
         if (now.isAfter(auction.getEndTime())) {
-            return "Da ket thuc";
+            return "ĐÃ KẾT THÚC";
         }
 
         long totalSeconds = java.time.Duration.between(now, auction.getEndTime()).getSeconds();
@@ -122,11 +122,11 @@ public class AuctionCardController {
         long seconds = totalSeconds % 60;
 
         if (hours > 0) {
-            return String.format("Con %02d:%02d:%02d", hours, minutes, seconds);
+            return String.format("CÒN %02d:%02d:%02d", hours, minutes, seconds);
         } else if (minutes > 0) {
-            return String.format("Con %02d:%02d", minutes, seconds);
+            return String.format("CÒN %02d:%02d", minutes, seconds);
         } else {
-            return String.format("Con %ds", seconds);
+            return String.format("CÒN %ds", seconds);
         }
     }
 
