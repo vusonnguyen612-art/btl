@@ -11,6 +11,7 @@ import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.*;
@@ -73,9 +74,6 @@ public class AuctionRoomController {
     private final AuctionDAO auctionDAO = new AuctionDAO();
     private Timeline timerTimeline;
     private Timeline refreshTimeline;
-
-    private static final String AUCTION_CARD_STYLE =
-            "-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-border-width: 2; -fx-padding: 15; -fx-background-radius: 10; -fx-border-radius: 10;";
 
     private static final String BID_BUTTON_STYLE =
             "-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30; -fx-font-size: 14px;";
@@ -149,60 +147,21 @@ public class AuctionRoomController {
     }
 
     private HBox createAuctionCard(AuctionSession auction, boolean isRunning) {
-        HBox card = new HBox(15);
-        card.setStyle(AUCTION_CARD_STYLE);
-        card.setAlignment(Pos.CENTER_LEFT);
-        card.setPrefHeight(80);
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/auction_card.fxml"));
+            HBox card = loader.load();
+            AuctionCardController controller = loader.getController();
 
-        VBox infoBox = new VBox(5);
-        infoBox.setPrefWidth(200);
+            boolean canStart = currentUser != null && auction.getSellerId().equals(currentUser.getId());
+            controller.setAuction(auction, isRunning, canStart);
+            controller.setOnSelectAuction(() -> selectAuction(auction));
+            controller.setOnStartAuction(() -> startAuction(auction));
 
-        Label nameLabel = new Label(auction.getItem() != null ? auction.getItem().getName() : "Unknown");
-        nameLabel.setStyle("-fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: bold;");
-
-        Label priceLabel = new Label("Gia hien tai: " + formatMoney(new BigDecimal(String.valueOf(auction.getCurrentPrice()))) + " $");
-        priceLabel.setStyle("-fx-text-fill: #d9b15f; -fx-font-size: 14px;");
-
-        String statusText = isRunning ? "DANG DIEN RA" : "CHUA BAT DAU";
-        String statusColor = isRunning ? "#4CAF50" : "#FF9800";
-        Label statusLabel = new Label(statusText);
-        statusLabel.setStyle("-fx-text-fill: " + statusColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
-
-        String durationText = formatDuration(auction.getDurationMinutes());
-        Label durationLabel = new Label("Thoi gian: " + durationText);
-        durationLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 11px;");
-
-        infoBox.getChildren().addAll(nameLabel, priceLabel, statusLabel, durationLabel);
-
-        VBox actionBox = new VBox(5);
-        actionBox.setAlignment(Pos.CENTER_RIGHT);
-
-        if (isRunning) {
-            Button joinBtn = new Button("Vao phong");
-            joinBtn.setStyle(BID_BUTTON_STYLE);
-            joinBtn.setPrefSize(100, 35);
-            joinBtn.setOnAction(e -> selectAuction(auction));
-            actionBox.getChildren().add(joinBtn);
-
-            String timeRemaining = getTimeRemaining(auction);
-            Label timeLabel = new Label(timeRemaining);
-            timeLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 13px; -fx-font-weight: bold;");
-            actionBox.getChildren().add(timeLabel);
-        } else {
-            Button startBtn = new Button("Bat dau");
-            startBtn.setStyle(BID_BUTTON_STYLE);
-            startBtn.setPrefSize(100, 35);
-            if (currentUser != null && auction.getSellerId().equals(currentUser.getId())) {
-                startBtn.setOnAction(e -> startAuction(auction));
-            } else {
-                startBtn.setDisable(true);
-                startBtn.setStyle("-fx-background-color: #555555; -fx-text-fill: #999999; -fx-background-radius: 30; -fx-font-size: 14px;");
-            }
-            actionBox.getChildren().add(startBtn);
+            return card;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new HBox();
         }
-
-        card.getChildren().addAll(infoBox, actionBox);
-        return card;
     }
 
     private String formatDuration(long minutes) {
@@ -369,23 +328,16 @@ public class AuctionRoomController {
     }
 
     private HBox createBidCard(Bid bid) {
-        HBox card = new HBox(15);
-        card.setStyle("-fx-background-color: #1a1a1a; -fx-border-color: #333333; -fx-border-width: 1; -fx-padding: 10; -fx-background-radius: 5; -fx-border-radius: 5;");
-        card.setAlignment(Pos.CENTER_LEFT);
-
-        Label bidderLabel = new Label(bid.getBidderId());
-        bidderLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 13px; -fx-font-weight: bold;");
-        bidderLabel.setPrefWidth(100);
-
-        Label amountLabel = new Label(formatMoney(new BigDecimal(String.valueOf(bid.getAmount()))) + " $");
-        amountLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 14px; -fx-font-weight: bold;");
-
-        String timeStr = bid.getTimestamp().format(DateTimeFormatter.ofPattern("HH:mm:ss"));
-        Label timeLabel = new Label(timeStr);
-        timeLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 12px;");
-
-        card.getChildren().addAll(bidderLabel, amountLabel, timeLabel);
-        return card;
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/bid_card.fxml"));
+            HBox card = loader.load();
+            BidCardController controller = loader.getController();
+            controller.setBid(bid);
+            return card;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new HBox();
+        }
     }
 
     @FXML

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<HBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:id="cardRoot"
+      spacing="15" alignment="CENTER_LEFT"
+      style="-fx-background-color: #1a1a1a; -fx-border-color: #333333; -fx-border-width: 1; -fx-padding: 10; -fx-background-radius: 5; -fx-border-radius: 5;"
+      fx:controller="Controller.BidCardController">
+
+    <Label fx:id="bidderLabel" prefWidth="100" style="-fx-text-fill: #eacd8f; -fx-font-size: 13px; -fx-font-weight: bold;" />
+    <Label fx:id="amountLabel" style="-fx-text-fill: #4CAF50; -fx-font-size: 14px; -fx-font-weight: bold;" />
+    <Label fx:id="timeLabel" style="-fx-text-fill: #888888; -fx-font-size: 12px;" />
+</HBox>

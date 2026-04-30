@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<HBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:id="cardRoot"
+      spacing="10" alignment="CENTER_LEFT"
+      style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-padding: 10; -fx-background-radius: 5; -fx-border-radius: 5;"
+      fx:controller="Controller.ItemCardController">
+
+    <VBox fx:id="infoBox" spacing="3">
+        <Label fx:id="nameLabel" style="-fx-text-fill: #eacd8f; -fx-font-size: 16px; -fx-font-weight: bold;" />
+        <Label fx:id="priceLabel" style="-fx-text-fill: white; -fx-font-size: 14px;" />
+    </VBox>
+
+    <VBox fx:id="actionBox" alignment="CENTER_RIGHT" spacing="3" />
+</HBox>
