@@ -482,58 +482,19 @@ public class UserController {
     }
 
     private HBox createItemCard(Item item) {
-        HBox hbox = new HBox(10);
-        hbox.setStyle("-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-padding: 10; -fx-background-radius: 5; -fx-border-radius: 5;");
-        hbox.setSpacing(15);
-        hbox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/item_card.fxml"));
+            HBox card = loader.load();
+            ItemCardController controller = loader.getController();
 
-        VBox infoBox = new VBox(3);
-        Label nameLabel = new Label(item.getName());
-        nameLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 16px; -fx-font-weight: bold;");
+            List<AuctionSession> auctions = auctionDAO.findAllAuctions();
+            controller.setItem(item, auctions);
 
-        BigDecimal price = new BigDecimal(String.valueOf(item.getStartPrice()));
-        Label priceLabel = new Label(formatMoney(price) + " $");
-        priceLabel.setStyle("-fx-text-fill: white; -fx-font-size: 14px;");
-
-        infoBox.getChildren().addAll(nameLabel, priceLabel);
-
-        VBox actionBox = new VBox(3);
-        actionBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
-
-        List<AuctionSession> auctions = auctionDAO.findAllAuctions();
-        AuctionSession itemAuction = null;
-        for (AuctionSession auction : auctions) {
-            if (auction.getItem() != null && auction.getItem().getId().equals(item.getId())) {
-                itemAuction = auction;
-                break;
-            }
+            return card;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new HBox();
         }
-
-        if (itemAuction != null) {
-            String statusColor = itemAuction.isRunning() ? "#4CAF50" : "#FF9800";
-            String statusText = itemAuction.isRunning() ? "DANG DIEN RA" : itemAuction.isOpen() ? "CHUA BAT DAU" : "DA KET THUC";
-            Label statusLabel = new Label(statusText);
-            statusLabel.setStyle("-fx-text-fill: " + statusColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
-
-            BigDecimal currentPrice = new BigDecimal(String.valueOf(itemAuction.getCurrentPrice()));
-            Label currentPriceLabel = new Label("Gia hien tai: " + formatMoney(currentPrice) + " $");
-            currentPriceLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 13px;");
-
-            String timeText = itemAuction.isRunning() && itemAuction.getEndTime() != null
-                    ? "Con: " + getRemainingTime(itemAuction)
-                    : "Thoi gian: " + formatDuration(itemAuction.getDurationMinutes());
-            Label timeLabel = new Label(timeText);
-            timeLabel.setStyle("-fx-text-fill: #ff9800; -fx-font-size: 12px;");
-
-            actionBox.getChildren().addAll(statusLabel, currentPriceLabel, timeLabel);
-        } else {
-            Label noAuctionLabel = new Label("Chua co phien dau gia");
-            noAuctionLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 12px;");
-            actionBox.getChildren().add(noAuctionLabel);
-        }
-
-        hbox.getChildren().addAll(infoBox, actionBox);
-        return hbox;
     }
 
     private void loadWarehouseItems() {
@@ -585,41 +546,16 @@ public class UserController {
     }
 
     private HBox createAuctionCard(AuctionSession auction) {
-        HBox hbox = new HBox(15);
-        hbox.setStyle("-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-padding: 12; -fx-background-radius: 5; -fx-border-radius: 5;");
-        hbox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/auction_card.fxml"));
+            HBox card = loader.load();
+            AuctionCardController controller = loader.getController();
 
-        String itemName = auction.getItem() != null ? auction.getItem().getName() : "Unknown";
-        Label nameLabel = new Label(itemName);
-        nameLabel.setStyle("-fx-text-fill: white; -fx-font-size: 15px; -fx-font-weight: bold;");
-        nameLabel.setPrefWidth(150);
+            boolean isRunning = auction.isRunning();
+            boolean canStart = auction.isOpen();
 
-        String statusColor = auction.isRunning() ? "#4CAF50" : auction.isOpen() ? "#FF9800" : "#ff6b6b";
-        String statusText = auction.isRunning() ? "DANG CHAY" : auction.isOpen() ? "CHUA BAT DAU" : "DA KET THUC";
-        Label statusLabel = new Label(statusText);
-        statusLabel.setStyle("-fx-text-fill: " + statusColor + "; -fx-font-size: 13px; -fx-font-weight: bold;");
-        statusLabel.setPrefWidth(100);
-
-        BigDecimal currentPrice = new BigDecimal(String.valueOf(auction.getCurrentPrice()));
-        Label priceLabel = new Label(formatMoney(currentPrice) + " $");
-        priceLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 14px;");
-        priceLabel.setPrefWidth(90);
-
-        String timeText = auction.isRunning() && auction.getEndTime() != null
-                ? "Con: " + getRemainingTime(auction)
-                : "Thoi gian: " + formatDuration(auction.getDurationMinutes());
-        Label timeLabel = new Label(timeText);
-        timeLabel.setStyle("-fx-text-fill: #ff9800; -fx-font-size: 12px;");
-        timeLabel.setPrefWidth(100);
-
-        VBox actionBox = new VBox(5);
-        actionBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
-
-        if (auction.isOpen()) {
-            Button startBtn = new Button("Bat dau");
-            startBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 20;");
-            startBtn.setPrefSize(80, 30);
-            startBtn.setOnAction(e -> {
+            controller.setAuction(auction, isRunning, canStart);
+            controller.setOnStartAuction(() -> {
                 boolean success = auctionDAO.startAuction(auction.getId());
                 if (success) {
                     showInfo("Thanh cong", "Da bat dau phien dau gia.");
@@ -629,11 +565,12 @@ public class UserController {
                     showError("Loi", "Khong the bat dau phien dau gia.");
                 }
             });
-            actionBox.getChildren().add(startBtn);
-        }
 
-        hbox.getChildren().addAll(nameLabel, statusLabel, priceLabel, timeLabel, actionBox);
-        return hbox;
+            return card;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new HBox();
+        }
     }
 
     private void loadBidHistory() {
@@ -689,26 +626,16 @@ public class UserController {
     }
 
     private HBox createBidHistoryCard(Bid bid) {
-        HBox hbox = new HBox(15);
-        hbox.setStyle("-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-padding: 12; -fx-background-radius: 5; -fx-border-radius: 5;");
-        hbox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-
-        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-        String timeStr = bid.getTimestamp().format(formatter);
-
-        Label timeLabel = new Label(timeStr);
-        timeLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 12px;");
-        timeLabel.setPrefWidth(140);
-
-        BigDecimal amount = new BigDecimal(String.valueOf(bid.getAmount()));
-        Label amountLabel = new Label(formatMoney(amount) + " $");
-        amountLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 16px; -fx-font-weight: bold;");
-
-        Label auctionLabel = new Label("Phien: " + bid.getAuctionId());
-        auctionLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 13px;");
-
-        hbox.getChildren().addAll(timeLabel, amountLabel, auctionLabel);
-        return hbox;
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/bid_history_card.fxml"));
+            HBox card = loader.load();
+            BidHistoryCardController controller = loader.getController();
+            controller.setBid(bid);
+            return card;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new HBox();
+        }
     }
 
     private Label createEmptyLabel(String text) {
