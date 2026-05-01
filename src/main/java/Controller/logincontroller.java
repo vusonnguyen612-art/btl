@@ -61,9 +61,9 @@ public class logincontroller {
                 return true;
             }
         } catch (Exception e) {
-            showMessage("Khong the ket noi toi server: " + e.getMessage());
+            showMessage("Không thể kết nối tới máy chủ: " + e.getMessage());
         }
-        showMessage("Khong the ket noi toi server.");
+        showMessage("Không thể kết nối tới máy chủ.");
         return false;
     }
 
@@ -89,7 +89,7 @@ public class logincontroller {
         String password = read(loginPasswordField);
 
         if (username.isBlank() || password.isBlank()) {
-            showMessage("Vui long nhap day du tai khoan va mat khau.");
+            showMessage("Vui lòng nhập đầy đủ tài khoản và mật khẩu.");
             return;
         }
 
@@ -97,13 +97,13 @@ public class logincontroller {
             var userOpt = userDAO.login(username, password);
             if (userOpt.isPresent()) {
                 currentUser = userOpt.get();
-                showMessage("Dang nhap thanh cong! Xin chao " + currentUser.getUsername());
+                showMessage("Đăng nhập thành công! Xin chào " + currentUser.getUsername());
                 navigateToMain(event);
             } else {
-                showMessage("Tai khoan hoac mat khau khong dung.");
+                showMessage("Tài khoản hoặc mật khẩu không đúng.");
             }
         } catch (Exception e) {
-            showMessage("Loi dang nhap: " + e.getMessage());
+            showMessage("Lỗi đăng nhập: " + e.getMessage());
         }
     }
 
@@ -116,33 +116,33 @@ public class logincontroller {
         String confirmPassword = read(signupConfirmPasswordField);
 
         if (fullName.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
-            showMessage("Vui long nhap day du thong tin dang ky.");
+            showMessage("Vui lòng nhập đầy đủ thông tin đăng ký.");
             return;
         }
 
         if (!password.equals(confirmPassword)) {
-            showMessage("Mat khau nhap lai khong khop.");
+            showMessage("Mật khẩu nhập lại không khớp.");
             return;
         }
 
         try {
             if (userDAO.existsByUsername(fullName)) {
-                showMessage("Tai khoan da ton tai.");
+                showMessage("Tài khoản đã tồn tại.");
                 return;
             }
 
             String userId = UUID.randomUUID().toString();
             User newUser = new User(userId, fullName, password);
             newUser.setEmail(email);
-            
+
             if (userDAO.register(newUser)) {
-                showMessage("Dang ky thanh cong! Vui long dang nhap.");
+                showMessage("Đăng ký thành công! Vui lòng đăng nhập.");
                 ComeLogin(event);
             } else {
-                showMessage("Dang ky that bai.");
+                showMessage("Đăng ký thất bại.");
             }
         } catch (Exception e) {
-            showMessage("Loi dang ky: " + e.getMessage());
+            showMessage("Lỗi đăng ký: " + e.getMessage());
         }
     }
 
@@ -176,7 +176,7 @@ public class logincontroller {
         try {
             URL resource = getClass().getResource(resourcePath);
             if (resource == null) {
-                showMessage("Khong tim thay giao dien: " + resourcePath);
+                showMessage("Không tìm thấy giao diện: " + resourcePath);
                 return;
             }
 
@@ -185,7 +185,7 @@ public class logincontroller {
             stage.setScene(new Scene(root, width, height));
             stage.show();
         } catch (IOException e) {
-            showMessage("Khong the mo giao dien: " + e.getMessage());
+            showMessage("Không thể mở giao diện: " + e.getMessage());
         }
     }
 
@@ -193,15 +193,15 @@ public class logincontroller {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/Indivisual.fxml"));
             Parent root = loader.load();
-            
+
             UserController userController = loader.getController();
             userController.setUserData(currentUser, new BigDecimal("300000"));
-            
+
             Stage stage = (Stage) ((javafx.scene.Node) event.getSource()).getScene().getWindow();
             stage.setScene(new Scene(root, 900, 600));
             stage.show();
         } catch (IOException e) {
-            showMessage("Khong the mo giao dien: " + e.getMessage());
+            showMessage("Không thể mở giao diện: " + e.getMessage());
         }
     }
 }
