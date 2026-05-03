@@ -13,7 +13,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane fx:controller="Controller.UserController" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="608.0" prefWidth="823.0" style="-fx-background-color: #1E1E1D;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="608.0" prefWidth="823.0" style="-fx-background-color: #1E1E1D;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.UserController">
    <children>
       <BorderPane layoutX="1.0" layoutY="1.0" prefHeight="608.0" prefWidth="823.0">
          <left>
@@ -24,7 +24,7 @@
                <children>
                   <ImageView fitHeight="135.0" fitWidth="123.0" pickOnBounds="true" preserveRatio="true">
                      <image>
-                        <Image url="@../../image/NA.jpg" />
+                        <Image url="@../../../image/images.jpg" />
                      </image></ImageView>
                   <Label fx:id="Name" alignment="CENTER" contentDisplay="CENTER" prefHeight="62.0" prefWidth="182.0" text="Nguyễn Duy Quang" textAlignment="CENTER" textFill="#eacd8f" wrapText="true">
                      <font>
