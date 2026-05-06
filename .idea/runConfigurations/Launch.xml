@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Launch" type="Application" factoryName="Application">
+    <envs>
+      <env name="JAVA_HOME" value="$PROJECT_DIR$/../../../../Program Files/Java/jdk-25.0.2" />
+    </envs>
+    <option name="MAIN_CLASS_NAME" value="Launch" />
+    <module name="demotempt" />
+    <option name="VM_PARAMETERS" value="--module-path &quot;$MAVEN_REPOSITORY$/org/openjfx/javafx-controls/21.0.6;$MAVEN_REPOSITORY$/org/openjfx/javafx-fxml/21.0.6;$MAVEN_REPOSITORY$/org/openjfx/javafx-graphics/21.0.6;$MAVEN_REPOSITORY$/org/openjfx/javafx-base/21.0.6&quot; --add-modules javafx.controls,javafx.fxml,javafx.graphics,javafx.base --enable-native-access=ALL-UNNAMED" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
