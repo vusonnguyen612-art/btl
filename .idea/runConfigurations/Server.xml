@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="AuctionServer" type="Application" factoryName="Application">
+    <envs>
+      <env name="JAVA_HOME" value="$PROJECT_DIR$/../../../../Program Files/Java/jdk-25.0.2" />
+    </envs>
+    <option name="MAIN_CLASS_NAME" value="Network.AuctionServer" />
+    <module name="demotempt" />
+    <option name="PROGRAM_PARAMETERS" value="8989" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

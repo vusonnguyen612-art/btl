@@ -8,7 +8,9 @@ public class Bid implements Serializable {
     private String id;
     private String auctionId;
     private String bidderId;
+    private String bidderUsername;
     private double amount;
+    private String itemName;
     private LocalDateTime timestamp;
 
     public Bid(String auctionId, String bidderId, double amount) {
@@ -32,6 +34,22 @@ public class Bid implements Serializable {
 
     public String getBidderId() {
         return bidderId;
+    }
+
+    public String getBidderUsername() {
+        return bidderUsername;
+    }
+
+    public void setBidderUsername(String bidderUsername) {
+        this.bidderUsername = bidderUsername;
+    }
+
+    public String getItemName() {
+        return itemName;
+    }
+
+    public void setItemName(String itemName) {
+        this.itemName = itemName;
     }
 
     public double getAmount() {

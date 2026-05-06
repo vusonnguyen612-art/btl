@@ -14,12 +14,10 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
-import Network.AuctionClient;
+import Network.NetworkService;
 import Model.User;
-import DAO.UserDAO;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 public class logincontroller {
     @FXML
@@ -46,40 +44,13 @@ public class logincontroller {
     @FXML
     private Label messageLabel;
 
-    private static AuctionClient client;
     private static User currentUser;
-    private static final String SERVER_ADDRESS = "localhost";
-    private static final int SERVER_PORT = 8989;
-    private final UserDAO userDAO = new UserDAO();
-
-    private boolean ensureConnection() {
-        if (client == null) {
-            client = new AuctionClient(SERVER_ADDRESS, SERVER_PORT);
-        }
-        try {
-            if (client.connect()) {
-                return true;
-            }
-        } catch (Exception e) {
-            showMessage("Không thể kết nối tới máy chủ: " + e.getMessage());
-        }
-        showMessage("Không thể kết nối tới máy chủ.");
-        return false;
-    }
 
     public static User getCurrentUser() {
         return currentUser;
     }
 
-    public static AuctionClient getClient() {
-        return client;
-    }
-
     public static void logout() {
-        if (client != null) {
-            client.disconnect();
-            client = null;
-        }
         currentUser = null;
     }
 
@@ -89,21 +60,26 @@ public class logincontroller {
         String password = read(loginPasswordField);
 
         if (username.isBlank() || password.isBlank()) {
-            showMessage("Vui lòng nhập đầy đủ tài khoản và mật khẩu.");
+            showMessage("Vui long nhap day du tai khoan va mat khau.");
             return;
         }
 
+        NetworkService networkService = NetworkService.getInstance();
+        if (!networkService.isConnected()) {
+            networkService.connect();
+        }
+
         try {
-            var userOpt = userDAO.login(username, password);
-            if (userOpt.isPresent()) {
-                currentUser = userOpt.get();
-                showMessage("Đăng nhập thành công! Xin chào " + currentUser.getUsername());
+            var response = networkService.login(username, password);
+            if (response.getType() == Network.Message.Type.SUCCESS && response.getData() != null) {
+                currentUser = (User) response.getData();
+                showMessage("Dang nhap thanh cong! Xin chao " + currentUser.getUsername());
                 navigateToMain(event);
             } else {
-                showMessage("Tài khoản hoặc mật khẩu không đúng.");
+                showMessage("Tai khoan hoac mat khau khong dung.");
             }
         } catch (Exception e) {
-            showMessage("Lỗi đăng nhập: " + e.getMessage());
+            showMessage("Loi dang nhap: " + e.getMessage());
         }
     }
 
@@ -116,33 +92,30 @@ public class logincontroller {
         String confirmPassword = read(signupConfirmPasswordField);
 
         if (fullName.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
-            showMessage("Vui lòng nhập đầy đủ thông tin đăng ký.");
+            showMessage("Vui long nhap day du thong tin dang ky.");
             return;
         }
 
         if (!password.equals(confirmPassword)) {
-            showMessage("Mật khẩu nhập lại không khớp.");
+            showMessage("Mat khau nhap lai khong khop.");
             return;
         }
 
+        NetworkService networkService = NetworkService.getInstance();
+        if (!networkService.isConnected()) {
+            networkService.connect();
+        }
+
         try {
-            if (userDAO.existsByUsername(fullName)) {
-                showMessage("Tài khoản đã tồn tại.");
-                return;
-            }
-
-            String userId = UUID.randomUUID().toString();
-            User newUser = new User(userId, fullName, password);
-            newUser.setEmail(email);
-
-            if (userDAO.register(newUser)) {
-                showMessage("Đăng ký thành công! Vui lòng đăng nhập.");
+            var response = networkService.register(fullName, password);
+            if (response.getType() == Network.Message.Type.SUCCESS) {
+                showMessage("Dang ky thanh cong! Vui long dang nhap.");
                 ComeLogin(event);
             } else {
-                showMessage("Đăng ký thất bại.");
+                showMessage("Dang ky that bai: " + response.getContent());
             }
         } catch (Exception e) {
-            showMessage("Lỗi đăng ký: " + e.getMessage());
+            showMessage("Loi dang ky: " + e.getMessage());
         }
     }
 
@@ -176,7 +149,7 @@ public class logincontroller {
         try {
             URL resource = getClass().getResource(resourcePath);
             if (resource == null) {
-                showMessage("Không tìm thấy giao diện: " + resourcePath);
+                showMessage("Khong tim thay giao dien: " + resourcePath);
                 return;
             }
 
@@ -185,7 +158,7 @@ public class logincontroller {
             stage.setScene(new Scene(root, width, height));
             stage.show();
         } catch (IOException e) {
-            showMessage("Không thể mở giao diện: " + e.getMessage());
+            showMessage("Khong the mo giao dien: " + e.getMessage());
         }
     }
 
@@ -201,7 +174,7 @@ public class logincontroller {
             stage.setScene(new Scene(root, 900, 600));
             stage.show();
         } catch (IOException e) {
-            showMessage("Không thể mở giao diện: " + e.getMessage());
+            showMessage("Khong the mo giao dien: " + e.getMessage());
         }
     }
 }

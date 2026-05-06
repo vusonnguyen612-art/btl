@@ -1,12 +1,13 @@
 package DAO;
 
 import Model.User;
+import Exception.AuthenticationException;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.Optional;
 
 public class UserDAO {
-    
+
     public boolean register(User user) {
         String sql = "INSERT INTO users (id, username, password, email, is_seller, is_bidder) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -26,7 +27,7 @@ public class UserDAO {
             return false;
         }
     }
-    
+
     public Optional<User> login(String username, String password) {
         String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -43,7 +44,15 @@ public class UserDAO {
         }
         return Optional.empty();
     }
-    
+
+    public User authenticate(String username, String password) throws AuthenticationException {
+        Optional<User> userOpt = login(username, password);
+        if (userOpt.isPresent()) {
+            return userOpt.get();
+        }
+        throw new AuthenticationException("Invalid username or password", username);
+    }
+
     public Optional<User> findById(String id) {
         String sql = "SELECT * FROM users WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -59,7 +68,7 @@ public class UserDAO {
         }
         return Optional.empty();
     }
-    
+
     public boolean existsByUsername(String username) {
         String sql = "SELECT 1 FROM users WHERE username = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -73,7 +82,7 @@ public class UserDAO {
             return false;
         }
     }
-    
+
     public boolean changePassword(String username, String oldPassword, String newPassword) {
         String sql = "UPDATE users SET password = ? WHERE username = ? AND password = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -88,18 +97,18 @@ public class UserDAO {
             return false;
         }
     }
-    
+
     private User mapResultSetToUser(ResultSet rs) throws SQLException {
         User user = new User(
-            rs.getString("id"),
-            rs.getString("username"),
-            rs.getString("password")
+                rs.getString("id"),
+                rs.getString("username"),
+                rs.getString("password")
         );
         user.setEmail(rs.getString("email"));
         user.setBalance(rs.getBigDecimal("balance"));
         return user;
     }
-    
+
     public boolean updateBalance(String username, BigDecimal newBalance) {
         String sql = "UPDATE users SET balance = ? WHERE username = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -111,5 +120,21 @@ public class UserDAO {
             e.printStackTrace();
             return false;
         }
+    }
+
+    public BigDecimal getBalance(String userId) {
+        String sql = "SELECT balance FROM users WHERE id = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBigDecimal("balance");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return BigDecimal.ZERO;
     }
 }
