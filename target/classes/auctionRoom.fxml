@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.*?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.text.*?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="600.0" prefWidth="900.0" style="-fx-background-color: #1E1E1D;" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.AuctionRoomController">
+<AnchorPane prefHeight="600.0" prefWidth="900.0" style="-fx-background-color: #1E1E1D;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.AuctionRoomController">
 
     <children>
         <BorderPane prefHeight="600.0" prefWidth="900.0">
@@ -17,7 +24,7 @@
                     <children>
                         <Label style="-fx-text-fill: #eacd8f; -fx-font-size: 24px; -fx-font-weight: bold;" text="PHÒNG ĐẤU GIÁ" />
                         <Region HBox.hgrow="ALWAYS" />
-                        <Label style="-fx-text-fill: #eacd8f; -fx-font-size: 14px;" text="Số dư :" />
+                        <Label style="-fx-text-fill: #eacd8f; -fx-font-size: 14px;" text="Số dư:" />
                         <Label fx:id="userBalanceLabel" style="-fx-text-fill: #4CAF50; -fx-font-size: 16px; -fx-font-weight: bold;" text="300,000 $" />
                         <Button onAction="#backToList" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 20;" text="Quay lại">
                             <font>
@@ -120,7 +127,7 @@
                                     </children>
                                 </HBox>
 
-                                <Label style="-fx-text-fill: #eacd8f; -fx-font-size: 16px; -fx-font-weight: bold;" text="Dat gia">
+                                <Label style="-fx-text-fill: #eacd8f; -fx-font-size: 16px; -fx-font-weight: bold;" text="Đặt giá">
                                     <VBox.margin>
                                         <Insets bottom="10.0" />
                                     </VBox.margin>
@@ -133,15 +140,15 @@
                                                 <Font size="16.0" />
                                             </font>
                                         </TextField>
-                                        <Button onAction="#placeBid" prefHeight="45.0" prefWidth="120.0" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-font-size: 16px;" text="DAT GIA" />
-                                        <Button onAction="#quickBid" prefHeight="45.0" prefWidth="100.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-font-size: 14px;" text="GIA NHANH" />
+                                        <Button onAction="#placeBid" prefHeight="45.0" prefWidth="120.0" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-font-size: 16px;" text="ĐẶT GIÁ" />
+                                        <Button onAction="#quickBid" prefHeight="45.0" prefWidth="100.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-font-size: 14px;" text="ĐẶT GIÁ NHANH" />
                                     </children>
                                     <VBox.margin>
                                         <Insets bottom="20.0" />
                                     </VBox.margin>
                                 </HBox>
 
-                                <Label style="-fx-text-fill: #eacd8f; -fx-font-size: 16px; -fx-font-weight: bold;" text="Lich su dat gia">
+                                <Label style="-fx-text-fill: #eacd8f; -fx-font-size: 16px; -fx-font-weight: bold;" text="Lịch sử đặt giá">
                                     <VBox.margin>
                                         <Insets bottom="10.0" />
                                     </VBox.margin>
