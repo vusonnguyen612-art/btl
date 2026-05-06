@@ -1,682 +1,365 @@
-# HỆ THỐNG ĐẤU GIÁ TRỰC TUYẾN
+# Hệ Thống Đấu Giá Trực Tuyến (Online Auction System)
 
-Hệ thống đấu giá trực tuyến Java với Client-Server architecture, áp dụng các Design Patterns (Singleton, Factory, Observer) và xử lý đồng thời (Concurrency).
+## Luồng Chạy Chi Tiết
 
-## CẤU TRÚC PROJECT
-
+### 1. Khởi động ứng dụng
 ```
-btl/
-├── src/
-│   ├── Exception/           # Custom Exceptions
-│   ├── Model/               # Data Models
-│   ├── Factory/             # Factory Pattern
-│   ├── Observer/            # Observer Pattern
-│   ├── Service/             # Business Logic (Singleton)
-│   └── Network/             # Socket Communication
-├── test/                    # JUnit Tests
-└── lib/                     # JUnit Library
+Launch.main() → Class.forName("LoginApp") → LoginApp.main() → launch(args)
 ```
 
-## SƠ ĐỒ LỚP CHI TIẾT
-
-### 1. EXCEPTION PACKAGE
-
+### 2. Khởi tạo kết nối mạng
 ```
-┌────────────────────────────────────────────────────────────────────────────────────┐
-│                    Exception Package                                               │
-├────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                    │
-│  ┌─────────────────────────┐  ┌─────────────────────────┐  ┌─────────────────────┐ │
-│  │ InvalidBidException     │  │ AuctionClosedException  │  │ AuthenticationException│
-│  ├─────────────────────────┤  ├─────────────────────────┤  ├─────────────────────┤ │
-│  │ - bidAmount: double     │  │ - auctionId: String    │  │ - username: String   │ │
-│  │ - currentPrice: double │  └─────────────────────────┘  └─────────────────────┘ │
-│  └─────────────────────────┘                                                         │
-│                                                                                    │
-│  ┌─────────────────────────┐  ┌─────────────────────────┐                           │
-│  │ ItemNotFoundException   │  │ UnauthorizedException   │                           │
-│  ├─────────────────────────┤  ├─────────────────────────┤                           │
-│  │ - itemId: String       │  │ - userId: String       │                           │
-│  └─────────────────────────┘  │ - action: String       │                           │
-│                               └─────────────────────────┘                           │
-└────────────────────────────────────────────────────────────────────────────────────┘
+LoginApp.start() → NetworkService.getInstance() → connect() 
+→ Socket("0.tcp.ap.ngrok.io", 20782)
+→ Khởi tạo ObjectOutputStream/ObjectInputStream
 ```
 
-### 2. MODEL PACKAGE - USER HIERARCHY
-
+### 3. Đăng nhập (Login Flow)
 ```
-┌────────────────────────────────────────────────────────────────────────────────────┐
-│                              USER HIERARCHY                                         │
-└────────────────────────────────────────────────────────────────────────────────────┘
-
-                         ┌───────────────────────────────────────┐
-                         │     <<abstract>> User                 │
-                         ├───────────────────────────────────────┤
-                         │ # id: String                         │
-                         │ # username: String                   │
-                         │ # password: String                   │
-                         │ # email: String                      │
-                         ├───────────────────────────────────────┤
-                         │ + getRole(): String {abstract}        │
-                         │ + isAdmin(): boolean                 │
-                         │ + isSeller(): boolean                │
-                         │ + isBidder(): boolean                │
-                         └───────────────────────────────────────┘
-                                        ▲
-                                        │ extends
-              ┌─────────────────────────┼─────────────────────────┐
-              │                         │                         │
-              ▼                         ▼                         ▼
-┌─────────────────────────┐  ┌─────────────────────────┐  ┌─────────────────────────┐
-│        Bidder           │  │        Seller          │  │         Admin           │
-├─────────────────────────┤  ├─────────────────────────┤  ├─────────────────────────┤
-│ - balance: double       │  │ - storeName: String    │  │ - adminLevel: String    │
-├─────────────────────────┤  ├─────────────────────────┤  ├─────────────────────────┤
-│ + getBalance()          │  │ + getStoreName()        │  │ + getAdminLevel()       │
-│ + setBalance()         │  │ + setStoreName()        │  │ + setAdminLevel()       │
-│ + addBalance()         │  │                         │  │                         │
-│ + isBidder(): true     │  │ + isSeller(): true     │  │ + isAdmin(): true      │
-│ + getRole(): "BIDDER"  │  │ + getRole(): "SELLER"  │  │ + getRole(): "ADMIN"   │
-└─────────────────────────┘  └─────────────────────────┘  └─────────────────────────┘
+User nhập username/password → logincontroller → NetworkService.login()
+→ Tạo Message(Type.LOGIN, data=username, content=password)
+→ Gửi qua socket → AuctionServer.ClientHandler.processMessage()
+→ handleLogin() → UserDAO.authenticate()
+→ Truy vấn MySQL: SELECT * FROM users WHERE username=? AND password=?
+→ Trả về Message(SUCCESS, data=User) hoặc Message(ERROR)
 ```
 
-### 3. MODEL PACKAGE - ITEM HIERARCHY
-
+### 4. Đăng ký (Register Flow)
 ```
-┌────────────────────────────────────────────────────────────────────────────────────┐
-│                              ITEM HIERARCHY                                        │
-└────────────────────────────────────────────────────────────────────────────────────┘
-
-                         ┌───────────────────────────────────────┐
-                         │     <<abstract>> Item                 │
-                         ├───────────────────────────────────────┤
-                         │ # id: String                         │
-                         │ # name: String                       │
-                         │ # description: String               │
-                         │ # startPrice: double                 │
-                         │ # sellerId: String                   │
-                         │ # category: String                   │
-                         │ - imagePath: String                  │
-                         ├───────────────────────────────────────┤
-                         │ + getSpecificInfo(): String {abstract}│
-                         │ + getters/setters...                  │
-                         └───────────────────────────────────────┘
-                                        ▲
-                                        │ extends
-    ┌────────────────────────────────────┼────────────────────────────────────┐
-    │                                    │                                    │
-    ▼                                    ▼                                    ▼
-┌────────────────────────────────┐ ┌────────────────────────────────┐ ┌────────────────────────────┐
-│         Electronics            │ │            Art                  │ │          Vehicle            │
-├────────────────────────────────┤ ├────────────────────────────────┤ ├────────────────────────────┤
-│ - brand: String               │ │ - artist: String               │ │ - brand: String            │
-│ - warrantyMonths: int        │ │ - yearCreated: int            │ │ - model: String            │
-│ - model: String              │ │ - medium: String              │ │ - year: int                │
-│ - condition: String          │ │ - style: String               │ │ - mileage: int             │
-├────────────────────────────────┤ │ - isAuthenticated: boolean    │ │ - fuelType: String         │
-│ + getSpecificInfo(): String   │ ├────────────────────────────────┤ │ - transmission: String      │
-│   "Brand: Apple, Model: M3,  │ │ + getSpecificInfo(): String   │ │ - color: String            │
-│   Warranty: 24 months,       │ │   "Artist: Van Gogh, Year:    │ │ - condition: String        │
-│   Condition: New"            │ │   1889, Medium: Oil..."       │ ├────────────────────────────┤
-└────────────────────────────────┘ └────────────────────────────────┘ │ + getSpecificInfo(): String  │
-                                                                      └────────────────────────────┘
+User nhập username/password → NetworkService.register()
+→ UserFactory.getPasswordError() kiểm tra password
+→ UserFactory.createUser() → UserDAO.register()
+→ INSERT INTO users → Trả về Message(SUCCESS)
 ```
 
-### 4. AUCTION SESSION - STATE DIAGRAM
-
+### 5. Tạo Item (Seller)
 ```
-┌────────────────────────────────────────────────────────────────────────────────────┐
-│                         AUCTION SESSION & STATUS FLOW                               │
-└────────────────────────────────────────────────────────────────────────────────────┘
-
-                         ┌───────────────────────────────────────┐
-                         │         AuctionSession                │
-                         ├───────────────────────────────────────┤
-                         │ FIELDS:                              │
-                         │ - id: String                         │
-                         │ - item: Item                          │
-                         │ - sellerId: String                    │
-                         │ - status: Status {enum}               │
-                         │ - currentPrice: double                │
-                         │ - startPrice: double                 │
-                         │ - highestBidderId: String            │
-                         │ - winnerId: String                   │
-                         │ - startTime: LocalDateTime          │
-                         │ - endTime: LocalDateTime             │
-                         │ - durationMinutes: long              │
-                         │ - bidHistory: List<Bid>              │
-                         │ - minIncrement: double               │
-                         │                                          │
-                         │ TRANSIENT (NOT SERIALIZED):           │
-                         │ - observers: List<AuctionObserver>   │
-                         │ - scheduler: ScheduledExecutor       │
-                         │ - autoCloseTask: ScheduledFuture     │
-                         ├───────────────────────────────────────┤
-                         │ METHODS:                             │
-                         │ + placeBid(bidderId, amount)         │
-                         │ + start()                            │
-                         │ + finish()                            │
-                         │ + cancel(reason)                     │
-                         │ + processPayment(winnerId, amount)   │
-                         │ + addObserver(observer)              │
-                         │ + removeObserver(observer)            │
-                         │ + isOpen/isRunning/isFinished...     │
-                         └───────────────────────────────────────┘
-
-
-┌────────────────────────────────────────────────────────────────────────────────────┐
-│                              STATUS TRANSITIONS                                    │
-└────────────────────────────────────────────────────────────────────────────────────┘
-
-        ┌────────────────────────────────────────────────────────────────────────┐
-        │                                                                   │
-        │                              ┌─────┐                                  │
-        │                              │OPEN │                                  │
-        │                              └──┬──┘                                  │
-        │                                 │                                     │
-        │                                 │ start()                            │
-        │                                 ▼                                     │
-        │                         ┌─────────────┐                              │
-        │                         │  RUNNING    │                              │
-        │                         └──────┬──────┘                              │
-        │                                │                                     │
-        │              ┌────────────────┼────────────────┐                    │
-        │              │                 │                │                    │
-        │              │    Timer Expires│     cancel()   │                    │
-        │              ▼                 ▼                ▼                    │
-        │        ┌───────────┐    ┌──────────┐    ┌───────────┐              │
-        │        │ FINISHED  │    │ FINISHED │    │ CANCELED  │              │
-        │        └─────┬─────┘    └──────────┘    └───────────┘              │
-        │              │                                                        │
-        │              │ processPayment()                                      │
-        │              ▼                                                        │
-        │        ┌──────────┐                                                 │
-        │        │   PAID   │                                                 │
-        │        └──────────┘                                                 │
-        │                                                                      │
-        └──────────────────────────────────────────────────────────────────────┘
-
-
-┌────────────────────────────────────────────────────────────────────────────────────┐
-│                              BID CLASS                                            │
-└────────────────────────────────────────────────────────────────────────────────────┘
-
-    ┌───────────────────────────────────────┐
-    │              Bid                       │
-    ├───────────────────────────────────────┤
-    │ - id: String                         │
-    │ - auctionId: String                   │
-    │ - bidderId: String                    │
-    │ - amount: double                      │
-    │ - timestamp: LocalDateTime           │
-    └───────────────────────────────────────┘
+Seller tạo item → ItemFactory.createItem(category, ...)
+→ Tạo Electronics/Art/Vehicle → NetworkService.createItem(item)
+→ Message(Type.CREATE_ITEM, data=Item) → Server → ItemDAO.save()
+→ INSERT INTO items
 ```
 
-### 5. DESIGN PATTERNS
-
+### 6. Tạo phiên đấu giá (Create Auction)
 ```
-┌────────────────────────────────────────────────────────────────────────────────────┐
-│                                 DESIGN PATTERNS                                     │
-└────────────────────────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────┐
-│  1. SINGLETON PATTERN                    │
-│     AuctionManager                        │
-├──────────────────────────────────────────┤
-│                                          │
-│  ┌────────────────────────────────────┐  │
-│  │ AuctionManager                      │  │
-│  │ : <<Singleton>>                    │  │
-│  ├────────────────────────────────────┤  │
-│  │ - instance: AuctionManager {static}│  │
-│  │ - users: Map<String, User>          │  │
-│  │ - items: Map<String, Item>          │  │
-│  │ - auctions: Map<String, AuctionSession>│
-│  │ - globalObservers: List<Observer>  │  │
-│  │ - lock: ReentrantReadWriteLock      │  │
-│  ├────────────────────────────────────┤  │
-│  │ + getInstance() {static, sync}    │──┼──► Returns singleton instance
-│  │ + resetInstance() {static, sync}  │  │
-│  │ + createAuction(itemId, duration)   │  │
-│  │ + placeBid(auctionId, bidderId, $) │  │
-│  │ + authenticate(username, password) │  │
-│  │ + saveData() / loadData()         │  │
-│  └────────────────────────────────────┘  │
-│                                          │
-└──────────────────────────────────────────┘
-
-┌──────────────────────────────────────────┐
-│  2. FACTORY METHOD PATTERN               │
-│     ItemFactory & UserFactory             │
-├──────────────────────────────────────────┤
-│                                          │
-│  ┌────────────────────────────────────┐  │
-│  │ ItemFactory                        │  │
-│  ├────────────────────────────────────┤  │
-│  │ + createElectronics(...) → Item   │  │
-│  │ + createArt(...) → Item           │  │
-│  │ + createVehicle(...) → Item        │  │
-│  │ + createItem(category, ...) → Item │──┼──► Creates by category
-│  └────────────────────────────────────┘  │
-│                                          │
-│  ┌────────────────────────────────────┐  │
-│  │ UserFactory                        │  │
-│  ├────────────────────────────────────┤  │
-│  │ + createBidder(username, pass)     │  │
-│  │ + createSeller(username, pass)     │  │
-│  │ + createAdmin(username, pass)       │  │
-│  │ + createUser(role, ...) → User     │──┼──► Creates by role
-│  └────────────────────────────────────┘  │
-│                                          │
-└──────────────────────────────────────────┘
-
-┌──────────────────────────────────────────┐
-│  3. OBSERVER PATTERN                      │
-│     AuctionObserver                       │
-├──────────────────────────────────────────┤
-│                                          │
-│        ┌───────────────────┐             │
-│        │ AuctionObserver   │◄────┐       │
-│        │  <<interface>>    │     │       │
-│        ├───────────────────┤     │       │
-│        │+onBidPlaced()     │     │       │
-│        │+onAuctionStarted()│     │       │
-│        │+onAuctionFinished │     │       │
-│        │+onAuctionCanceled │     │       │
-│        │+onStatusChanged() │     │       │
-│        └───────────────────┘     │       │
-│               ▲                  │       │
-│               │ implements        │       │
-│        ┌──────┴──────┐          │       │
-│        │             │          │       │
-│        ▼             ▼          │       │
-│  ┌───────────┐  ┌──────────┐    │       │
-│  │ServerObser│  │UIControl │    │       │
-│  │ (Prints)  │  │(Updates) │────┘       │
-│  └───────────┘  └──────────┘            │
-│                                          │
-│  AuctionSession.notify*() → Observer     │
-│                                          │
-└──────────────────────────────────────────┘
+Seller chọn item → NetworkService.createAuction(itemId, duration)
+→ Message(Type.CREATE_AUCTION) → Server:
+  → ItemDAO.findById(itemId) → lấy Item
+  → Tạo AuctionSession(id, item, sellerId, startPrice, duration)
+  → AuctionDAO.saveAuction() → INSERT INTO auction_sessions
 ```
 
-### 6. NETWORK LAYER
-
+### 7. Bắt đầu đấu giá (Start Auction)
 ```
-┌────────────────────────────────────────────────────────────────────────────────────┐
-│                                 NETWORK LAYER                                      │
-└────────────────────────────────────────────────────────────────────────────────────┘
-
-   ┌─────────────────────────────────┐        ┌─────────────────────────────────┐
-   │         AuctionClient           │        │         AuctionServer          │
-   ├─────────────────────────────────┤        ├─────────────────────────────────┤
-   │ - Socket socket                 │◄──────►│ - ServerSocket serverSocket    │
-   │ - ObjectOutputStream output    │        │ - AuctionManager manager       │
-   │ - ObjectInputStream input      │        ├─────────────────────────────────┤
-   ├─────────────────────────────────┤        │ + start()                      │
-   │ + connect()                     │        │ + stop()                       │
-   │ + disconnect()                  │        │                                 │
-   │ + sendMessage(msg)             │        │ [ClientHandler Thread]         │
-   │ + login/user/pass              │        │ + processMessage(msg)          │
-   │ + register(role/user/pass)      │        │ + handleLogin()                │
-   │ + getAuctions()                │        │ + handlePlaceBid()             │
-   │ + getAuction(id)               │        │ + handleCreateAuction()        │
-   │ + createAuction(itemId, mins)   │        │ + handleFinishAuction()        │
-   │ + startAuction(id)             │        │ + ...                          │
-   │ + placeBid(auctionId, amount) │        │                                 │
-   │ + finishAuction(id)            │        │ [ServerAuctionObserver]        │
-   │ + ...                          │        │ + onBidPlaced() → log         │
-   └─────────────────────────────────┘        └─────────────────────────────────┘
-
-   ┌────────────────────────────────────────────────────────────────────────────┐
-   │                              Message (Serializable)                         │
-   ├────────────────────────────────────────────────────────────────────────────┤
-   │  Type Enum:                                                                 │
-   │  LOGIN, LOGOUT, REGISTER, GET_AUCTIONS, GET_AUCTION, CREATE_AUCTION,      │
-   │  START_AUCTION, PLACE_BID, FINISH_AUCTION, CANCEL_AUCTION,                │
-   │  GET_ITEMS, CREATE_ITEM, UPDATE_ITEM, DELETE_ITEM, GET_USERS,               │
-   │  NOTIFICATION, ERROR, SUCCESS                                               │
-   ├────────────────────────────────────────────────────────────────────────────┤
-   │  Fields:                                                                   │
-   │  - type: Type                        - auctionId: String                   │
-   │  - senderId: String                  - itemId: String                      │
-   │  - content: String                   - data: Object                        │
-   │  - timestamp: long                                                       │
-   └────────────────────────────────────────────────────────────────────────────┘
+Seller start → NetworkService.startAuction(auctionId)
+→ Server: AuctionDAO.startAuction()
+→ UPDATE status='RUNNING', start_time=NOW(), end_time=NOW()+duration
+→ AuctionSession.start() → notifyAuctionStarted() → scheduleAutoClose()
 ```
 
-## CÁCH HOẠT ĐỘNG CHI TIẾT
-
-### 1. QUY TRÌNH ĐẤU GIÁ
-
+### 8. Đặt giá (Place Bid)
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         VÒNG ĐỜI PHIÊN ĐẤU GIÁ                                  │
-└─────────────────────────────────────────────────────────────────────────────────┘
-
-   SELLER                                    SYSTEM                           BIDDER
-     │                                         │                                │
-     │  1. Tạo Item (Electronics/Art/Vehicle)  │                                │
-     │────────────────────────────────────────►│                                │
-     │                                         │                                │
-     │  2. Tạo AuctionSession (OPEN)          │                                │
-     │────────────────────────────────────────►│                                │
-     │                                         │                                │
-     │  3. Start Auction (OPEN → RUNNING)     │                                │
-     │────────────────────────────────────────►│                                │
-     │                                         │                                │
-     │                                         │◄─────────── 4. Place Bid ─────│
-     │                                         │            (validate)          │
-     │                                         │◄─────────── 5. Place Bid ─────│
-     │                                         │            (validate)          │
-     │                                         │◄─────────── 6. Place Bid ─────│
-     │                                         │            (validate)          │
-     │                                         │                                │
-     │                                         │◄─── 7. Timer Expires ─────────│
-     │                                         │     (AUTO: RUNNING → FINISHED)│
-     │                                         │                                │
-     │◄──────────── 8. Winner/Price ───────────│                                │
-     │                                         │                                │
-     │  9. Process Payment (FINISHED → PAID)  │                                │
-     │────────────────────────────────────────►│                                │
-     │                                         │                                │
-     ▼                                         ▼                                ▼
+Bidder đặt giá → NetworkService.placeBid(auctionId, amount)
+→ Message(Type.PLACE_BID) → Server:
+  → AuctionDAO.placeBid() → INSERT INTO bids
+  → UPDATE auction_sessions SET current_price=?, highest_bidder_id=?
+  → AuctionSession.placeBid() → validate → notifyBidPlaced()
 ```
 
-### 2. XỬ LÝ ĐẶT GIÁ (Place Bid)
-
+### 9. Kết thúc đấu giá (Auto/Manual)
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         PLACE BID SEQUENCE                                      │
-└─────────────────────────────────────────────────────────────────────────────────┘
+Hết thời gian: scheduleAutoClose() → AuctionSession.finish()
+→ UPDATE status='FINISHED', winner_id=highest_bidder_id
+→ notifyAuctionFinished(winnerId, finalPrice)
 
-   Bidder                      AuctionSession                    AuctionObserver
-      │                              │                                    │
-      │ placeBid(bidderId, amount)   │                                    │
-      │─────────────────────────────►│                                    │
-      │                              │                                    │
-      │                              │ 1. Kiểm tra status == RUNNING?     │
-      │                              │    ❌ Không → AuctionClosedException│
-      │                              │                                    │
-      │                              │ 2. Kiểm tra thời gian?             │
-      │                              │    ❌ Hết hạn → AuctionClosedException│
-      │                              │                                    │
-      │                              │ 3. Kiểm tra amount > currentPrice? │
-      │                              │    ❌ Không → InvalidBidException  │
-      │                              │                                    │
-      │                              │ 4. Kiểm tra amount >= minIncrement │
-      │                              │    ❌ Không → InvalidBidException  │
-      │                              │                                    │
-      │                              │ 5. ✅ Hợp lệ:                      │
-      │                              │    - currentPrice = amount         │
-      │                              │    - highestBidderId = bidderId    │
-      │                              │    - Thêm vào bidHistory          │
-      │                              │                                    │
-      │                              │ 6. notifyBidPlaced()              │
-      │                              │────────────────────────────────────►│
-      │                              │                                    │
-      │  ✅ "Bid placed successfully" │                                    │
-      │◄─────────────────────────────│                                    │
-      │                              │                                    │
-      ▼                              ▼                                    ▼
+Hoặc Manual: NetworkService.finishAuction() → Server finishAuction()
 ```
 
-### 3. CONCURRENCY (XỬ LÝ ĐỒNG THỜI)
+---
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                    CONCURRENCY VỚI REENTRANTREADWRITELOCK                       │
-└─────────────────────────────────────────────────────────────────────────────────┘
+## Sơ Đồ Lớp (Class Diagram)
 
-                    AuctionManager
-                    ┌─────────────────────────────────────────┐
-                    │  ReentrantReadWriteLock                 │
-                    │  ┌───────────────────────────────────┐  │
-                    │  │         LOCK HIERARCHY             │  │
-                    │  │                                   │  │
-                    │  │  WRITE LOCK (exclusive)           │  │
-                    │  │  ┌─────────────────────────────┐  │  │
-                    │  │  │ • placeBid()               │  │  │
-                    │  │  │ • createAuction()          │  │  │
-                    │  │  │ • startAuction()           │  │  │
-                    │  │  │ • finishAuction()          │  │  │
-                    │  │  │ • addUser()                │  │  │
-                    │  │  │ • addItem()                │  │  │
-                    │  │  │ • updateItem()             │  │  │
-                    │  │  │ • deleteItem()            │  │  │
-                    │  │  └─────────────────────────────┘  │  │
-                    │  │              OR                  │  │
-                    │  │  READ LOCK (shared)              │  │
-                    │  │  ┌─────────────────────────────┐  │  │
-                    │  │  │ • getAuction()             │  │  │
-                    │  │  │ • getItem()               │  │  │
-                    │  │  │ • getAllItems()           │  │  │
-                    │  │  │ • getAllAuctions()        │  │  │
-                    │  │  │ • authenticate()          │  │  │
-                    │  │  └─────────────────────────────┘  │  │
-                    │  └───────────────────────────────────┘  │
-                    └─────────────────────────────────────────┘
+### Tổng Quan Client-Server
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           CLIENT-SERVER AUCTION SYSTEM                     │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-    Thread A (placeBid)                    Thread B (placeBid)
-         │                                      │
-         │ writeLock.lock()                     │
-         │◄────────────────────────────────────►│ ❌ BLOCKED
-         │                                      │
-         │ [Critical Section]                    │
-         │ - Update currentPrice                 │
-         │ - Add to bidHistory                  │
-         │                                      │
-         │ writeLock.unlock()                   │
-         │──────────────────────────────────────►│ writeLock.lock()
-         │                                      │ [Critical Section]
-         │                                      │ ...
-```
-
-### 4. REALTIME NOTIFICATION (OBSERVER PATTERN)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                    OBSERVER PATTERN - REALTIME                                  │
-└─────────────────────────────────────────────────────────────────────────────────┘
-
-        ┌─────────────────┐
-        │ AuctionSession  │
-        │                 │
-        │ List<Observer> │──────┐
-        └─────────────────┘       │
-               │                  │ notify
-               │                  ▼
-               │         ┌───────────────────┐
-               │         │ AuctionObserver    │
-               │         │  <<interface>>    │
-               │         ├───────────────────┤
-               │         │ + onBidPlaced()    │
-               │         │ + onAuctionStarted │
-               │         │ + onAuctionFinished│
-               │         │ + onAuctionCanceled│
-               │         └───────────────────┘
-               │                  ▲
-               │                  │ implements
-               │         ┌────────┴────────┐
-               │         │                 │
-               │         ▼                 ▼
-    ┌──────────┴───┐           ┌───────────┴──────┐
-    │ServerObserver│           │  UI Controller  │
-    │ (Print logs) │           │ (Update view)   │
-    └──────────────┘           └──────────────────┘
-
-
-    FLOW: Khi có bid mới
-    ─────────────────────
-    1. Bidder gọi placeBid()
-    2. AuctionSession.placeBid() ✅ Thành công
-    3. notifyBidPlaced() được gọi
-    4. Duyệt observers:
-       - ServerObserver: In log "New bid: 1100.0"
-       - UI Controller: Cập nhật giao diện real-time
+┌───────────────────┐           ┌──────────────────────┐
+│     Launch        │──────────>│      LoginApp        │
+│   (main entry)    │  invokes  │   extends Application│
+└───────────────────┘           └──────────┬───────────┘
+                                          │ uses
+                                          ▼
+                        ┌─────────────────────────────────┐
+                        │    NetworkService (Singleton)   │
+                        │ ───────────────────────────── │
+                        │ - socket: Socket               │
+                        │ - output: ObjectOutputStream   │
+                        │ - input: ObjectInputStream     │
+                        │ - currentUser: User            │
+                        │ ───────────────────────────── │
+                        │ + connect(): boolean           │
+                        │ + disconnect()                 │
+                        │ + sendMessage(msg): Message    │
+                        │ + login(u,p): Message          │
+                        │ + register(u,p): Message       │
+                        │ + getAuctions(): Message       │
+                        │ + placeBid(auctionId,amt):Msg  │
+                        │ + createItem(item): Message    │
+                        └─────────────────────────────────┘
+                                          │ sends/receives
+                                          ▼
+                        ┌─────────────────────────────────┐
+                        │         Message (Serializable)  │
+                        │ ───────────────────────────── │
+                        │ + Type: enum {LOGIN,REGISTER,  │
+                        │   GET_AUCTIONS, CREATE_AUCTION,│
+                        │   PLACE_BID, SUCCESS, ERROR...}│
+                        │ - type: Type                   │
+                        │ - senderId: String             │
+                        │ - auctionId: String            │
+                        │ - itemId: String               │
+                        │ - content: String              │
+                        │ - data: Object                 │
+                        │ - timestamp: long              │
+                        └─────────────────────────────────┘
 ```
 
-### 5. SOCKET COMMUNICATION
+### Server Side
+```text
+═══════════════════════════════════════════════════════════════════════════════
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                    CLIENT-SERVER COMMUNICATION                                    │
-└─────────────────────────────────────────────────────────────────────────────────┘
-
-   CLIENT                                          SERVER
-   ┌──────────┐                                   ┌──────────────────┐
-   │ Auction  │                                   │ AuctionServer    │
-   │ Client   │                                   │                  │
-   └────┬─────┘                                   └────────┬─────────┘
-        │                                                  │
-        │  1. CONNECT (Socket)                            │
-        │────────────────────────────────────────────────►│
-        │                                                  │
-        │  2. SEND Message (ObjectOutputStream)           │
-        │  ┌────────────────────────────────────┐         │
-        │  │ Message {                           │         │
-        │  │   type: PLACE_BID,                  │         │
-        │  │   auctionId: "AUC00001",            │         │
-        │  │   data: 1500.0                       │         │
-        │  │ }                                   │         │
-        │  └────────────────────────────────────┘         │
-        │────────────────────────────────────────────────►│
-        │                                                  │
-        │                          ┌──────────────────────┴────┐
-        │                          │ ClientHandler.processMsg() │
-        │                          │  • validate permissions    │
-        │                          │  • call AuctionManager     │
-        │                          │  • handle exceptions       │
-        │                          └──────────────────────┬─────┘
-        │                                                  │
-        │  3. RECEIVE Response (ObjectInputStream)         │
-        │  ┌────────────────────────────────────┐          │
-        │  │ Message {                           │          │
-        │  │   type: SUCCESS,                    │          │
-        │  │   content: "Bid placed: 1500.0"    │          │
-        │  │ }                                   │          │
-        │  └────────────────────────────────────┘          │
-        │◄─────────────────────────────────────────────────│
-        │                                                  │
-        │  4. DISCONNECT                                   │
-        │────────────────────────────────────────────────►│
-        ▼                                                  ▼
+                        SERVER SIDE
+┌────────────────────────────────────────────────────────────────────────────┐
+│                         AuctionServer                                     │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ - serverSocket: ServerSocket                                             │
+│ - port: int                                                              │
+│ - userDAO: UserDAO                                                       │
+│ - itemDAO: ItemDAO                                                       │
+│ - auctionDAO: AuctionDAO                                                 │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ + start()                                                                 │
+│ + stop()                                                                  │
+│                                                                           │
+│   Inner Class: ClientHandler extends Thread                              │
+│   ───────────────────────────────────────────────────────────────────────│
+│   - socket: Socket                                                       │
+│   - currentUser: User                                                    │
+│   + run()                                                                │
+│   - processMessage(msg): Message                                         │
+│     ├─ handleLogin() → UserDAO.authenticate()                            │
+│     ├─ handleRegister() → UserFactory + UserDAO.register()               │
+│     ├─ handleCreateItem() → ItemFactory + ItemDAO.save()                 │
+│     ├─ handleCreateAuction() → AuctionSession + AuctionDAO               │
+│     ├─ handlePlaceBid() → AuctionDAO.placeBid()                          │
+│     └─ handleGetAuctions() → AuctionDAO.findAllAuctions()                │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 6. SERIALIZATION (LƯU TRỮ DỮ LIỆU)
+### Model Layer
+```text
+═══════════════════════════════════════════════════════════════════════════════
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                    PERSISTENCE VỚI SERIALIZATION                                │
-└─────────────────────────────────────────────────────────────────────────────────┘
+MODEL LAYER (Entity Classes)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         User (Serializable)                                │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ - id: String                    # Base class for all users                │
+│ - username: String                                                       │
+│ - password: String                                                       │
+│ - email: String                                                          │
+│ - isSeller: boolean                                                      │
+│ - isBidder: boolean                                                      │
+│ - balance: BigDecimal                                                    │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ + getRole(): String          + isSeller(): boolean                       │
+│ + isBidder(): boolean         + getBalance(): BigDecimal                 │
+└──────────────┬──────────────────────────────────┬─────────────────────────┘
+               │ extends                           │ extends
+               ▼                                  ▼
+┌──────────────────────────┐        ┌──────────────────────────┐
+│       Bidder             │        │        Seller            │
+│  (isBidder=true)         │        │   (isSeller=true)        │
+│  + getRole(): "BIDDER"   │        │   + getRole(): "SELLER"  │
+│  + addBalance(amount)     │        │   - storeName: String    │
+└──────────────────────────┘        └──────────────────────────┘
 
-    AuctionManager (Singleton) ◄─────── Serializable
-          │                                    │
-          │                                    │ serialVersionUID = 1L
-          │                                    │
-          │    ┌───────────────────────────────┤
-          │    │ FIELDS ĐƯỢC LƯU:            │
-          │    │ • users (Map)                │
-          │    │ • items (Map)                │
-          │    │ • auctions (Map)             │
-          │    │ • globalObservers (List)     │
-          │    │ • auctionCounter (int)       │
-          │    │                               │
-          │    │ FIELDS KHÔNG LƯU:            │
-          │    │ • lock (transient)           │
-          │    │ • scheduler (transient)      │
-          │    │ • observers (transient)       │
-          │    │ • autoCloseTask (transient)  │
-          │    └───────────────────────────────┘
-          │                                    │
-          │                                    ▼
-          │                          ┌─────────────────────┐
-          │                          │ auction_data.ser    │
-          │                          │ (Binary File)       │
-          │                          └─────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      Item (abstract, Serializable)                          │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ - id: String                     # Abstract base for auction items         │
+│ - name: String                                                             │
+│ - description: String                                                      │
+│ - startPrice: double                                                       │
+│ - sellerId: String                                                         │
+│ - category: String (protected)                                             │
+│ - imagePath: String                                                        │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ + getSpecificInfo(): String (abstract)                                     │
+└──────────────┬──────────────────────────────────┬──────────────────┬────────┘
+               │ extends                           │ extends        │ extends
+               ▼                                  ▼                ▼
+┌──────────────────────┐  ┌──────────────────────┐  ┌─────────────────────────┐
+│   Electronics        │  │       Art             │  │      Vehicle            │
+│ - brand: String      │  │ - artist: String     │  │ - brand: String        │
+│ - warrantyMonths: int│  │ - yearCreated: int   │  │ - model: String        │
+│ - model: String      │  │ - medium: String    │  │ - year: int            │
+│ - condition: String  │  │ - style: String     │  │ - mileage: int         │
+└──────────────────────┘  └──────────────────────┘  │ - fuelType: String     │
+                                                    │ - transmission: String │
+                                                    │ - color: String        │
+                                                    │ - condition: String    │
+                                                    └─────────────────────────┘
 
-    saveData()                              loadData()
-    ─────────                               ─────────
-    1. acquire readLock                     1. read from file
-    2. ObjectOutputStream                   2. ObjectInputStream
-    3. writeObject(this)                    3. cast to AuctionManager
-    4. release readLock                      4. assign to instance
-```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                   AuctionSession (Serializable)                            │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ - id: String                     # Represents an auction session          │
+│ - item: Item                                                                │
+│ - sellerId: String                                                          │
+│ - status: Status (OPEN/RUNNING/FINISHED/PAID/CANCELED)                     │
+│ - currentPrice: double                                                      │
+│ - startPrice: double                                                        │
+│ - highestBidderId: String                                                   │
+│ - winnerId: String                                                          │
+│ - startTime: LocalDateTime                                                  │
+│ - endTime: LocalDateTime                                                    │
+│ - durationMinutes: long                                                     │
+│ - bidHistory: List<Bid>                                                     │
+│ - observers: List<AuctionObserver> (transient)                              │
+│ - scheduler: ScheduledExecutorService (transient)                           │
+│ - minIncrement: double                                                      │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ + start()                        + placeBid(bidderId, amount)              │
+│ + finish()                      + cancel(reason)                           │
+│ + processPayment(winnerId,amt):boolean                                     │
+│ + addObserver(observer)           + removeObserver(observer)                │
+│ - notifyBidPlaced()                - notifyAuctionStarted()                 │
+│ - notifyAuctionFinished()          - notifyAuctionCanceled()               │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-## TỔNG KẾT CÁC THÀNH PHẦN
-
-| Package | Class | Chức năng |
-|---------|-------|-----------|
-| **Exception** | InvalidBidException | Giá thầu không hợp lệ |
-| | AuctionClosedException | Đấu giá đã đóng |
-| | AuthenticationException | Lỗi đăng nhập |
-| | ItemNotFoundException | Không tìm thấy sản phẩm |
-| | UnauthorizedException | Không có quyền thực hiện |
-| **Model** | User (abstract) | Lớp cha người dùng |
-| | Bidder | Người đấu giá |
-| | Seller | Người bán |
-| | Admin | Quản trị viên |
-| | Item (abstract) | Lớp cha sản phẩm |
-| | Electronics | Sản phẩm điện tử |
-| | Art | Sản phẩm nghệ thuật |
-| | Vehicle | Phương tiện |
-| | Bid | Thông tin đặt giá |
-| | AuctionSession | Phiên đấu giá với trạng thái |
-| **Factory** | ItemFactory | Tạo Item theo loại (Factory Method) |
-| | UserFactory | Tạo User theo vai trò (Factory Method) |
-| **Observer** | AuctionObserver | Interface observer (Observer Pattern) |
-| **Service** | AuctionManager | Singleton quản lý toàn bộ hệ thống |
-| **Network** | AuctionServer | Socket server xử lý client |
-| | AuctionClient | Socket client kết nối server |
-| | Message | Giao tiếp client-server (Serializable) |
-
-## DESIGN PATTERNS ĐÃ ÁP DỤNG
-
-| Pattern | Class | Mục đích |
-|---------|-------|----------|
-| **Singleton** | AuctionManager | Đảm bảo chỉ có 1 instance duy nhất |
-| **Factory Method** | ItemFactory, UserFactory | Tạo đối tượng theo loại/categor |
-| **Observer** | AuctionObserver | Thông báo realtime khi có bid mới |
-
-## CHẠY PROJECT
-
-### Compile
-```bash
-javac -d out -sourcepath src src/Exception/*.java src/Model/*.java src/Factory/*.java src/Observer/*.java src/Service/*.java src/Network/*.java
-```
-
-### Run Server
-```bash
-java -cp out Network.AuctionServer
-```
-
-### Run Client
-```bash
-java -cp out Network.AuctionClient
-```
-
-### Chạy Tests
-```bash
-# Compile tests
-javac -cp "out;lib/junit-platform-console-standalone-1.10.0.jar" -d test/out test/*.java
-
-# Run tests
-java -cp "out;test/out;lib/junit-platform-console-standalone-1.10.0.jar" org.junit.platform.console.ConsoleLauncher --scan-class-path test/out
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        Bid (Serializable)                                   │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ - id: String                      # Represents a single bid                │
+│ - auctionId: String                                                         │
+│ - bidderId: String                                                         │
+│ - bidderUsername: String                                                   │
+│ - amount: double                                                           │
+│ - itemName: String                                                         │
+│ - timestamp: LocalDateTime                                                  │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## CÁC TRẠNG THÁI PHIÊN ĐẤU GIÁ
+### DAO Layer
+```text
+═══════════════════════════════════════════════════════════════════════════════
 
-```
-OPEN ──────► RUNNING ──────► FINISHED ──────► PAID
-  │              │               │
-  │              │               │
-  └──────────────┴──► CANCELED ◄──┘
+DAO LAYER (Data Access Objects)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       DatabaseUtil                                         │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ - DB_URL: String = "jdbc:mysql://localhost:3306/auction_db"               │
+│ - DB_USER: String = "root"                                                 │
+│ - DB_PASSWORD: String = "123456789"                                         │
+│ ──────────────────────────────────────────────────────────────────────────│
+│ + getConnection(): Connection                                               │
+│ + close(resources...)                                                       │
+│ + closeAllConnections()                                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+           │ uses
+     ┌─────┴─────┬──────────────┬──────────────┐
+     ▼            ▼              ▼              ▼
+┌──────────┐ ┌───────────┐ ┌──────────────┐ ┌──────────────┐
+│ UserDAO  │ │  ItemDAO  │ │ AuctionDAO   │ │AuctionSesDAO │
+│──────────│ │───────────│ │──────────────│ │──────────────│
+│+register()│ │+findAll() │ │+placeBid()   │ │+save()      │
+│+login()   │ │+findById()│ │+startAuction│ │+findAll()   │
+│+authentic.│ │+save()    │ │+finishAuct. │ │+findById()  │
+│+findById()│ │           │ │+cancelAuct. │ │+getBidHist. │
+│+getBalance│ │           │ │+findRunning()│ │+getUserBids│
+│+updateBal.│ │           │ │+findOpen()   │ │              │
+└──────────┘ └───────────┘ └──────────────┘ └──────────────┘
 ```
 
-- **OPEN**: Phiên đấu giá được tạo, chờ bắt đầu
-- **RUNNING**: Phiên đấu giá đang diễn ra, nhận bid
-- **FINISHED**: Hết thời gian hoặc bị kết thúc thủ công
-- **PAID**: Người thắng đã thanh toán
-- **CANCELED**: Phiên bị hủy bỏ
-- cần bổ sung
-- 
+### Factory & Observer Pattern
+```text
+═══════════════════════════════════════════════════════════════════════════════
+
+FACTORY PATTERN
+┌──────────────────────────────┐    ┌──────────────────────────────┐
+│       UserFactory           │    │       ItemFactory            │
+│─────────────────────────────│    │─────────────────────────────│
+│+isValidPassword(): boolean  │    │+createElectronics(): Item   │
+│+getPasswordError(): String  │    │+createArt(): Item           │
+│+createUser(): User          │    │+createVehicle(): Item        │
+│  (id, username, password)   │    │+createItem(cat,...): Item   │
+└──────────────────────────────┘    └──────────────────────────────┘
+
+OBSERVER PATTERN
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    AuctionObserver (interface)                              │
+│─────────────────────────────────────────────────────────────────────────────│
+│ + onBidPlaced(auctionId, bidderId, amount)                                 │
+│ + onAuctionStarted(auctionId)                                              │
+│ + onAuctionFinished(auctionId, winnerId, finalPrice)                       │
+│ + onAuctionCanceled(auctionId, reason)                                     │
+│ + onAuctionStatusChanged(auctionId, oldStatus, newStatus)                  │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    △ (implemented by)
+                                    │
+                    ┌───────────────┴───────────────┐
+                    │   (Concrete Observers in UI)   │
+                    │   e.g., AuctionRoomController  │
+                    └───────────────────────────────┘
+```
+
+### Exception Hierarchy
+```text
+═══════════════════════════════════════════════════════════════════════════════
+
+EXCEPTION HIERARCHY
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    Exception Package                                        │
+│─────────────────────────────────────────────────────────────────────────────│
+│ - AuthenticationException (username/password invalid)                      │
+│ - InvalidBidException (bid amount invalid)                                 │
+│ - AuctionClosedException (auction not running)                             │
+│ - UnauthorizedException (no permission)                                    │
+│ - ItemNotFoundException (item not found)                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Controller Layer
+```text
+═══════════════════════════════════════════════════════════════════════════════
+
+CONTROLLER LAYER (JavaFX MVC)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      Controller Package                                     │
+│─────────────────────────────────────────────────────────────────────────────│
+│ - logincontroller       → Xử lý đăng nhập/đăng ký                         │
+│ - UserController        → Quản lý user info                                │
+│ - CreateItemsController → Tạo item mới (Seller)                            │
+│ - AuctionCardController → Hiển thị card phiên đấu giá                      │
+│ - AuctionRoomController → Phòng đấu giá chi tiết (Observer)                │
+│ - BidCardController     → Hiển thị thông tin bid                           │
+│ - BidHistoryCardController → Lịch sử bid                                  │
+│ - ItemCardController    → Hiển thị thông tin item                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Tóm Tắt Kiến Trúc
+
+| Thành phần | Công nghệ | Mô tả |
+|-----------|----------|-------|
+| **Frontend** | JavaFX 21 | Login, Auction Room, Bid History UI |
+| **Backend** | Java Socket | Server multi-threaded, Client handler |
+| **Giao tiếp** | Object Stream | Message object serialization |
+| **Database** | MySQL 8.4 | users, items, auction_sessions, bids |
+| **Pattern** | DAO, Factory, Observer, Singleton | Design patterns |
+| **Build** | Maven | Dependency management |
