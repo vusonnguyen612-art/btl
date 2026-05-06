@@ -60,7 +60,7 @@ public class logincontroller {
         String password = read(loginPasswordField);
 
         if (username.isBlank() || password.isBlank()) {
-            showMessage("Vui long nhap day du tai khoan va mat khau.");
+            showMessage("Vui lòng nhập đầy đủ tài khoản và mật khẩu" +".");
             return;
         }
 
@@ -73,13 +73,13 @@ public class logincontroller {
             var response = networkService.login(username, password);
             if (response.getType() == Network.Message.Type.SUCCESS && response.getData() != null) {
                 currentUser = (User) response.getData();
-                showMessage("Dang nhap thanh cong! Xin chao " + currentUser.getUsername());
+                showMessage("Đăng nhập thành công! Xin chào! " + currentUser.getUsername());
                 navigateToMain(event);
             } else {
-                showMessage("Tai khoan hoac mat khau khong dung.");
+                showMessage("Tài khoản hoặc mật khẩu không đúng.");
             }
         } catch (Exception e) {
-            showMessage("Loi dang nhap: " + e.getMessage());
+            showMessage("Lỗi đăng nhập: " + e.getMessage());
         }
     }
 
@@ -92,12 +92,12 @@ public class logincontroller {
         String confirmPassword = read(signupConfirmPasswordField);
 
         if (fullName.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
-            showMessage("Vui long nhap day du thong tin dang ky.");
+            showMessage("Vui lòng nhập đầy đủ thông tin đăng ký.");
             return;
         }
 
         if (!password.equals(confirmPassword)) {
-            showMessage("Mat khau nhap lai khong khop.");
+            showMessage("Mật khẩu nhập lại không khớp.");
             return;
         }
 
@@ -109,13 +109,13 @@ public class logincontroller {
         try {
             var response = networkService.register(fullName, password);
             if (response.getType() == Network.Message.Type.SUCCESS) {
-                showMessage("Dang ky thanh cong! Vui long dang nhap.");
+                showMessage("Đăng ký thành công! Vui lòng đăng nhập.");
                 ComeLogin(event);
             } else {
-                showMessage("Dang ky that bai: " + response.getContent());
+                showMessage("Đăng ký thất bại: " + response.getContent());
             }
         } catch (Exception e) {
-            showMessage("Loi dang ky: " + e.getMessage());
+            showMessage("Lỗi đăng ký: " + e.getMessage());
         }
     }
 
@@ -149,7 +149,7 @@ public class logincontroller {
         try {
             URL resource = getClass().getResource(resourcePath);
             if (resource == null) {
-                showMessage("Khong tim thay giao dien: " + resourcePath);
+                showMessage("Không tìm thấy giao diện: " + resourcePath);
                 return;
             }
 
@@ -158,7 +158,7 @@ public class logincontroller {
             stage.setScene(new Scene(root, width, height));
             stage.show();
         } catch (IOException e) {
-            showMessage("Khong the mo giao dien: " + e.getMessage());
+            showMessage("Không thể mở giao diện: " + e.getMessage());
         }
     }
 
@@ -174,7 +174,7 @@ public class logincontroller {
             stage.setScene(new Scene(root, 900, 600));
             stage.show();
         } catch (IOException e) {
-            showMessage("Khong the mo giao dien: " + e.getMessage());
+            showMessage("Không thể mở giao diện: " + e.getMessage());
         }
     }
 }

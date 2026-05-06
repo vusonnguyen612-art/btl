@@ -34,7 +34,7 @@ public class BidHistoryCardController {
         BigDecimal amount = new BigDecimal(String.valueOf(bid.getAmount()));
         amountLabel.setText(moneyFormat.format(amount) + " $");
 
-        auctionLabel.setText("Phien: " + bid.getAuctionId());
+        auctionLabel.setText("Phiên: " + bid.getAuctionId());
     }
 
     public HBox getRoot() {
