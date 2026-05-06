@@ -14,12 +14,10 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
-import Network.AuctionClient;
+import Network.NetworkService;
 import Model.User;
-import DAO.UserDAO;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 public class logincontroller {
     @FXML
@@ -46,40 +44,13 @@ public class logincontroller {
     @FXML
     private Label messageLabel;
 
-    private static AuctionClient client;
     private static User currentUser;
-    private static final String SERVER_ADDRESS = "localhost";
-    private static final int SERVER_PORT = 8989;
-    private final UserDAO userDAO = new UserDAO();
-
-    private boolean ensureConnection() {
-        if (client == null) {
-            client = new AuctionClient(SERVER_ADDRESS, SERVER_PORT);
-        }
-        try {
-            if (client.connect()) {
-                return true;
-            }
-        } catch (Exception e) {
-            showMessage("Khong the ket noi toi server: " + e.getMessage());
-        }
-        showMessage("Khong the ket noi toi server.");
-        return false;
-    }
 
     public static User getCurrentUser() {
         return currentUser;
     }
 
-    public static AuctionClient getClient() {
-        return client;
-    }
-
     public static void logout() {
-        if (client != null) {
-            client.disconnect();
-            client = null;
-        }
         currentUser = null;
     }
 
@@ -93,10 +64,15 @@ public class logincontroller {
             return;
         }
 
+        NetworkService networkService = NetworkService.getInstance();
+        if (!networkService.isConnected()) {
+            networkService.connect();
+        }
+
         try {
-            var userOpt = userDAO.login(username, password);
-            if (userOpt.isPresent()) {
-                currentUser = userOpt.get();
+            var response = networkService.login(username, password);
+            if (response.getType() == Network.Message.Type.SUCCESS && response.getData() != null) {
+                currentUser = (User) response.getData();
                 showMessage("Dang nhap thanh cong! Xin chao " + currentUser.getUsername());
                 navigateToMain(event);
             } else {
@@ -125,21 +101,18 @@ public class logincontroller {
             return;
         }
 
-        try {
-            if (userDAO.existsByUsername(fullName)) {
-                showMessage("Tai khoan da ton tai.");
-                return;
-            }
+        NetworkService networkService = NetworkService.getInstance();
+        if (!networkService.isConnected()) {
+            networkService.connect();
+        }
 
-            String userId = UUID.randomUUID().toString();
-            User newUser = new User(userId, fullName, password);
-            newUser.setEmail(email);
-            
-            if (userDAO.register(newUser)) {
+        try {
+            var response = networkService.register(fullName, password);
+            if (response.getType() == Network.Message.Type.SUCCESS) {
                 showMessage("Dang ky thanh cong! Vui long dang nhap.");
                 ComeLogin(event);
             } else {
-                showMessage("Dang ky that bai.");
+                showMessage("Dang ky that bai: " + response.getContent());
             }
         } catch (Exception e) {
             showMessage("Loi dang ky: " + e.getMessage());

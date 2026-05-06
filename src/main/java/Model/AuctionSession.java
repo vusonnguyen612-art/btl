@@ -76,7 +76,7 @@ public class AuctionSession implements Serializable {
         }
     }
 
-    public synchronized void placeBid(String bidderId, double amount) 
+    public synchronized void placeBid(String bidderId, double amount)
             throws AuctionClosedException, InvalidBidException {
         if (status != Status.RUNNING) {
             throw new AuctionClosedException("Auction is not running", id);
@@ -87,10 +87,18 @@ public class AuctionSession implements Serializable {
             throw new AuctionClosedException("Auction time has expired", id);
         }
 
+        if (bidderId.equals(sellerId)) {
+            throw new InvalidBidException(
+                "Seller cannot bid on their own item",
+                amount,
+                currentPrice
+            );
+        }
+
         if (amount <= currentPrice) {
             throw new InvalidBidException(
                 String.format("Bid must be higher than current price: %.2f", currentPrice),
-                amount, 
+                amount,
                 currentPrice
             );
         }

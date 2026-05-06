@@ -1,4 +1,5 @@
 package Controller;
+
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -23,7 +24,6 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 
@@ -31,9 +31,8 @@ import Model.Item;
 import Model.User;
 import Model.AuctionSession;
 import Model.Bid;
-import DAO.UserDAO;
-import DAO.ItemDAO;
-import DAO.AuctionDAO;
+import Network.NetworkService;
+import Network.Message;
 
 public class UserController {
 
@@ -103,9 +102,7 @@ public class UserController {
     private final ToggleGroup menuGroup = new ToggleGroup();
 
     private User currentUser;
-    private final UserDAO userDAO = new UserDAO();
-    private final ItemDAO itemDAO = new ItemDAO();
-    private final AuctionDAO auctionDAO = new AuctionDAO();
+    private NetworkService networkService = NetworkService.getInstance();
     private BigDecimal soDuTaiKhoan = new BigDecimal("300000");
 
     private static final String MENU_STYLE =
@@ -125,12 +122,8 @@ public class UserController {
     private void initialize() {
         setupMenuButtons();
         setupDefaultScreen();
-
-        syncBalanceLabels();
-
         loadHomeItems();
         loadWarehouseItems();
-        loadBidHistory();
     }
 
     private void setupMenuButtons() {
@@ -210,18 +203,6 @@ public class UserController {
         }
     }
 
-    private void syncBalanceLabels() {
-        String formattedBalance = formatMoney(soDuTaiKhoan);
-
-        if (Sodutaikhoan1 != null) {
-            Sodutaikhoan1.setText(formattedBalance);
-        }
-
-        if (Sodutaikhoan != null) {
-            Sodutaikhoan.setText(formattedBalance);
-        }
-    }
-
     private String formatMoney(BigDecimal value) {
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
         symbols.setGroupingSeparator(',');
@@ -276,12 +257,14 @@ public class UserController {
             BigDecimal soTienNap = parseMoney(soTienRaw);
 
             soDuTaiKhoan = soDuTaiKhoan.add(soTienNap);
-            
-            if (currentUser != null) {
-                userDAO.updateBalance(currentUser.getUsername(), soDuTaiKhoan);
+
+            if (Sodutaikhoan1 != null) {
+                Sodutaikhoan1.setText(formatMoney(soDuTaiKhoan));
             }
-            
-            syncBalanceLabels();
+
+            if (Sodutaikhoan != null) {
+                Sodutaikhoan.setText(formatMoney(soDuTaiKhoan));
+            }
 
             Nganhangnaptien.clear();
             Sotaikhoannaptien.clear();
@@ -322,22 +305,16 @@ public class UserController {
             return;
         }
 
-        boolean success = userDAO.changePassword(currentUser.getUsername(), matKhauHienTai, matKhauMoi);
+        showWarning("Chua ho tro", "Tinh nang doi mat khau qua Server chua duoc cai dat.");
 
-        if (success) {
-            Matkhauhientai.clear();
-            Matkhaumoi.clear();
-            Nhaplaimatkhaumoi.clear();
-            showInfo("Thanh cong", "Doi mat khau thanh cong!");
-        } else {
-            showWarning("Loi", "Mat khau hien tai khong dung.");
-        }
+        Matkhauhientai.clear();
+        Matkhaumoi.clear();
+        Nhaplaimatkhaumoi.clear();
     }
 
     @FXML
     private void CreateItems(ActionEvent event) {
         openModalFXML(CREATE_ITEM_FXML, "Tao san pham");
-
         loadHomeItems();
         loadWarehouseItems();
     }
@@ -359,7 +336,6 @@ public class UserController {
             stage.setOnHidden(e -> auctionRoomController.stopRefresh());
             stage.show();
 
-            refreshAllData();
         } catch (Exception e) {
             showError("Loi", "Khong the mo phong dau gia: " + e.getMessage());
         }
@@ -398,22 +374,20 @@ public class UserController {
 
     public void setUserData(User user, BigDecimal balance) {
         this.currentUser = user;
-        
+
         if (user != null && user.getUsername() != null) {
-            Name.setText(user.getUsername());
+            if (Name != null) {
+                Name.setText(user.getUsername());
+            }
         }
 
-        if (user != null && user.getBalance() != null) {
-            this.soDuTaiKhoan = user.getBalance();
-        } else if (balance != null) {
+        if (balance != null) {
             this.soDuTaiKhoan = balance;
         }
 
         updateBalanceLabels();
-        syncBalanceLabels();
         loadHomeItems();
         loadWarehouseItems();
-        loadBidHistory();
     }
 
     private void updateBalanceLabels() {
@@ -436,20 +410,10 @@ public class UserController {
         return currentUser;
     }
 
-    public void setSoDuTaiKhoan(BigDecimal soDuTaiKhoan) {
-        if (soDuTaiKhoan == null) {
-            return;
-        }
-
-        this.soDuTaiKhoan = soDuTaiKhoan;
-        syncBalanceLabels();
-    }
-
     public void refreshAllData() {
-        syncBalanceLabels();
+        updateBalanceLabels();
         loadHomeItems();
         loadWarehouseItems();
-        loadBidHistory();
     }
 
     private void loadHomeItems() {
@@ -460,19 +424,22 @@ public class UserController {
         AllItems.getChildren().clear();
 
         try {
-            List<Item> allItems = itemDAO.findAll();
-            if (allItems.isEmpty()) {
-                Label emptyLabel = createEmptyLabel("Chua co san pham dau gia nao.");
-                AllItems.getChildren().add(emptyLabel);
-            } else {
-                Label headerLabel = new Label("San pham dang dau gia");
-                headerLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 20px; -fx-font-weight: bold;");
-                headerLabel.setPadding(new Insets(0, 0, 10, 0));
-                AllItems.getChildren().add(headerLabel);
+            Message response = networkService.getItems();
+            if (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List) {
+                List<Item> allItems = (List<Item>) response.getData();
+                if (allItems.isEmpty()) {
+                    Label emptyLabel = createEmptyLabel("Chua co san pham dau gia nao.");
+                    AllItems.getChildren().add(emptyLabel);
+                } else {
+                    Label headerLabel = new Label("San pham dang dau gia");
+                    headerLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 20px; -fx-font-weight: bold;");
+                    headerLabel.setPadding(new Insets(0, 0, 10, 0));
+                    AllItems.getChildren().add(headerLabel);
 
-                for (Item item : allItems) {
-                    HBox itemBox = createItemCard(item);
-                    AllItems.getChildren().add(itemBox);
+                    for (Item item : allItems) {
+                        HBox itemBox = createItemCard(item);
+                        AllItems.getChildren().add(itemBox);
+                    }
                 }
             }
         } catch (Exception e) {
@@ -487,7 +454,9 @@ public class UserController {
             HBox card = loader.load();
             ItemCardController controller = loader.getController();
 
-            List<AuctionSession> auctions = auctionDAO.findAllAuctions();
+            Message response = networkService.getAuctions();
+            List<AuctionSession> auctions = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
+                    ? (List<AuctionSession>) response.getData() : List.of();
             controller.setItem(item, auctions);
 
             return card;
@@ -511,8 +480,13 @@ public class UserController {
         }
 
         try {
-            List<Item> userItems = itemDAO.findBySellerId(currentUser.getId());
-            List<AuctionSession> userAuctions = auctionDAO.findAllAuctions();
+            Message itemsResponse = networkService.getItems();
+            Message auctionsResponse = networkService.getAuctions();
+
+            List<Item> userItems = (itemsResponse.getType() == Message.Type.SUCCESS && itemsResponse.getData() instanceof List)
+                    ? (List<Item>) itemsResponse.getData() : List.of();
+            List<AuctionSession> userAuctions = (auctionsResponse.getType() == Message.Type.SUCCESS && auctionsResponse.getData() instanceof List)
+                    ? (List<AuctionSession>) auctionsResponse.getData() : List.of();
 
             if (userItems.isEmpty() && userAuctions.isEmpty()) {
                 Label emptyLabel = createEmptyLabel("Kho cua ban hien chua co san pham.");
@@ -556,8 +530,8 @@ public class UserController {
 
             controller.setAuction(auction, isRunning, canStart);
             controller.setOnStartAuction(() -> {
-                boolean success = auctionDAO.startAuction(auction.getId());
-                if (success) {
+                Message response = networkService.startAuction(auction.getId());
+                if (response.getType() == Message.Type.SUCCESS) {
                     showInfo("Thanh cong", "Da bat dau phien dau gia.");
                     loadWarehouseItems();
                     loadHomeItems();
@@ -588,54 +562,10 @@ public class UserController {
             return;
         }
 
-        try {
-            List<Bid> bids = auctionDAO.getUserBidHistory(currentUser.getId());
-
-            if (bids.isEmpty()) {
-                Label label = createEmptyLabel("Chua co lich su dau gia.");
-                label.setLayoutX(220);
-                label.setLayoutY(250);
-                LichsudaugiaPane.getChildren().add(label);
-            } else {
-                VBox bidList = new VBox(10);
-                bidList.setLayoutX(20);
-                bidList.setLayoutY(20);
-                bidList.setPrefWidth(620);
-
-                for (Bid bid : bids) {
-                    HBox bidCard = createBidHistoryCard(bid);
-                    bidList.getChildren().add(bidCard);
-                }
-
-                ScrollPane scrollPane = new ScrollPane(bidList);
-                scrollPane.setLayoutX(0);
-                scrollPane.setLayoutY(0);
-                scrollPane.setPrefWidth(660);
-                scrollPane.setPrefHeight(500);
-                scrollPane.setStyle("-fx-background-color: transparent; -fx-border-color: transparent;");
-                scrollPane.setFitToWidth(true);
-
-                LichsudaugiaPane.getChildren().add(scrollPane);
-            }
-        } catch (Exception e) {
-            Label label = createEmptyLabel("Loi tai lich su: " + e.getMessage());
-            label.setLayoutX(150);
-            label.setLayoutY(250);
-            LichsudaugiaPane.getChildren().add(label);
-        }
-    }
-
-    private HBox createBidHistoryCard(Bid bid) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/bid_history_card.fxml"));
-            HBox card = loader.load();
-            BidHistoryCardController controller = loader.getController();
-            controller.setBid(bid);
-            return card;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new HBox();
-        }
+        Label label = createEmptyLabel("Chua co lich su dau gia.");
+        label.setLayoutX(220);
+        label.setLayoutY(250);
+        LichsudaugiaPane.getChildren().add(label);
     }
 
     private Label createEmptyLabel(String text) {
@@ -654,26 +584,6 @@ public class UserController {
             return hours + "h";
         }
         return minutes + " phut";
-    }
-
-    private String getRemainingTime(AuctionSession auction) {
-        if (auction.getEndTime() == null) {
-            return formatDuration(auction.getDurationMinutes());
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        if (now.isAfter(auction.getEndTime())) {
-            return "Da ket thuc";
-        }
-
-        long minutes = java.time.Duration.between(now, auction.getEndTime()).toMinutes();
-        long seconds = java.time.Duration.between(now, auction.getEndTime()).getSeconds() % 60;
-
-        if (minutes > 0) {
-            return String.format("%d:%02d", minutes, seconds);
-        } else {
-            return String.format("%ds", seconds);
-        }
     }
 
     private void openModalFXML(String fxmlPath, String title) {
@@ -723,36 +633,6 @@ public class UserController {
                     "Khong the chuyen giao dien",
                     "Khong tim thay hoac khong load duoc file: " + fxmlPath + "\n\nChi tiet: " + e.getMessage()
             );
-        }
-    }
-
-    private void loadFXMLIntoPane(String fxmlPath, AnchorPane targetPane) {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
-            Parent root = loader.load();
-
-            Object childController = loader.getController();
-            connectChildController(childController);
-
-            targetPane.getChildren().clear();
-            targetPane.getChildren().add(root);
-
-            AnchorPane.setTopAnchor(root, 0.0);
-            AnchorPane.setRightAnchor(root, 0.0);
-            AnchorPane.setBottomAnchor(root, 0.0);
-            AnchorPane.setLeftAnchor(root, 0.0);
-
-        } catch (IOException e) {
-            showError(
-                    "Khong the load giao dien",
-                    "Khong load duoc file: " + fxmlPath + "\n\nChi tiet: " + e.getMessage()
-            );
-        }
-    }
-
-    private void connectChildController(Object controller) {
-        if (controller instanceof LinkedController linkedController) {
-            linkedController.setUserController(this);
         }
     }
 
@@ -809,6 +689,12 @@ public class UserController {
         return alert.showAndWait()
                 .filter(buttonType -> buttonType == ButtonType.OK)
                 .isPresent();
+    }
+
+    private void connectChildController(Object controller) {
+        if (controller instanceof LinkedController linkedController) {
+            linkedController.setUserController(this);
+        }
     }
 
     public interface LinkedController {

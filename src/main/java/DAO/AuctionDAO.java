@@ -71,7 +71,7 @@ public class AuctionDAO {
         }
     }
     
-    public boolean cancelAuction(String auctionId) {
+    public boolean cancelAuction(String auctionId, String content) {
         String sql = "UPDATE auction_sessions SET status = 'CANCELED' WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -287,5 +287,8 @@ public class AuctionDAO {
         }
         
         return session;
+    }
+
+    public void saveAuction(AuctionSession auction) {
     }
 }

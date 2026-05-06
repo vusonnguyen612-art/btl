@@ -1,10 +1,11 @@
 package Controller;
 
-import DAO.AuctionDAO;
 import Model.AuctionSession;
 import Model.Bid;
 import Model.Item;
 import Model.User;
+import Network.Message;
+import Network.NetworkService;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -13,7 +14,6 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -71,7 +71,7 @@ public class AuctionRoomController {
 
     private User currentUser;
     private AuctionSession selectedAuction;
-    private final AuctionDAO auctionDAO = new AuctionDAO();
+    private NetworkService networkService = NetworkService.getInstance();
     private Timeline timerTimeline;
     private Timeline refreshTimeline;
 
@@ -89,9 +89,12 @@ public class AuctionRoomController {
     public void setCurrentUser(User user) {
         this.currentUser = user;
         if (user != null) {
-            BigDecimal balance = auctionDAO.getUserBalance(user.getId());
-            if (balance != null) {
-                userBalanceLabel.setText(formatMoney(balance) + " $");
+            Message response = networkService.getUserBalance();
+            if (response.getType() == Message.Type.SUCCESS && response.getData() != null) {
+                BigDecimal balance = (BigDecimal) response.getData();
+                if (userBalanceLabel != null) {
+                    userBalanceLabel.setText(formatMoney(balance) + " $");
+                }
             }
         }
         loadAuctions();
@@ -111,8 +114,16 @@ public class AuctionRoomController {
 
         auctionList.getChildren().clear();
 
-        List<AuctionSession> runningAuctions = auctionDAO.findRunningAuctions();
-        List<AuctionSession> openAuctions = auctionDAO.findOpenAuctions();
+        Message response = networkService.getAuctions();
+        List<AuctionSession> allAuctions = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
+                ? (List<AuctionSession>) response.getData() : List.of();
+
+        List<AuctionSession> runningAuctions = allAuctions.stream()
+                .filter(AuctionSession::isRunning)
+                .toList();
+        List<AuctionSession> openAuctions = allAuctions.stream()
+                .filter(AuctionSession::isOpen)
+                .toList();
 
         if (runningAuctions.isEmpty() && openAuctions.isEmpty()) {
             Label emptyLabel = new Label("Khong co phien dau gia nao.");
@@ -245,8 +256,14 @@ public class AuctionRoomController {
         }
 
         if (bidAmountField != null) {
-            double minBid = auction.getCurrentPrice() + auction.getMinIncrement();
-            bidAmountField.setText(String.valueOf(minBid));
+            boolean isSeller = currentUser != null && auction.getSellerId().equals(currentUser.getId());
+            bidAmountField.setDisable(isSeller);
+            if (isSeller) {
+                bidAmountField.clear();
+            } else {
+                double minBid = auction.getCurrentPrice() + auction.getMinIncrement();
+                bidAmountField.setText(String.valueOf(minBid));
+            }
         }
 
         loadBidHistory(auction.getId());
@@ -280,7 +297,9 @@ public class AuctionRoomController {
             timerLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 20px; -fx-font-weight: bold;");
             timerTimeline.stop();
 
-            auctionDAO.finishAuction(auction.getId());
+            Message finishMsg = new Message(Message.Type.FINISH_AUCTION);
+            finishMsg.setAuctionId(auction.getId());
+            networkService.sendMessage(finishMsg);
             loadAuctions();
             return;
         }
@@ -312,7 +331,9 @@ public class AuctionRoomController {
 
         bidHistoryList.getChildren().clear();
 
-        List<Bid> bids = auctionDAO.getBidHistory(auctionId);
+        Message response = networkService.getBidHistory(auctionId);
+        List<Bid> bids = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
+                ? (List<Bid>) response.getData() : List.of();
 
         if (bids.isEmpty()) {
             Label emptyLabel = new Label("Chua co lich su dat gia");
@@ -352,6 +373,11 @@ public class AuctionRoomController {
             return;
         }
 
+        if (selectedAuction.getSellerId().equals(currentUser.getId())) {
+            showAlert(Alert.AlertType.WARNING, "Loi", "Ban khong the dat gia cho san pham cua minh.");
+            return;
+        }
+
         double bidAmount;
         try {
             bidAmount = Double.parseDouble(bidAmountField.getText().trim());
@@ -372,27 +398,27 @@ public class AuctionRoomController {
             return;
         }
 
-        BigDecimal userBalance = auctionDAO.getUserBalance(currentUser.getId());
-        if (userBalance.compareTo(new BigDecimal(String.valueOf(bidAmount))) < 0) {
-            showAlert(Alert.AlertType.ERROR, "Loi", "So du khong du. So du hien tai: " + formatMoney(userBalance) + " $");
-            return;
-        }
+        Message response = networkService.placeBid(selectedAuction.getId(), bidAmount);
 
-        boolean success = auctionDAO.placeBid(selectedAuction.getId(), currentUser.getId(), bidAmount);
-
-        if (success) {
+        if (response.getType() == Message.Type.SUCCESS) {
             showAlert(Alert.AlertType.INFORMATION, "Thanh cong",
                     "Dat gia thanh cong: " + formatMoney(new BigDecimal(String.valueOf(bidAmount))) + " $");
 
-            selectedAuction = auctionDAO.findAuctionById(selectedAuction.getId()).orElse(selectedAuction);
+            Message auctionResponse = networkService.getAuction(selectedAuction.getId());
+            if (auctionResponse.getType() == Message.Type.SUCCESS && auctionResponse.getData() != null) {
+                selectedAuction = (AuctionSession) auctionResponse.getData();
+            }
             selectAuction(selectedAuction);
 
             if (userBalanceLabel != null) {
-                BigDecimal newBalance = auctionDAO.getUserBalance(currentUser.getId());
-                userBalanceLabel.setText(formatMoney(newBalance) + " $");
+                Message balanceResponse = networkService.getUserBalance();
+                if (balanceResponse.getType() == Message.Type.SUCCESS && balanceResponse.getData() != null) {
+                    BigDecimal newBalance = (BigDecimal) balanceResponse.getData();
+                    userBalanceLabel.setText(formatMoney(newBalance) + " $");
+                }
             }
         } else {
-            showAlert(Alert.AlertType.ERROR, "Loi", "Khong the dat gia. Vui long thu lai.");
+            showAlert(Alert.AlertType.ERROR, "Loi", "Khong the dat gia. " + response.getContent());
         }
     }
 
@@ -406,9 +432,8 @@ public class AuctionRoomController {
     }
 
     private void startAuction(AuctionSession auction) {
-        boolean success = auctionDAO.startAuction(auction.getId());
-
-        if (success) {
+        Message response = networkService.startAuction(auction.getId());
+        if (response.getType() == Message.Type.SUCCESS) {
             showAlert(Alert.AlertType.INFORMATION, "Thanh cong", "Da bat dau phien dau gia.");
             loadAuctions();
         } else {

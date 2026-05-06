@@ -22,6 +22,8 @@ public class Message implements Serializable {
         UPDATE_ITEM,
         DELETE_ITEM,
         GET_USERS,
+        GET_USER_BALANCE,
+        GET_BID_HISTORY,
         NOTIFICATION,
         ERROR,
         SUCCESS

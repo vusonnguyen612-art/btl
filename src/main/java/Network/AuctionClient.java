@@ -127,7 +127,7 @@ public class AuctionClient {
     }
 
     public static void main(String[] args) {
-        AuctionClient client = new AuctionClient("localhost", 8989);
+        AuctionClient client = new AuctionClient("0.tcp.ap.ngrok.io", 25278);
         Scanner scanner = new Scanner(System.in);
         
         System.out.println("=== Auction Client ===");

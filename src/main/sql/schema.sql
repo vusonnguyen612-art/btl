@@ -1,6 +1,6 @@
 -- Tạo database cho ứng dụng đấu giá
-CREATE DATABASE IF NOT EXISTS auction_db;
-USE auction_db;
+CREATE DATABASE IF NOT EXISTS bqp25geywfulxwr7vhyi;
+USE bqp25geywfulxwr7vhyi;
 
 -- Bảng users (tài khoản đăng nhập)
 CREATE TABLE IF NOT EXISTS users (
