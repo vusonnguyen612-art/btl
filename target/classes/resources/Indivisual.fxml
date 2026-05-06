@@ -13,7 +13,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane fx:controller="Controller.UserController" maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="608.0" prefWidth="823.0" style="-fx-background-color: #1E1E1D;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="608.0" prefWidth="823.0" style="-fx-background-color: #1E1E1D;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.UserController">
    <children>
       <BorderPane layoutX="1.0" layoutY="1.0" prefHeight="608.0" prefWidth="823.0">
          <left>
@@ -22,9 +22,9 @@
                   <Insets top="10.0" />
                </padding>
                <children>
-                  <ImageView fitHeight="135.0" fitWidth="123.0" pickOnBounds="true" preserveRatio="true">
+                  <ImageView fitHeight="136.0" fitWidth="123.0" pickOnBounds="true" preserveRatio="true">
                      <image>
-                        <Image url="@../../image/NA.jpg" />
+                        <Image url="@../../../image/images.jpg" />
                      </image></ImageView>
                   <Label fx:id="Name" alignment="CENTER" contentDisplay="CENTER" prefHeight="62.0" prefWidth="182.0" text="Nguyễn Duy Quang" textAlignment="CENTER" textFill="#eacd8f" wrapText="true">
                      <font>
@@ -62,7 +62,7 @@
          <center>
             <StackPane prefHeight="150.0" prefWidth="200.0" style="-fx-background-color: White;" BorderPane.alignment="CENTER">
                <children>
-                   <AnchorPane fx:id="TrangchuPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D;">
+                   <AnchorPane fx:id="TrangchuPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;">
                       <children>
                          <VBox fx:id="AllItems" layoutX="8.0" layoutY="211.0" prefHeight="411.0" prefWidth="666.0" style="-fx-background-color: #1E1E1D;" />
                          <Label layoutX="4.0" layoutY="62.0" prefHeight="18.0" prefWidth="674.0" style="-fx-text-fill: #eacd8f;" text="_______________________________________________________________________________________________________________________________________" />
@@ -88,7 +88,7 @@
                          </Button>
                       </children>
                    </AnchorPane>
-                  <AnchorPane fx:id="KhoPane" prefHeight="200.0" prefWidth="200.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" visible="false">
+                  <AnchorPane fx:id="KhoPane" prefHeight="200.0" prefWidth="200.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;">
                      <children>
                         <Button layoutX="450.0" layoutY="46.0" mnemonicParsing="false" onAction="#CreateItems" prefHeight="59.0" prefWidth="206.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Tạo sản phẩm">
                            <font>
@@ -104,7 +104,7 @@
                      </children>
                   </AnchorPane>
                   <AnchorPane fx:id="LichsudaugiaPane" prefHeight="200.0" prefWidth="200.0" visible="false" />
-                  <AnchorPane fx:id="NaptienPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" visible="false">
+                  <AnchorPane fx:id="NaptienPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;">
                      <children>
                         <Label fx:id="Sodutaikhoan" alignment="CENTER" layoutX="48.0" layoutY="93.0" prefHeight="36.0" prefWidth="486.0" style="-fx-text-fill: white; -fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-font-weight: bold;" text=" 300000">
                            <font>
@@ -137,9 +137,9 @@
                               <Font name="Arial" size="22.0" />
                            </font>
                         </TextField>
-                        <Button layoutX="171.0" layoutY="461.0" mnemonicParsing="false" onAction="#Naptien" prefHeight="34.0" prefWidth="240.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Nạp tiền">
+                        <Button layoutX="162.0" layoutY="459.0" mnemonicParsing="false" onAction="#Naptien" prefHeight="49.0" prefWidth="258.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Nạp tiền">
                            <font>
-                              <Font size="17.0" />
+                              <Font size="24.0" />
                            </font>
                         </Button>
                         <Label alignment="CENTER" layoutX="480.0" layoutY="100.0" prefHeight="54.0" prefWidth="44.0" style="-fx-text-fill: white;" text="\$">
@@ -154,7 +154,7 @@
                         </Label>
                      </children>
                   </AnchorPane>
-                  <AnchorPane fx:id="CaidatPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" visible="false">
+                  <AnchorPane fx:id="CaidatPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;">
                      <children>
                         <Label layoutX="48.0" layoutY="26.0" prefHeight="50.0" prefWidth="486.0" style="-fx-text-fill: #eacd8f;" text="Đổi mật khẩu" textFill="TRANSPARENT">
                            <font>
@@ -186,7 +186,7 @@
                               <Font name="Arial" size="25.0" />
                            </font>
                         </Button>
-                        <Button layoutX="48.0" layoutY="432.0" mnemonicParsing="false" onAction="#Doitaikhoan" prefHeight="59.0" prefWidth="214.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Đổi tài khoản">
+                        <Button layoutX="48.0" layoutY="432.0" mnemonicParsing="false" onAction="#Doitaikhoan" prefHeight="59.0" prefWidth="214.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Đăng xuất">
                            <font>
                               <Font name="Arial" size="24.0" />
                            </font>
