@@ -2,43 +2,41 @@ package Network;
 
 import Exception.*;
 import Model.*;
-import Service.AuctionManager;
-import Observer.AuctionObserver;
+import DAO.*;
 import Factory.ItemFactory;
 import Factory.UserFactory;
 
 import java.io.*;
 import java.net.*;
 import java.util.List;
+import java.util.Optional;
 
 public class AuctionServer {
     private ServerSocket serverSocket;
     private int port;
     private boolean running;
-    private AuctionManager auctionManager;
+    private UserDAO userDAO;
+    private ItemDAO itemDAO;
+    private AuctionDAO auctionDAO;
 
     public AuctionServer(int port) {
         this.port = port;
-        try {
-            this.auctionManager = AuctionManager.loadData();
-            System.out.println("Data loaded from file");
-        } catch (IOException | ClassNotFoundException e) {
-            System.out.println("No data file found, starting fresh");
-            this.auctionManager = AuctionManager.getInstance();
-        }
-        auctionManager.addGlobalObserver(new ServerAuctionObserver());
+        this.userDAO = new UserDAO();
+        this.itemDAO = new ItemDAO();
+        this.auctionDAO = new AuctionDAO();
+        System.out.println("Server initialized with DAO pattern (MySQL)");
     }
 
     public void start() throws IOException {
         serverSocket = new ServerSocket(port);
         running = true;
         System.out.println("Server started on port " + port);
-        
+
         while (running) {
             try {
                 Socket clientSocket = serverSocket.accept();
                 System.out.println("Client connected: " + clientSocket.getRemoteSocketAddress());
-                new ClientHandler(clientSocket, auctionManager).start();
+                new ClientHandler(clientSocket).start();
             } catch (IOException e) {
                 if (running) {
                     System.err.println("Error accepting client: " + e.getMessage());
@@ -53,22 +51,19 @@ public class AuctionServer {
             if (serverSocket != null) {
                 serverSocket.close();
             }
-            auctionManager.saveData();
         } catch (IOException e) {
-            System.err.println("Error saving data: " + e.getMessage());
+            System.err.println("Error closing server: " + e.getMessage());
         }
     }
 
-    private static class ClientHandler extends Thread {
+    private class ClientHandler extends Thread {
         private Socket socket;
         private ObjectInputStream input;
         private ObjectOutputStream output;
-        private AuctionManager auctionManager;
         private User currentUser;
 
-        public ClientHandler(Socket socket, AuctionManager auctionManager) {
+        public ClientHandler(Socket socket) {
             this.socket = socket;
-            this.auctionManager = auctionManager;
         }
 
         @Override
@@ -77,13 +72,13 @@ public class AuctionServer {
                 input = new ObjectInputStream(socket.getInputStream());
                 output = new ObjectOutputStream(socket.getOutputStream());
                 output.flush();
-                
+
                 Message message;
                 while ((message = (Message) input.readObject()) != null) {
                     Message response = processMessage(message);
                     output.writeObject(response);
                     output.flush();
-                    
+
                     if (response.getType() == Message.Type.ERROR) {
                         break;
                     }
@@ -120,10 +115,12 @@ public class AuctionServer {
                         return handleGetItems();
                     case CREATE_ITEM:
                         return handleCreateItem(message);
-                    case GET_USERS:
-                        return handleGetUsers();
+                    case GET_USER_BALANCE:
+                        return handleGetUserBalance(message);
+                    case GET_BID_HISTORY:
+                        return handleGetBidHistory(message);
                     default:
-                        return new Message(Message.Type.ERROR, "Unknown message type");
+                        return createErrorMessage("Unknown message type");
                 }
             } catch (Exception e) {
                 return createErrorMessage(e.getMessage());
@@ -132,12 +129,13 @@ public class AuctionServer {
 
         private Message handleLogin(Message message) {
             try {
-                User user = auctionManager.authenticate(
+                User user = userDAO.authenticate(
                     (String) message.getData(),
                     message.getContent()
                 );
                 currentUser = user;
-                Message response = new Message(Message.Type.SUCCESS, "Login successful");
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setContent("Login successful");
                 response.setData(user);
                 return response;
             } catch (AuthenticationException e) {
@@ -155,30 +153,25 @@ public class AuctionServer {
                 (String) message.getData(),
                 message.getContent()
             );
-            auctionManager.addUser(newUser);
-            try {
-                auctionManager.saveData();
-            } catch (IOException e) {
-                System.err.println("Error saving data: " + e.getMessage());
-            }
-            Message response = new Message(Message.Type.SUCCESS, "Registration successful");
+            userDAO.register(newUser);
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setContent("Registration successful");
             response.setData(newUser);
             return response;
         }
 
         private Message handleGetAuctions() {
-            List<AuctionSession> auctions = auctionManager.getAllAuctions();
-            String auctionList = auctions.isEmpty() ? "No auctions" : auctions.toString();
-            Message response = new Message(Message.Type.SUCCESS, auctionList);
+            List<AuctionSession> auctions = auctionDAO.findAllAuctions();
+            Message response = new Message(Message.Type.SUCCESS);
             response.setData(auctions);
             return response;
         }
 
         private Message handleGetAuction(Message message) {
-            AuctionSession auction = auctionManager.getAuction(message.getAuctionId());
-            if (auction != null) {
+            Optional<AuctionSession> auction = auctionDAO.findAuctionById(message.getAuctionId());
+            if (auction.isPresent()) {
                 Message response = new Message(Message.Type.SUCCESS);
-                response.setData(auction);
+                response.setData(auction.get());
                 return response;
             }
             return createErrorMessage("Auction not found");
@@ -188,56 +181,77 @@ public class AuctionServer {
             if (currentUser == null || !currentUser.isSeller()) {
                 return createErrorMessage("Only sellers can create auctions");
             }
-            
+
             try {
-                AuctionSession auction = auctionManager.createAuction(
-                    message.getItemId(),
+                Optional<Item> itemOpt = itemDAO.findById(message.getItemId());
+                if (!itemOpt.isPresent()) {
+                    return createErrorMessage("Item not found");
+                }
+                Item item = itemOpt.get();
+
+                AuctionSession auction = new AuctionSession(
+                    "AUC" + System.currentTimeMillis(),
+                    item,
+                    currentUser.getId(),
+                    item.getStartPrice(),
                     Long.parseLong(message.getContent())
                 );
-                Message response = new Message(Message.Type.SUCCESS, "Auction created");
+                auctionDAO.saveAuction(auction);
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setContent("Auction created");
                 response.setData(auction);
                 return response;
-            } catch (ItemNotFoundException e) {
+            } catch (Exception e) {
                 return createErrorMessage(e.getMessage());
             }
         }
 
         private Message handleStartAuction(Message message) {
-            auctionManager.startAuction(message.getAuctionId());
-            return new Message(Message.Type.SUCCESS, "Auction started");
+            auctionDAO.startAuction(message.getAuctionId());
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setContent("Auction started");
+            return response;
         }
 
         private Message handlePlaceBid(Message message) {
             if (currentUser == null || !currentUser.isBidder()) {
                 return createErrorMessage("Only bidders can place bids");
             }
-            
+
             try {
-                String result = auctionManager.placeBid(
+                boolean success = auctionDAO.placeBid(
                     message.getAuctionId(),
                     currentUser.getId(),
                     (Double) message.getData()
                 );
-                return new Message(Message.Type.SUCCESS, result);
-            } catch (AuctionClosedException | InvalidBidException e) {
+                if (success) {
+                    Message response = new Message(Message.Type.SUCCESS);
+                    response.setContent("Bid placed successfully");
+                    return response;
+                }
+                return createErrorMessage("Failed to place bid");
+            } catch (Exception e) {
                 return createErrorMessage(e.getMessage());
             }
         }
 
         private Message handleFinishAuction(Message message) {
-            auctionManager.finishAuction(message.getAuctionId());
-            return new Message(Message.Type.SUCCESS, "Auction finished");
+            auctionDAO.finishAuction(message.getAuctionId());
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setContent("Auction finished");
+            return response;
         }
 
         private Message handleCancelAuction(Message message) {
-            auctionManager.cancelAuction(message.getAuctionId(), message.getContent());
-            return new Message(Message.Type.SUCCESS, "Auction canceled");
+            auctionDAO.cancelAuction(message.getAuctionId(), message.getContent());
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setContent("Auction canceled");
+            return response;
         }
 
         private Message handleGetItems() {
-            List<Item> items = auctionManager.getAllItems();
-            String itemList = items.isEmpty() ? "No items" : items.toString();
-            Message response = new Message(Message.Type.SUCCESS, itemList);
+            List<Item> items = itemDAO.findAll();
+            Message response = new Message(Message.Type.SUCCESS);
             response.setData(items);
             return response;
         }
@@ -246,7 +260,7 @@ public class AuctionServer {
             if (currentUser == null || !currentUser.isSeller()) {
                 return createErrorMessage("Only sellers can create items");
             }
-            
+
             Item item = (Item) message.getData();
             item = ItemFactory.createItem(
                 item.getCategory(),
@@ -255,20 +269,28 @@ public class AuctionServer {
                 item.getStartPrice(),
                 currentUser.getId()
             );
-            auctionManager.addItem(item);
-            
-            Message response = new Message(Message.Type.SUCCESS, "Item created");
+            itemDAO.save(item);
+
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setContent("Item created");
             response.setData(item);
             return response;
         }
 
-        private Message handleGetUsers() {
-            if (currentUser == null || !currentUser.isAdmin()) {
-                return createErrorMessage("Only admins can view all users");
+        private Message handleGetUserBalance(Message message) {
+            if (currentUser == null) {
+                return createErrorMessage("Not logged in");
             }
-            
+            java.math.BigDecimal balance = userDAO.getBalance(currentUser.getId());
             Message response = new Message(Message.Type.SUCCESS);
-            response.setData(auctionManager.getAllAuctions());
+            response.setData(balance);
+            return response;
+        }
+
+        private Message handleGetBidHistory(Message message) {
+            List<Bid> bids = auctionDAO.getBidHistory(message.getAuctionId());
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setData(bids);
             return response;
         }
 
@@ -289,35 +311,16 @@ public class AuctionServer {
         }
     }
 
-    private static class ServerAuctionObserver implements AuctionObserver {
-        @Override
-        public void onBidPlaced(String auctionId, String bidderId, double amount) {
-            System.out.println("[NOTIFICATION] New bid on " + auctionId + ": " + bidderId + " - " + amount);
-        }
-
-        @Override
-        public void onAuctionStarted(String auctionId) {
-            System.out.println("[NOTIFICATION] Auction " + auctionId + " started");
-        }
-
-        @Override
-        public void onAuctionFinished(String auctionId, String winnerId, double finalPrice) {
-            System.out.println("[NOTIFICATION] Auction " + auctionId + " finished. Winner: " + winnerId + " - " + finalPrice);
-        }
-
-        @Override
-        public void onAuctionCanceled(String auctionId, String reason) {
-            System.out.println("[NOTIFICATION] Auction " + auctionId + " canceled: " + reason);
-        }
-
-        @Override
-        public void onAuctionStatusChanged(String auctionId, String oldStatus, String newStatus) {
-            System.out.println("[NOTIFICATION] Auction " + auctionId + " status changed: " + oldStatus + " -> " + newStatus);
-        }
-    }
-
     public static void main(String[] args) {
-        AuctionServer server = new AuctionServer(8989);
+        int port = 8989;
+        if (args.length > 0) {
+            try {
+                port = Integer.parseInt(args[0]);
+            } catch (NumberFormatException e) {
+                System.err.println("Invalid port number, using default 8989");
+            }
+        }
+        AuctionServer server = new AuctionServer(port);
         try {
             server.start();
         } catch (IOException e) {

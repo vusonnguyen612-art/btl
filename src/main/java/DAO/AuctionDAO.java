@@ -71,7 +71,7 @@ public class AuctionDAO {
         }
     }
     
-    public boolean cancelAuction(String auctionId) {
+    public boolean cancelAuction(String auctionId, String content) {
         String sql = "UPDATE auction_sessions SET status = 'CANCELED' WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -145,7 +145,7 @@ public class AuctionDAO {
     }
     
     public List<Bid> getBidHistory(String auctionId) {
-        String sql = "SELECT b.id, b.auction_id, b.bidder_id, u.username, b.amount, b.timestamp FROM bids b LEFT JOIN users u ON b.bidder_id = u.id WHERE b.auction_id = ? ORDER BY b.timestamp DESC";
+        String sql = "SELECT * FROM bids WHERE auction_id = ? ORDER BY timestamp DESC";
         List<Bid> bids = new ArrayList<>();
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -158,7 +158,6 @@ public class AuctionDAO {
                         rs.getDouble("amount")
                     );
                     bid.setId(rs.getString("id"));
-                    bid.setBidderUsername(rs.getString("username"));
                     bids.add(bid);
                 }
             }
@@ -169,7 +168,7 @@ public class AuctionDAO {
     }
     
     public List<Bid> getUserBidHistory(String userId) {
-        String sql = "SELECT b.id, b.auction_id, b.bidder_id, u.username, b.amount, b.timestamp, i.name as item_name FROM bids b JOIN auction_sessions a ON b.auction_id = a.id JOIN items i ON a.item_id = i.id LEFT JOIN users u ON b.bidder_id = u.id WHERE b.bidder_id = ? ORDER BY b.timestamp DESC";
+        String sql = "SELECT b.*, a.item_id FROM bids b JOIN auction_sessions a ON b.auction_id = a.id WHERE b.bidder_id = ? ORDER BY b.timestamp DESC";
         List<Bid> bids = new ArrayList<>();
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -182,8 +181,6 @@ public class AuctionDAO {
                         rs.getDouble("amount")
                     );
                     bid.setId(rs.getString("id"));
-                    bid.setBidderUsername(rs.getString("username"));
-                    bid.setItemName(rs.getString("item_name"));
                     bids.add(bid);
                 }
             }
@@ -239,22 +236,6 @@ public class AuctionDAO {
         return BigDecimal.ZERO;
     }
     
-    public String getUsernameById(String userId) {
-        String sql = "SELECT username FROM users WHERE id = ?";
-        try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, userId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getString("username");
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return userId;
-    }
-    
     private AuctionSession mapResultSetToSession(ResultSet rs) throws SQLException {
         String id = rs.getString("id");
         String itemId = rs.getString("item_id");
@@ -306,5 +287,8 @@ public class AuctionDAO {
         }
         
         return session;
+    }
+
+    public void saveAuction(AuctionSession auction) {
     }
 }

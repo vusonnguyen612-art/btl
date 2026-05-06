@@ -1,10 +1,11 @@
 package Controller;
 
-import DAO.AuctionDAO;
 import Model.AuctionSession;
 import Model.Bid;
 import Model.Item;
 import Model.User;
+import Network.Message;
+import Network.NetworkService;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -13,7 +14,6 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -71,7 +71,7 @@ public class AuctionRoomController {
 
     private User currentUser;
     private AuctionSession selectedAuction;
-    private final AuctionDAO auctionDAO = new AuctionDAO();
+    private NetworkService networkService = NetworkService.getInstance();
     private Timeline timerTimeline;
     private Timeline refreshTimeline;
 
@@ -89,9 +89,12 @@ public class AuctionRoomController {
     public void setCurrentUser(User user) {
         this.currentUser = user;
         if (user != null) {
-            BigDecimal balance = auctionDAO.getUserBalance(user.getId());
-            if (balance != null) {
-                userBalanceLabel.setText(formatMoney(balance) + " $");
+            Message response = networkService.getUserBalance();
+            if (response.getType() == Message.Type.SUCCESS && response.getData() != null) {
+                BigDecimal balance = (BigDecimal) response.getData();
+                if (userBalanceLabel != null) {
+                    userBalanceLabel.setText(formatMoney(balance) + " $");
+                }
             }
         }
         loadAuctions();
@@ -111,18 +114,26 @@ public class AuctionRoomController {
 
         auctionList.getChildren().clear();
 
-        List<AuctionSession> runningAuctions = auctionDAO.findRunningAuctions();
-        List<AuctionSession> openAuctions = auctionDAO.findOpenAuctions();
+        Message response = networkService.getAuctions();
+        List<AuctionSession> allAuctions = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
+                ? (List<AuctionSession>) response.getData() : List.of();
+
+        List<AuctionSession> runningAuctions = allAuctions.stream()
+                .filter(AuctionSession::isRunning)
+                .toList();
+        List<AuctionSession> openAuctions = allAuctions.stream()
+                .filter(AuctionSession::isOpen)
+                .toList();
 
         if (runningAuctions.isEmpty() && openAuctions.isEmpty()) {
-            Label emptyLabel = new Label("Hiện chưa có phiên đấu giá nào đang diễn ra.");
+            Label emptyLabel = new Label("Khong co phien dau gia nao.");
             emptyLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 16px;");
             auctionList.getChildren().add(emptyLabel);
             return;
         }
 
         if (!runningAuctions.isEmpty()) {
-            Label runningHeader = new Label("PHIÊN ĐANG DIỄN RA");
+            Label runningHeader = new Label("Phien dang dien ra");
             runningHeader.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 18px; -fx-font-weight: bold;");
             runningHeader.setPadding(new Insets(5, 0, 10, 0));
             auctionList.getChildren().add(runningHeader);
@@ -134,7 +145,7 @@ public class AuctionRoomController {
         }
 
         if (!openAuctions.isEmpty()) {
-            Label openHeader = new Label("PHIÊN SẮP DIỄN RA");
+            Label openHeader = new Label("Phien sap dien ra");
             openHeader.setStyle("-fx-text-fill: #FF9800; -fx-font-size: 18px; -fx-font-weight: bold;");
             openHeader.setPadding(new Insets(15, 0, 10, 0));
             auctionList.getChildren().add(openHeader);
@@ -173,7 +184,7 @@ public class AuctionRoomController {
             }
             return hours + "h";
         }
-        return minutes + " phút";
+        return minutes + " phut";
     }
 
     private String getTimeRemaining(AuctionSession auction) {
@@ -183,7 +194,7 @@ public class AuctionRoomController {
 
         LocalDateTime now = LocalDateTime.now();
         if (now.isAfter(auction.getEndTime())) {
-            return "Đã kết thúc";
+            return "Da ket thuc";
         }
 
         long totalSeconds = java.time.Duration.between(now, auction.getEndTime()).getSeconds();
@@ -192,11 +203,11 @@ public class AuctionRoomController {
         long seconds = totalSeconds % 60;
 
         if (hours > 0) {
-            return String.format("Còn lại: %02d:%02d:%02d", hours, minutes, seconds);
+            return String.format("Con %02d:%02d:%02d", hours, minutes, seconds);
         } else if (minutes > 0) {
-            return String.format("Còn lại: %02d:%02d", minutes, seconds);
+            return String.format("Con %02d:%02d", minutes, seconds);
         } else {
-            return String.format("Còn lại: %ds", seconds);
+            return String.format("Con %ds", seconds);
         }
     }
 
@@ -204,23 +215,23 @@ public class AuctionRoomController {
         this.selectedAuction = auction;
 
         if (selectedAuctionName != null) {
-            selectedAuctionName.setText(auction.getItem() != null ? auction.getItem().getName() : "Không xác định");
+            selectedAuctionName.setText(auction.getItem() != null ? auction.getItem().getName() : "Unknown");
         }
 
         if (selectedAuctionStatus != null) {
             String status = auction.getStatus().toString();
-            selectedAuctionStatus.setText("Trạng thái: " + status);
+            selectedAuctionStatus.setText("Trang thai: " + status);
         }
 
         if (durationDisplayLabel != null) {
-            durationDisplayLabel.setText("Thời lượng: " + formatDuration(auction.getDurationMinutes()));
+            durationDisplayLabel.setText("Thoi gian: " + formatDuration(auction.getDurationMinutes()));
         }
 
         if (startTimeLabel != null) {
             if (auction.getStartTime() != null) {
                 startTimeLabel.setText(auction.getStartTime().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
             } else {
-                startTimeLabel.setText("Chưa bắt đầu");
+                startTimeLabel.setText("Chua bat dau");
             }
         }
 
@@ -240,13 +251,19 @@ public class AuctionRoomController {
             if (auction.getHighestBidderId() != null) {
                 highestBidderLabel.setText(auction.getHighestBidderId());
             } else {
-                highestBidderLabel.setText("Chưa có người đặt giá");
+                highestBidderLabel.setText("Chua co");
             }
         }
 
         if (bidAmountField != null) {
-            double minBid = auction.getCurrentPrice() + auction.getMinIncrement();
-            bidAmountField.setText(String.valueOf(minBid));
+            boolean isSeller = currentUser != null && auction.getSellerId().equals(currentUser.getId());
+            bidAmountField.setDisable(isSeller);
+            if (isSeller) {
+                bidAmountField.clear();
+            } else {
+                double minBid = auction.getCurrentPrice() + auction.getMinIncrement();
+                bidAmountField.setText(String.valueOf(minBid));
+            }
         }
 
         loadBidHistory(auction.getId());
@@ -276,11 +293,13 @@ public class AuctionRoomController {
 
         LocalDateTime now = LocalDateTime.now();
         if (now.isAfter(auction.getEndTime())) {
-            timerLabel.setText("Đã kết thúc");
+            timerLabel.setText("DA KET THUC");
             timerLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 20px; -fx-font-weight: bold;");
             timerTimeline.stop();
 
-            auctionDAO.finishAuction(auction.getId());
+            Message finishMsg = new Message(Message.Type.FINISH_AUCTION);
+            finishMsg.setAuctionId(auction.getId());
+            networkService.sendMessage(finishMsg);
             loadAuctions();
             return;
         }
@@ -312,10 +331,12 @@ public class AuctionRoomController {
 
         bidHistoryList.getChildren().clear();
 
-        List<Bid> bids = auctionDAO.getBidHistory(auctionId);
+        Message response = networkService.getBidHistory(auctionId);
+        List<Bid> bids = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
+                ? (List<Bid>) response.getData() : List.of();
 
         if (bids.isEmpty()) {
-            Label emptyLabel = new Label("Chưa có lượt đặt giá nào. Hãy là người đầu tiên!");
+            Label emptyLabel = new Label("Chua co lich su dat gia");
             emptyLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 14px;");
             bidHistoryList.getChildren().add(emptyLabel);
             return;
@@ -343,12 +364,17 @@ public class AuctionRoomController {
     @FXML
     private void placeBid(ActionEvent event) {
         if (currentUser == null || selectedAuction == null) {
-            showAlert(Alert.AlertType.WARNING, "Thông báo", "Vui lòng chọn một phiên đấu giá để tiếp tục.");
+            showAlert(Alert.AlertType.WARNING, "Loi", "Vui long chon phien dau gia.");
             return;
         }
 
         if (selectedAuction.getStatus() != AuctionSession.Status.RUNNING) {
-            showAlert(Alert.AlertType.WARNING, "Thông báo", "Phiên đấu giá này hiện không thể nhận lượt đặt giá mới (chưa bắt đầu hoặc đã khép lại).");
+            showAlert(Alert.AlertType.WARNING, "Loi", "Phien dau gia chua bat dau hoac da ket thuc.");
+            return;
+        }
+
+        if (selectedAuction.getSellerId().equals(currentUser.getId())) {
+            showAlert(Alert.AlertType.WARNING, "Loi", "Ban khong the dat gia cho san pham cua minh.");
             return;
         }
 
@@ -356,43 +382,43 @@ public class AuctionRoomController {
         try {
             bidAmount = Double.parseDouble(bidAmountField.getText().trim());
         } catch (NumberFormatException e) {
-            showAlert(Alert.AlertType.WARNING, "Lỗi nhập liệu", "Vui lòng nhập một số tiền hợp lệ (chỉ bao gồm chữ số).");
+            showAlert(Alert.AlertType.WARNING, "Loi", "So tien khong hop le.");
             return;
         }
 
         if (bidAmount <= selectedAuction.getCurrentPrice()) {
-            showAlert(Alert.AlertType.WARNING, "Lỗi mức giá",
-                    "Mức giá đưa ra phải cao hơn giá hiện tại: " + formatMoney(new BigDecimal(String.valueOf(selectedAuction.getCurrentPrice()))) + " $");
+            showAlert(Alert.AlertType.WARNING, "Loi",
+                    "Gia phai lon hon gia hien tai: " + formatMoney(new BigDecimal(String.valueOf(selectedAuction.getCurrentPrice()))) + " $");
             return;
         }
 
         if (bidAmount < selectedAuction.getCurrentPrice() + selectedAuction.getMinIncrement()) {
-            showAlert(Alert.AlertType.WARNING, "Lỗi mức giá",
-                    "Mức giá tối thiểu hợp lệ cho bước giá này là: " + formatMoney(new BigDecimal(String.valueOf(selectedAuction.getCurrentPrice() + selectedAuction.getMinIncrement()))) + " $");
+            showAlert(Alert.AlertType.WARNING, "Loi",
+                    "Gia toi thieu phai la: " + formatMoney(new BigDecimal(String.valueOf(selectedAuction.getCurrentPrice() + selectedAuction.getMinIncrement()))) + " $");
             return;
         }
 
-        BigDecimal userBalance = auctionDAO.getUserBalance(currentUser.getId());
-        if (userBalance.compareTo(new BigDecimal(String.valueOf(bidAmount))) < 0) {
-            showAlert(Alert.AlertType.ERROR, "Lỗi giao dịch", "Tài khoản của bạn không đủ số dư để thực hiện giao dịch này. Số dư hiện tại: " + formatMoney(userBalance) + " $");
-            return;
-        }
+        Message response = networkService.placeBid(selectedAuction.getId(), bidAmount);
 
-        boolean success = auctionDAO.placeBid(selectedAuction.getId(), currentUser.getId(), bidAmount);
+        if (response.getType() == Message.Type.SUCCESS) {
+            showAlert(Alert.AlertType.INFORMATION, "Thanh cong",
+                    "Dat gia thanh cong: " + formatMoney(new BigDecimal(String.valueOf(bidAmount))) + " $");
 
-        if (success) {
-            showAlert(Alert.AlertType.INFORMATION, "Thành công",
-                    "Đặt giá thành công: " + formatMoney(new BigDecimal(String.valueOf(bidAmount))) + " $");
-
-            selectedAuction = auctionDAO.findAuctionById(selectedAuction.getId()).orElse(selectedAuction);
+            Message auctionResponse = networkService.getAuction(selectedAuction.getId());
+            if (auctionResponse.getType() == Message.Type.SUCCESS && auctionResponse.getData() != null) {
+                selectedAuction = (AuctionSession) auctionResponse.getData();
+            }
             selectAuction(selectedAuction);
 
             if (userBalanceLabel != null) {
-                BigDecimal newBalance = auctionDAO.getUserBalance(currentUser.getId());
-                userBalanceLabel.setText(formatMoney(newBalance) + " $");
+                Message balanceResponse = networkService.getUserBalance();
+                if (balanceResponse.getType() == Message.Type.SUCCESS && balanceResponse.getData() != null) {
+                    BigDecimal newBalance = (BigDecimal) balanceResponse.getData();
+                    userBalanceLabel.setText(formatMoney(newBalance) + " $");
+                }
             }
         } else {
-            showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Đã xảy ra lỗi trong quá trình xử lý. Vui lòng thử lại sau.");
+            showAlert(Alert.AlertType.ERROR, "Loi", "Khong the dat gia. " + response.getContent());
         }
     }
 
@@ -406,13 +432,12 @@ public class AuctionRoomController {
     }
 
     private void startAuction(AuctionSession auction) {
-        boolean success = auctionDAO.startAuction(auction.getId());
-
-        if (success) {
-            showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đã bắt đầu phiên đấu giá thành công.");
+        Message response = networkService.startAuction(auction.getId());
+        if (response.getType() == Message.Type.SUCCESS) {
+            showAlert(Alert.AlertType.INFORMATION, "Thanh cong", "Da bat dau phien dau gia.");
             loadAuctions();
         } else {
-            showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể bắt đầu phiên đấu giá. Vui lòng thử lại sau.");
+            showAlert(Alert.AlertType.ERROR, "Loi", "Khong the bat dau phien dau gia.");
         }
     }
 

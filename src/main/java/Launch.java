@@ -1,15 +1,14 @@
-import javafx.application.Application;
-import javafx.fxml.FXMLLoader;
-import javafx.scene.Scene;
-import javafx.stage.Stage;
-
-import java.net.URL;
-import java.nio.file.Paths;
-
-import javafx.application.Application;
+import java.lang.reflect.Method;
 
 public class Launch {
     public static void main(String[] args) {
-        Application.launch(LoginApp.class, args);
+        try {
+            Class<?> loginAppClass = Class.forName("LoginApp");
+            Method mainMethod = loginAppClass.getMethod("main", String[].class);
+            mainMethod.invoke(null, (Object) args);
+        } catch (Exception e) {
+            System.err.println("Cannot launch application: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }

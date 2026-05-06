@@ -109,24 +109,24 @@ public class CreateItemsController implements UserController.LinkedController {
         String thoiGianStr = thoiGianDauGia.getText().trim();
 
         if (ten.isBlank()) {
-            showWarning("Lỗi", "Vui lòng nhập tên sản phẩm.");
+            showWarning("Loi", "Vui long nhap ten san pham.");
             return;
         }
 
         if (giaStr.isBlank()) {
-            showWarning("Lỗi", "Vui lòng nhập giá khởi đầu.");
+            showWarning("Loi", "Vui long nhap gia khoi dau.");
             return;
         }
 
         if (thoiGianStr.isBlank()) {
-            showWarning("Lỗi", "Vui lòng nhập thời gian đấu giá.");
+            showWarning("Loi", "Vui long nhap thoi gian dau gia.");
             return;
         }
 
         try {
             BigDecimal gia = new BigDecimal(giaStr);
             if (gia.compareTo(BigDecimal.ZERO) <= 0) {
-                showWarning("Lỗi", "Giá phải lớn hơn 0.");
+                showWarning("Loi", "Gia phai lon hon 0.");
                 return;
             }
 
@@ -134,15 +134,15 @@ public class CreateItemsController implements UserController.LinkedController {
             try {
                 duration = Long.parseLong(thoiGianStr);
                 if (duration <= 0) {
-                    showWarning("Lỗi", "Thời gian phải lớn hơn 0 phút.");
+                    showWarning("Loi", "Thoi gian phai lon hon 0 phut.");
                     return;
                 }
                 if (duration > 1440) {
-                    showWarning("Lỗi", "Thời gian tối đa là 1440 phút (24 giờ).");
+                    showWarning("Loi", "Thoi gian toi da la 1440 phut (24 gio).");
                     return;
                 }
             } catch (NumberFormatException e) {
-                showWarning("Lỗi", "Thời gian không hợp lệ.");
+                showWarning("Loi", "Thoi gian khong hop le.");
                 return;
             }
 
@@ -153,26 +153,26 @@ public class CreateItemsController implements UserController.LinkedController {
             if (itemDAO.save(item)) {
                 String sessionId = UUID.randomUUID().toString();
                 AuctionSession session = new AuctionSession(
-                        sessionId,
-                        item,
-                        currentUser.getId(),
-                        gia.doubleValue(),
-                        duration
+                    sessionId,
+                    item,
+                    currentUser.getId(),
+                    gia.doubleValue(),
+                    duration
                 );
                 sessionDAO.save(session);
 
                 String durationText = duration >= 60
-                        ? (duration / 60) + " giờ" + (duration % 60 > 0 ? " " + (duration % 60) + " phút" : "")
-                        : duration + " phút";
+                        ? (duration / 60) + " gio" + (duration % 60 > 0 ? " " + (duration % 60) + " phut" : "")
+                        : duration + " phut";
 
-                showInfo("Thành công", "Tạo sản phẩm thành công!\nThời gian đấu giá: " + durationText);
+                showInfo("Thanh cong", "Tao san pham thanh cong!\nThoi gian dau gia: " + durationText);
                 closeWindow();
             } else {
-                showWarning("Lỗi", "Không thể tạo sản phẩm.");
+                showWarning("Loi", "Khong the tao san pham.");
             }
 
         } catch (NumberFormatException e) {
-            showWarning("Lỗi", "Giá không hợp lệ.");
+            showWarning("Loi", "Gia khong hop le.");
         }
     }
 
