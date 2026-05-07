@@ -1,6 +1,7 @@
 package Controller;
 
 import Model.Bid;
+import DAO.UserDAO;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
@@ -18,6 +19,7 @@ public class BidCardController {
     @FXML private Label timeLabel;
 
     private static final DecimalFormat moneyFormat;
+    private UserDAO userDAO = new UserDAO();
 
     static {
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
@@ -26,7 +28,8 @@ public class BidCardController {
     }
 
     public void setBid(Bid bid) {
-        bidderLabel.setText(bid.getBidderId());
+        String username = userDAO.getUsernameById(bid.getBidderId());
+        bidderLabel.setText(username);
 
         amountLabel.setText(moneyFormat.format(bid.getAmount()) + " $");
 

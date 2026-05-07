@@ -137,4 +137,20 @@ public class UserDAO {
         }
         return BigDecimal.ZERO;
     }
+
+    public String getUsernameById(String userId) {
+        String sql = "SELECT username FROM users WHERE id = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("username");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return userId;
+    }
 }
