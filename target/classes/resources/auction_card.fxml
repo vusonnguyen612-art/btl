@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<HBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:id="cardRoot"
+      spacing="15" alignment="CENTER_LEFT"
+      style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-padding: 12; -fx-background-radius: 5; -fx-border-radius: 5;"
+      fx:controller="Controller.AuctionCardController">
+
+    <VBox fx:id="infoBox" prefWidth="200" spacing="5">
+        <Label fx:id="nameLabel" style="-fx-text-fill: white; -fx-font-size: 15px; -fx-font-weight: bold;" />
+        <Label fx:id="priceLabel" style="-fx-text-fill: #d9b15f; -fx-font-size: 14px;" />
+        <Label fx:id="statusLabel" style="-fx-text-fill: #4CAF50; -fx-font-size: 12px; -fx-font-weight: bold;" />
+        <Label fx:id="timeInfoLabel" style="-fx-text-fill: #888888; -fx-font-size: 11px;" />
+    </VBox>
+
+    <VBox fx:id="actionBox" alignment="CENTER_RIGHT" spacing="5" />
+</HBox>

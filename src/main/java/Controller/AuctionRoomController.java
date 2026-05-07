@@ -4,6 +4,7 @@ import Model.AuctionSession;
 import Model.Bid;
 import Model.Item;
 import Model.User;
+import DAO.UserDAO;
 import Network.Message;
 import Network.NetworkService;
 
@@ -72,8 +73,10 @@ public class AuctionRoomController {
     private User currentUser;
     private AuctionSession selectedAuction;
     private NetworkService networkService = NetworkService.getInstance();
+    private UserDAO userDAO = new UserDAO();
     private Timeline timerTimeline;
     private Timeline refreshTimeline;
+    private Timeline selectedAuctionRefreshTimeline;
 
     private static final String BID_BUTTON_STYLE =
             "-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30; -fx-font-size: 14px;";
@@ -249,7 +252,8 @@ public class AuctionRoomController {
 
         if (highestBidderLabel != null) {
             if (auction.getHighestBidderId() != null) {
-                highestBidderLabel.setText(auction.getHighestBidderId());
+                String username = userDAO.getUsernameById(auction.getHighestBidderId());
+                highestBidderLabel.setText(username);
             } else {
                 highestBidderLabel.setText("Chua co");
             }
@@ -268,6 +272,7 @@ public class AuctionRoomController {
 
         loadBidHistory(auction.getId());
         startTimer(auction);
+        startSelectedAuctionRefresh(auction);
 
         if (auctionDetailPane != null) {
             auctionDetailPane.setVisible(true);
@@ -286,6 +291,47 @@ public class AuctionRoomController {
                 new KeyFrame(Duration.seconds(1), e -> updateTimer(auction))
         );
         timerTimeline.play();
+    }
+
+    private void startSelectedAuctionRefresh(AuctionSession auction) {
+        if (selectedAuctionRefreshTimeline != null) {
+            selectedAuctionRefreshTimeline.stop();
+        }
+
+        selectedAuctionRefreshTimeline = new Timeline();
+        selectedAuctionRefreshTimeline.setCycleCount(Timeline.INDEFINITE);
+        selectedAuctionRefreshTimeline.getKeyFrames().add(
+                new KeyFrame(Duration.seconds(1), e -> refreshSelectedAuction(auction))
+        );
+        selectedAuctionRefreshTimeline.play();
+    }
+
+    private void refreshSelectedAuction(AuctionSession auction) {
+        Message auctionResponse = networkService.getAuction(auction.getId());
+        if (auctionResponse.getType() == Message.Type.SUCCESS && auctionResponse.getData() != null) {
+            AuctionSession updatedAuction = (AuctionSession) auctionResponse.getData();
+            this.selectedAuction = updatedAuction;
+
+            Platform.runLater(() -> {
+                if (currentPriceLabel != null) {
+                    currentPriceLabel.setText(formatMoney(new BigDecimal(String.valueOf(updatedAuction.getCurrentPrice()))) + " $");
+                }
+                if (highestBidderLabel != null) {
+                    if (updatedAuction.getHighestBidderId() != null) {
+                        String username = userDAO.getUsernameById(updatedAuction.getHighestBidderId());
+                        highestBidderLabel.setText(username);
+                    } else {
+                        highestBidderLabel.setText("Chua co");
+                    }
+                }
+                loadBidHistory(updatedAuction.getId());
+
+                if (bidAmountField != null && !bidAmountField.isDisabled()) {
+                    double minBid = updatedAuction.getCurrentPrice() + updatedAuction.getMinIncrement();
+                    bidAmountField.setText(String.valueOf(minBid));
+                }
+            });
+        }
     }
 
     private void updateTimer(AuctionSession auction) {
@@ -452,6 +498,10 @@ public class AuctionRoomController {
             timerTimeline.stop();
         }
 
+        if (selectedAuctionRefreshTimeline != null) {
+            selectedAuctionRefreshTimeline.stop();
+        }
+
         selectedAuction = null;
     }
 
@@ -479,6 +529,9 @@ public class AuctionRoomController {
         }
         if (timerTimeline != null) {
             timerTimeline.stop();
+        }
+        if (selectedAuctionRefreshTimeline != null) {
+            selectedAuctionRefreshTimeline.stop();
         }
     }
 }
