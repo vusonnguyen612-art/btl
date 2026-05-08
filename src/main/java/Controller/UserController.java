@@ -256,21 +256,19 @@ public class UserController {
 
             BigDecimal soTienNap = parseMoney(soTienRaw);
 
-            soDuTaiKhoan = soDuTaiKhoan.add(soTienNap);
+            Message response = networkService.deposit(soTienNap);
+            if (response.getType() == Message.Type.SUCCESS && response.getData() != null) {
+                soDuTaiKhoan = (BigDecimal) response.getData();
+                updateBalanceLabels();
 
-            if (Sodutaikhoan1 != null) {
-                Sodutaikhoan1.setText(formatMoney(soDuTaiKhoan));
+                Nganhangnaptien.clear();
+                Sotaikhoannaptien.clear();
+                Sotiencannap.clear();
+
+                showInfo("Nạp tiền thành công", "Bạn đã nạp thêm " + formatMoney(soTienNap) + " $ vào tài khoản.");
+            } else {
+                showError("Lỗi", "Nạp tiền thất bại: " + response.getContent());
             }
-
-            if (Sodutaikhoan != null) {
-                Sodutaikhoan.setText(formatMoney(soDuTaiKhoan));
-            }
-
-            Nganhangnaptien.clear();
-            Sotaikhoannaptien.clear();
-            Sotiencannap.clear();
-
-            showInfo("Nạp tiền thành công", "Bạn đã nạp thêm " + formatMoney(soTienNap) + " $ vào tài khoản.");
 
         } catch (IllegalArgumentException e) {
             showWarning("Dữ liệu không hợp lệ", e.getMessage());
@@ -333,7 +331,16 @@ public class UserController {
             stage.setScene(new Scene(root, 900, 600));
             stage.initOwner(getCurrentStage());
             stage.initModality(Modality.WINDOW_MODAL);
-            stage.setOnHidden(e -> auctionRoomController.stopRefresh());
+            stage.setOnHidden(e -> {
+                auctionRoomController.stopRefresh();
+                Message balanceResponse = networkService.getUserBalance();
+                if (balanceResponse.getType() == Message.Type.SUCCESS && balanceResponse.getData() != null) {
+                    soDuTaiKhoan = (BigDecimal) balanceResponse.getData();
+                    updateBalanceLabels();
+                }
+                loadHomeItems();
+                loadWarehouseItems();
+            });
             stage.show();
 
         } catch (Exception e) {
@@ -372,7 +379,7 @@ public class UserController {
         }
     }
 
-    public void setUserData(User user, BigDecimal balance) {
+    public void setUserData(User user) {
         this.currentUser = user;
 
         if (user != null && user.getUsername() != null) {
@@ -381,8 +388,9 @@ public class UserController {
             }
         }
 
-        if (balance != null) {
-            this.soDuTaiKhoan = balance;
+        Message response = networkService.getUserBalance();
+        if (response.getType() == Message.Type.SUCCESS && response.getData() != null) {
+            this.soDuTaiKhoan = (BigDecimal) response.getData();
         }
 
         updateBalanceLabels();
@@ -424,20 +432,41 @@ public class UserController {
         AllItems.getChildren().clear();
 
         try {
-            Message response = networkService.getItems();
-            if (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List) {
-                List<Item> allItems = (List<Item>) response.getData();
+            Message itemsResponse = networkService.getItems();
+            Message auctionsResponse = networkService.getAuctions();
+            if (itemsResponse.getType() == Message.Type.SUCCESS && itemsResponse.getData() instanceof List) {
+                List<Item> allItems = (List<Item>) itemsResponse.getData();
+                List<AuctionSession> allAuctions = (auctionsResponse.getType() == Message.Type.SUCCESS && auctionsResponse.getData() instanceof List)
+                        ? (List<AuctionSession>) auctionsResponse.getData() : List.of();
+
                 if (allItems.isEmpty()) {
                     Label emptyLabel = createEmptyLabel("Chưa có sản phẩm đấu giá nào.");
                     AllItems.getChildren().add(emptyLabel);
                 } else {
-                    Label headerLabel = new Label("Sản phẩm đang đấu giá");
+                    Label headerLabel = new Label("Sản phẩm đấu giá");
                     headerLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 20px; -fx-font-weight: bold;");
                     headerLabel.setPadding(new Insets(0, 0, 10, 0));
                     AllItems.getChildren().add(headerLabel);
 
+                    List<Item> runningItems = new java.util.ArrayList<>();
+                    List<Item> otherItems = new java.util.ArrayList<>();
+                    java.util.Set<String> runningItemIds = new java.util.HashSet<>();
+                    for (AuctionSession auction : allAuctions) {
+                        if (auction.isRunning() && auction.getItem() != null) {
+                            runningItemIds.add(auction.getItem().getId());
+                        }
+                    }
                     for (Item item : allItems) {
-                        HBox itemBox = createItemCard(item);
+                        if (runningItemIds.contains(item.getId())) {
+                            runningItems.add(item);
+                        } else {
+                            otherItems.add(item);
+                        }
+                    }
+                    runningItems.addAll(otherItems);
+
+                    for (Item item : runningItems) {
+                        HBox itemBox = createItemCard(item, allAuctions);
                         AllItems.getChildren().add(itemBox);
                     }
                 }
@@ -448,17 +477,12 @@ public class UserController {
         }
     }
 
-    private HBox createItemCard(Item item) {
+    private HBox createItemCard(Item item, List<AuctionSession> auctions) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/item_card.fxml"));
             HBox card = loader.load();
             ItemCardController controller = loader.getController();
-
-            Message response = networkService.getAuctions();
-            List<AuctionSession> auctions = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
-                    ? (List<AuctionSession>) response.getData() : List.of();
             controller.setItem(item, auctions);
-
             return card;
         } catch (Exception e) {
             e.printStackTrace();
