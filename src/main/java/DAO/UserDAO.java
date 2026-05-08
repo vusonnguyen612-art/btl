@@ -122,6 +122,19 @@ public class UserDAO {
         }
     }
 
+    public boolean addBalance(String userId, BigDecimal amount) {
+        String sql = "UPDATE users SET balance = balance + ? WHERE id = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setBigDecimal(1, amount);
+            stmt.setString(2, userId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public BigDecimal getBalance(String userId) {
         String sql = "SELECT balance FROM users WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();

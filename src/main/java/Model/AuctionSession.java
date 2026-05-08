@@ -20,6 +20,7 @@ public class AuctionSession implements Serializable {
     public enum Status {
         OPEN,
         RUNNING,
+        PAYMENT_PENDING,
         FINISHED,
         PAID,
         CANCELED
@@ -113,7 +114,7 @@ public class AuctionSession implements Serializable {
     }
 
     public synchronized void finish() {
-        if (status == Status.FINISHED || status == Status.PAID || status == Status.CANCELED) {
+        if (status == Status.PAYMENT_PENDING || status == Status.FINISHED || status == Status.PAID || status == Status.CANCELED) {
             return;
         }
 
@@ -262,6 +263,30 @@ public class AuctionSession implements Serializable {
         this.minIncrement = minIncrement;
     }
 
+    public void setStatus(Status status) {
+        this.status = status;
+    }
+
+    public void setCurrentPrice(double currentPrice) {
+        this.currentPrice = currentPrice;
+    }
+
+    public void setHighestBidderId(String highestBidderId) {
+        this.highestBidderId = highestBidderId;
+    }
+
+    public void setWinnerId(String winnerId) {
+        this.winnerId = winnerId;
+    }
+
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
+
     public long getRemainingTimeMillis() {
         if (endTime == null) {
             return durationMinutes * 60 * 1000;
@@ -276,6 +301,10 @@ public class AuctionSession implements Serializable {
 
     public boolean isRunning() {
         return status == Status.RUNNING;
+    }
+
+    public boolean isPaymentPending() {
+        return status == Status.PAYMENT_PENDING;
     }
 
     public boolean isFinished() {

@@ -130,37 +130,12 @@ public class AuctionSessionDAO {
         Item item = itemDAO.findById(itemId).orElse(null);
         AuctionSession session = new AuctionSession(id, item, sellerId, startPrice, duration);
         session.setMinIncrement(minInc);
-        try {
-            java.lang.reflect.Field statusField = AuctionSession.class.getDeclaredField("status");
-            statusField.setAccessible(true);
-            statusField.set(session, status);
-            
-            java.lang.reflect.Field priceField = AuctionSession.class.getDeclaredField("currentPrice");
-            priceField.setAccessible(true);
-            priceField.set(session, currentPrice);
-            
-            java.lang.reflect.Field bidderField = AuctionSession.class.getDeclaredField("highestBidderId");
-            bidderField.setAccessible(true);
-            bidderField.set(session, highestBidderId);
-            
-            java.lang.reflect.Field winnerField = AuctionSession.class.getDeclaredField("winnerId");
-            winnerField.setAccessible(true);
-            winnerField.set(session, winnerId);
-            
-            if (startTime != null) {
-                java.lang.reflect.Field startField = AuctionSession.class.getDeclaredField("startTime");
-                startField.setAccessible(true);
-                startField.set(session, startTime.toLocalDateTime());
-            }
-            
-            if (endTime != null) {
-                java.lang.reflect.Field endField = AuctionSession.class.getDeclaredField("endTime");
-                endField.setAccessible(true);
-                endField.set(session, endTime.toLocalDateTime());
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        session.setStatus(status);
+        session.setCurrentPrice(currentPrice);
+        session.setHighestBidderId(highestBidderId);
+        session.setWinnerId(winnerId);
+        if (startTime != null) session.setStartTime(startTime.toLocalDateTime());
+        if (endTime != null) session.setEndTime(endTime.toLocalDateTime());
         return session;
     }
 }

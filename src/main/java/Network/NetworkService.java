@@ -2,8 +2,10 @@ package Network;
 
 import Model.*;
 import java.io.*;
+import java.math.BigDecimal;
 import java.net.*;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class NetworkService {
     private static NetworkService instance;
@@ -13,6 +15,7 @@ public class NetworkService {
     private String serverAddress;
     private int port;
     private User currentUser;
+    private Consumer<List<Message>> onNotifications;
 
     private NetworkService(String serverAddress, int port) {
         this.serverAddress = serverAddress;
@@ -60,13 +63,21 @@ public class NetworkService {
         try {
             output.writeObject(message);
             output.flush();
-            return (Message) input.readObject();
+            Message response = (Message) input.readObject();
+            if (response.getNotifications() != null && !response.getNotifications().isEmpty() && onNotifications != null) {
+                onNotifications.accept(response.getNotifications());
+            }
+            return response;
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("Send message error: " + e.getMessage());
             Message error = new Message(Message.Type.ERROR);
             error.setContent(e.getMessage());
             return error;
         }
+    }
+
+    public void setOnNotifications(Consumer<List<Message>> listener) {
+        this.onNotifications = listener;
     }
 
     public Message login(String username, String password) {
@@ -129,6 +140,38 @@ public class NetworkService {
 
     public Message getUserBalance() {
         return sendMessage(new Message(Message.Type.GET_USER_BALANCE));
+    }
+
+    public Message setAutoBid(String auctionId, double maxAmount, double increment) {
+        Message message = new Message(Message.Type.SET_AUTOBID);
+        message.setAuctionId(auctionId);
+        message.setData(maxAmount);
+        message.setContent(String.valueOf(increment));
+        return sendMessage(message);
+    }
+
+    public Message removeAutoBid(String auctionId) {
+        Message message = new Message(Message.Type.REMOVE_AUTOBID);
+        message.setAuctionId(auctionId);
+        return sendMessage(message);
+    }
+
+    public Message stopAuction(String auctionId) {
+        Message message = new Message(Message.Type.STOP_AUCTION);
+        message.setAuctionId(auctionId);
+        return sendMessage(message);
+    }
+
+    public Message processPayment(String auctionId) {
+        Message message = new Message(Message.Type.PROCESS_PAYMENT);
+        message.setAuctionId(auctionId);
+        return sendMessage(message);
+    }
+
+    public Message deposit(BigDecimal amount) {
+        Message message = new Message(Message.Type.DEPOSIT);
+        message.setData(amount);
+        return sendMessage(message);
     }
 
     public Message getBidHistory(String auctionId) {

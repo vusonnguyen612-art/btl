@@ -1,6 +1,7 @@
 package Network;
 
 import java.io.Serializable;
+import java.util.List;
 
 public class Message implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -23,6 +24,11 @@ public class Message implements Serializable {
         DELETE_ITEM,
         GET_USERS,
         GET_USER_BALANCE,
+        DEPOSIT,
+        SET_AUTOBID,
+        REMOVE_AUTOBID,
+        STOP_AUCTION,
+        PROCESS_PAYMENT,
         GET_BID_HISTORY,
         NOTIFICATION,
         ERROR,
@@ -35,6 +41,7 @@ public class Message implements Serializable {
     private String itemId;
     private String content;
     private Object data;
+    private List<Message> notifications;
     private long timestamp;
 
     public Message(Type type) {
@@ -98,5 +105,13 @@ public class Message implements Serializable {
 
     public long getTimestamp() {
         return timestamp;
+    }
+
+    public List<Message> getNotifications() {
+        return notifications;
+    }
+
+    public void setNotifications(List<Message> notifications) {
+        this.notifications = notifications;
     }
 }
