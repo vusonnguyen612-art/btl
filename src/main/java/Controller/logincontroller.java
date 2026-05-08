@@ -17,8 +17,6 @@ import javafx.stage.Stage;
 import Network.NetworkService;
 import Model.User;
 
-import java.math.BigDecimal;
-
 public class logincontroller {
     @FXML
     private TextField loginUsernameField;
@@ -168,7 +166,7 @@ public class logincontroller {
             Parent root = loader.load();
 
             UserController userController = loader.getController();
-            userController.setUserData(currentUser, new BigDecimal("300000"));
+            userController.setUserData(currentUser);
 
             Stage stage = (Stage) ((javafx.scene.Node) event.getSource()).getScene().getWindow();
             stage.setScene(new Scene(root, 900, 600));

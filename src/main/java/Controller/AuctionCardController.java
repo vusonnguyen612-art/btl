@@ -2,11 +2,14 @@ package Controller;
 
 import Model.AuctionSession;
 import DAO.AuctionDAO;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -27,6 +30,8 @@ public class AuctionCardController {
     private AuctionDAO auctionDAO = new AuctionDAO();
     private Runnable onSelectAuction;
     private Runnable onStartAuction;
+    private Label timeRemainingLabel;
+    private Timeline timeUpdateTimeline;
 
     private static final DecimalFormat moneyFormat;
 
@@ -38,7 +43,36 @@ public class AuctionCardController {
 
     public void setAuction(AuctionSession auction, boolean isRunning, boolean canStart) {
         this.auction = auction;
-        updateCard(isRunning, canStart);
+        stopTimeUpdate();
+        updateCard(isRunning, canStart, false);
+    }
+
+    public void setAuction(AuctionSession auction, boolean isRunning, boolean canStart, boolean isPaymentPending) {
+        this.auction = auction;
+        stopTimeUpdate();
+        updateCard(isRunning, canStart, isPaymentPending);
+    }
+
+    private void stopTimeUpdate() {
+        if (timeUpdateTimeline != null) {
+            timeUpdateTimeline.stop();
+            timeUpdateTimeline = null;
+        }
+    }
+
+    private void startTimeUpdate() {
+        stopTimeUpdate();
+        timeUpdateTimeline = new Timeline();
+        timeUpdateTimeline.setCycleCount(Timeline.INDEFINITE);
+        timeUpdateTimeline.getKeyFrames().add(
+                new KeyFrame(Duration.seconds(1), e -> updateTimeLabel())
+        );
+        timeUpdateTimeline.play();
+    }
+
+    private void updateTimeLabel() {
+        if (timeRemainingLabel == null || auction == null) return;
+        timeRemainingLabel.setText(getTimeRemaining(auction));
     }
 
     public void setOnSelectAuction(Runnable callback) {
@@ -49,14 +83,33 @@ public class AuctionCardController {
         this.onStartAuction = callback;
     }
 
-    private void updateCard(boolean isRunning, boolean canStart) {
+    private void updateCard(boolean isRunning, boolean canStart, boolean isPaymentPending) {
         String itemName = auction.getItem() != null ? auction.getItem().getName() : "Unknown";
         nameLabel.setText(itemName);
 
         priceLabel.setText("Giá hiện tại: " + moneyFormat.format(auction.getCurrentPrice()) + " $");
 
-        String statusText = isRunning ? "ĐANG DIỄN RA" : "CHƯA BẮT ĐẦU";
-        String statusColor = isRunning ? "#4CAF50" : "#FF9800";
+        String statusText;
+        String statusColor;
+        if (auction.isPaid()) {
+            statusText = "ĐÃ BÁN";
+            statusColor = "#9E9E9E";
+        } else if (auction.isFinished()) {
+            statusText = "ĐÃ KẾT THÚC";
+            statusColor = "#888888";
+        } else if (auction.isCanceled()) {
+            statusText = "ĐÃ HỦY";
+            statusColor = "#ff6b6b";
+        } else if (isPaymentPending) {
+            statusText = "CHỜ THANH TOÁN";
+            statusColor = "#FF9800";
+        } else if (isRunning) {
+            statusText = "ĐANG DIỄN RA";
+            statusColor = "#4CAF50";
+        } else {
+            statusText = "CHƯA BẮT ĐẦU";
+            statusColor = "#FF9800";
+        }
         statusLabel.setText(statusText);
         statusLabel.setStyle("-fx-text-fill: " + statusColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
 
@@ -74,22 +127,32 @@ public class AuctionCardController {
             });
             actionBox.getChildren().add(joinBtn);
 
-            String timeRemaining = getTimeRemaining(auction);
-            Label timeLabel = new Label(timeRemaining);
-            timeLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 13px; -fx-font-weight: bold;");
-            actionBox.getChildren().add(timeLabel);
-        } else {
+            timeRemainingLabel = new Label();
+            timeRemainingLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 13px; -fx-font-weight: bold;");
+            actionBox.getChildren().add(timeRemainingLabel);
+            updateTimeLabel();
+            startTimeUpdate();
+        } else if (isPaymentPending) {
+            Button viewBtn = new Button("Xem");
+            viewBtn.setStyle("-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30; -fx-font-size: 14px;");
+            viewBtn.setPrefSize(100, 35);
+            viewBtn.setOnAction(e -> {
+                if (onSelectAuction != null) onSelectAuction.run();
+            });
+            actionBox.getChildren().add(viewBtn);
+        } else if (auction.isOpen() && canStart) {
             Button startBtn = new Button("Bắt đầu");
             startBtn.setStyle("-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30; -fx-font-size: 14px;");
             startBtn.setPrefSize(100, 35);
-            if (canStart) {
-                startBtn.setOnAction(e -> {
-                    if (onStartAuction != null) onStartAuction.run();
-                });
-            } else {
-                startBtn.setDisable(true);
-                startBtn.setStyle("-fx-background-color: #555555; -fx-text-fill: #999999; -fx-background-radius: 30; -fx-font-size: 14px;");
-            }
+            startBtn.setOnAction(e -> {
+                if (onStartAuction != null) onStartAuction.run();
+            });
+            actionBox.getChildren().add(startBtn);
+        } else if (auction.isOpen()) {
+            Button startBtn = new Button("Bắt đầu");
+            startBtn.setStyle("-fx-background-color: #555555; -fx-text-fill: #999999; -fx-background-radius: 30; -fx-font-size: 14px;");
+            startBtn.setPrefSize(100, 35);
+            startBtn.setDisable(true);
             actionBox.getChildren().add(startBtn);
         }
     }

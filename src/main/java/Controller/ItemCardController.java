@@ -3,10 +3,13 @@ package Controller;
 import Model.Item;
 import Model.AuctionSession;
 import DAO.AuctionDAO;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
@@ -22,6 +25,9 @@ public class ItemCardController {
     @FXML private VBox actionBox;
 
     private AuctionDAO auctionDAO = new AuctionDAO();
+    private AuctionSession itemAuction;
+    private Label timeLabel;
+    private Timeline timeUpdateTimeline;
 
     private static final DecimalFormat moneyFormat;
 
@@ -36,6 +42,8 @@ public class ItemCardController {
     }
 
     public void setItem(Item item, List<AuctionSession> auctions) {
+        stopTimeUpdate();
+
         nameLabel.setText(item.getName());
 
         BigDecimal price = new BigDecimal(String.valueOf(item.getStartPrice()));
@@ -43,7 +51,7 @@ public class ItemCardController {
 
         actionBox.getChildren().clear();
 
-        AuctionSession itemAuction = null;
+        itemAuction = null;
         if (auctions != null) {
             for (AuctionSession auction : auctions) {
                 if (auction.getItem() != null && auction.getItem().getId().equals(item.getId())) {
@@ -63,17 +71,45 @@ public class ItemCardController {
             Label currentPriceLabel = new Label("Gia hien tai: " + moneyFormat.format(currentPrice) + " $");
             currentPriceLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 13px;");
 
-            String timeText = itemAuction.isRunning() && itemAuction.getEndTime() != null
-                    ? "Còn: " + getRemainingTime(itemAuction)
-                    : "Thời gian: " + formatDuration(itemAuction.getDurationMinutes());
-            Label timeLabel = new Label(timeText);
+            timeLabel = new Label();
             timeLabel.setStyle("-fx-text-fill: #ff9800; -fx-font-size: 12px;");
+            updateTimeLabel();
 
             actionBox.getChildren().addAll(statusLabel, currentPriceLabel, timeLabel);
+
+            if (itemAuction.isRunning()) {
+                startTimeUpdate();
+            }
         } else {
             Label noAuctionLabel = new Label("Chưa có phiên đấu giá");
             noAuctionLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 12px;");
             actionBox.getChildren().add(noAuctionLabel);
+        }
+    }
+
+    private void stopTimeUpdate() {
+        if (timeUpdateTimeline != null) {
+            timeUpdateTimeline.stop();
+            timeUpdateTimeline = null;
+        }
+    }
+
+    private void startTimeUpdate() {
+        stopTimeUpdate();
+        timeUpdateTimeline = new Timeline();
+        timeUpdateTimeline.setCycleCount(Timeline.INDEFINITE);
+        timeUpdateTimeline.getKeyFrames().add(
+                new KeyFrame(Duration.seconds(1), e -> updateTimeLabel())
+        );
+        timeUpdateTimeline.play();
+    }
+
+    private void updateTimeLabel() {
+        if (timeLabel == null || itemAuction == null) return;
+        if (itemAuction.isRunning() && itemAuction.getEndTime() != null) {
+            timeLabel.setText("Còn: " + getRemainingTime(itemAuction));
+        } else {
+            timeLabel.setText("Thời gian: " + formatDuration(itemAuction.getDurationMinutes()));
         }
     }
 
