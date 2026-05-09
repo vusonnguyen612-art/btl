@@ -4,6 +4,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 
@@ -11,6 +12,7 @@ import Model.Item;
 import Model.AuctionSession;
 import DAO.ItemDAO;
 import DAO.AuctionSessionDAO;
+import Factory.ItemFactory;
 import Model.User;
 import java.math.BigDecimal;
 import java.util.UUID;
@@ -32,6 +34,9 @@ public class CreateItemsController implements UserController.LinkedController {
 
     @FXML
     private TextField moTa;
+
+    @FXML
+    private ComboBox<String> categoryComboBox;
 
     @FXML
     private TextField thoiGianDauGia;
@@ -62,6 +67,8 @@ public class CreateItemsController implements UserController.LinkedController {
     @FXML
     private void initialize() {
         thoiGianDauGia.setText("60");
+        categoryComboBox.getItems().addAll("Art", "Electronics", "Vehicle", "Fashion", "Books", "Sports", "Jewelry", "Music", "Furniture");
+        categoryComboBox.setValue("Art");
     }
 
     @FXML
@@ -146,8 +153,8 @@ public class CreateItemsController implements UserController.LinkedController {
                 return;
             }
 
-            String itemId = UUID.randomUUID().toString();
-            Item item = new Model.Art(itemId, ten, Mota, gia.doubleValue(), currentUser.getId());
+            String category = categoryComboBox.getValue();
+            Item item = ItemFactory.createItem(category, ten, Mota, gia.doubleValue(), currentUser.getId());
             item.setSellerId(currentUser.getId());
 
             if (itemDAO.save(item)) {
