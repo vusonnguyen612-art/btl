@@ -9,7 +9,7 @@ public class Electronics extends Item {
 
     public Electronics(String id, String name, String description, double startPrice, String sellerId) {
         super(id, name, description, startPrice, sellerId);
-        this.category = "Electronics";
+        this.category = "ELECTRONICS";
         this.brand = "";
         this.warrantyMonths = 0;
         this.model = "";
@@ -19,7 +19,7 @@ public class Electronics extends Item {
     public Electronics(String id, String name, String description, double startPrice,
                        String sellerId, String brand, int warrantyMonths, String model, String condition) {
         super(id, name, description, startPrice, sellerId);
-        this.category = "Electronics";
+        this.category = "ELECTRONICS";
         this.brand = brand;
         this.warrantyMonths = warrantyMonths;
         this.model = model;
