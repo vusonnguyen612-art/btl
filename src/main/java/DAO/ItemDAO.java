@@ -1,9 +1,6 @@
 package DAO;
 
-import Model.Item;
-import Model.Art;
-import Model.Electronics;
-import Model.Vehicle;
+import Model.*;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -124,6 +121,24 @@ public class ItemDAO {
                 break;
             case "VEHICLE":
                 item = new Vehicle(id, name, desc, price, sellerId);
+                break;
+            case "FASHION":
+                item = new Fashion(id, name, desc, price, sellerId);
+                break;
+            case "BOOKS":
+                item = new Books(id, name, desc, price, sellerId);
+                break;
+            case "SPORTS":
+                item = new Sports(id, name, desc, price, sellerId);
+                break;
+            case "JEWELRY":
+                item = new Jewelry(id, name, desc, price, sellerId);
+                break;
+            case "MUSIC":
+                item = new Music(id, name, desc, price, sellerId);
+                break;
+            case "FURNITURE":
+                item = new Furniture(id, name, desc, price, sellerId);
                 break;
             default:
                 item = new Art(id, name, desc, price, sellerId);

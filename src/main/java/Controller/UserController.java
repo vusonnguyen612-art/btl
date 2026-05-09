@@ -22,6 +22,7 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.List;
@@ -612,7 +613,14 @@ public class UserController {
 
     private void openModalFXML(String fxmlPath, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
+            URL resourceUrl = getClass().getResource(fxmlPath);
+            if (resourceUrl == null) {
+                resourceUrl = Thread.currentThread().getContextClassLoader().getResource(
+                    fxmlPath.startsWith("/") ? fxmlPath.substring(1) : fxmlPath
+                );
+            }
+            System.out.println("Loading FXML from: " + resourceUrl);
+            FXMLLoader loader = new FXMLLoader(resourceUrl);
             Parent root = loader.load();
 
             Object childController = loader.getController();
@@ -626,6 +634,7 @@ public class UserController {
             stage.showAndWait();
 
         } catch (Exception e) {
+            e.printStackTrace();
             showError(
                     "Không thể mở giao diện",
                     "Không tìm thấy hoặc không LOAD được file: " + fxmlPath + "\n\nChi tiết: " + e.getMessage()

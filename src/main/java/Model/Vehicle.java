@@ -13,7 +13,7 @@ private String brand;
 
     public Vehicle(String id, String name, String description, double startPrice, String sellerId) {
         super(id, name, description, startPrice, sellerId);
-        this.category = "Vehicle";
+        this.category = "VEHICLE";
         this.brand = "";
         this.model = "";
         this.year = 0;
@@ -28,7 +28,7 @@ private String brand;
                       String sellerId, String brand, String model, int year,
                       int mileage, String fuelType, String transmission, String color, String condition) {
         super(id, name, description, startPrice, sellerId);
-        this.category = "Vehicle";
+        this.category = "VEHICLE";
         this.brand = brand;
         this.model = model;
         this.year = year;
