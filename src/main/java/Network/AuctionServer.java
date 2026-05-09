@@ -119,6 +119,8 @@ public class AuctionServer {
                         return handleGetUserBalance(message);
                     case GET_BID_HISTORY:
                         return handleGetBidHistory(message);
+                    case GET_WINNING_HISTORY:
+                        return handleGetWinningHistory(message);
                     default:
                         return createErrorMessage("Unknown message type");
                 }
@@ -236,10 +238,23 @@ public class AuctionServer {
         }
 
         private Message handleFinishAuction(Message message) {
-            auctionDAO.finishAuction(message.getAuctionId());
-            Message response = new Message(Message.Type.SUCCESS);
-            response.setContent("Auction finished");
-            return response;
+
+            String auctionId = (String) message.getData();
+
+            auctionDAO.finishAuction(auctionId);
+
+            BidDAO bidDAO = new BidDAO();
+            Bid winningBid = bidDAO.getHighestBid(auctionId);
+
+            if (winningBid != null) {
+                bidDAO.markAsWinner(winningBid.getId());
+
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setContent("Chúc mừng! Người thắng là: " + winningBid.getBidderId());
+                return response;
+            }
+
+            return new Message(Message.Type.SUCCESS, "Phiên đấu giá kết thúc, không có người đặt giá.");
         }
 
         private Message handleCancelAuction(Message message) {
@@ -298,6 +313,20 @@ public class AuctionServer {
             Message response = new Message(Message.Type.ERROR);
             response.setContent(error);
             return response;
+        }
+
+        private Message handleGetWinningHistory(Message message) {
+            try {
+                String userId = (String) message.getData();
+
+                BidDAO bidDAO = new BidDAO();
+                List<Bid> winningBids = bidDAO.getWinningBidsByUserId(userId);
+
+                return new Message(Message.Type.SUCCESS, winningBids.toString());
+
+            } catch (Exception e) {
+                return createErrorMessage("Lỗi khi lấy lịch sử thắng: " + e.getMessage());
+            }
         }
 
         private void close() {

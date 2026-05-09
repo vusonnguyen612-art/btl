@@ -48,6 +48,17 @@ public class CreateItemsController implements UserController.LinkedController {
     @FXML
     private Button btn180Phut;
 
+    @FXML
+    private Button Vehicle;
+
+    @FXML
+    private Button Electronics;
+
+    @FXML
+    private Button Art;
+
+    private String selectedCategory = "Electronics";
+
     private long selectedDuration = 60;
 
     private final String BUTTON_STYLE_DEFAULT =
@@ -60,8 +71,36 @@ public class CreateItemsController implements UserController.LinkedController {
     private final AuctionSessionDAO sessionDAO = new AuctionSessionDAO();
 
     @FXML
+    private void setCategoryArt(ActionEvent event) {
+        selectedCategory = "Art";
+        updateCategoryButtons(Art);
+    }
+
+    @FXML
+    private void setCategoryVehicle(ActionEvent event) {
+        selectedCategory = "Vehicle";
+        updateCategoryButtons(Vehicle);
+    }
+
+    @FXML
+    private void setCategoryElectronics(ActionEvent event) {
+        selectedCategory = "Electronics";
+        updateCategoryButtons(Electronics);
+    }
+
+    private void updateCategoryButtons(Button selected) {
+        Button[] buttons = {Art, Vehicle, Electronics};
+        for (Button btn : buttons) {
+            if (btn != null) {
+                btn.setStyle(btn == selected ? BUTTON_STYLE_SELECTED : BUTTON_STYLE_DEFAULT);
+            }
+        }
+    }
+
+    @FXML
     private void initialize() {
         thoiGianDauGia.setText("60");
+        updateCategoryButtons(Electronics);
     }
 
     @FXML
@@ -147,7 +186,21 @@ public class CreateItemsController implements UserController.LinkedController {
             }
 
             String itemId = UUID.randomUUID().toString();
-            Item item = new Model.Art(itemId, ten, Mota, gia.doubleValue(), currentUser.getId());
+            Item item = null;
+
+            switch (selectedCategory) {
+                case "Vehicles":
+                    item = new Model.Vehicle(itemId, ten, Mota, gia.doubleValue(), currentUser.getId());
+                    break;
+                case "Electronics":
+                    item = new Model.Electronics(itemId, ten, Mota, gia.doubleValue(), currentUser.getId());
+                    break;
+                case "Art":
+                default:
+                    item = new Model.Art(itemId, ten, Mota, gia.doubleValue(), currentUser.getId());
+                    break;
+            }
+
             item.setSellerId(currentUser.getId());
 
             if (itemDAO.save(item)) {

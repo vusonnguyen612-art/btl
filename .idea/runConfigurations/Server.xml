@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="AuctionServer" type="Application" factoryName="Application">
+  <configuration default="false" name="AuctionServer" type="Application" factoryName="Application" singleton="false">
     <envs>
       <env name="JAVA_HOME" value="$PROJECT_DIR$/../../../../Program Files/Java/jdk-25.0.2" />
     </envs>

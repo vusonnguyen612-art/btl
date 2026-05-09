@@ -1,6 +1,7 @@
 package Model;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class Bid implements Serializable {
@@ -12,6 +13,7 @@ public class Bid implements Serializable {
     private double amount;
     private String itemName;
     private LocalDateTime timestamp;
+    private boolean Winner;
 
     public Bid(String auctionId, String bidderId, double amount) {
         this.auctionId = auctionId;
@@ -19,6 +21,10 @@ public class Bid implements Serializable {
         this.amount = amount;
         this.timestamp = LocalDateTime.now();
     }
+
+    public boolean isWinner() { return Winner; }
+
+    public void setWinner(boolean winner) { Winner = winner; }
 
     public String getId() {
         return id;
@@ -52,11 +58,11 @@ public class Bid implements Serializable {
         this.itemName = itemName;
     }
 
-    public double getAmount() {
-        return amount;
-    }
-
     public LocalDateTime getTimestamp() {
         return timestamp;
     }
+
+    public void setAmount(){this.amount=amount;}
+
+    public double getAmount(){return amount;}
 }

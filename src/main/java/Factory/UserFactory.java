@@ -19,13 +19,13 @@ public class UserFactory {
 
     public static String getPasswordError(String password) {
         if (password == null || password.isEmpty()) {
-            return "Password cannot be empty";
+            return "Mật khẩu không thể rỗng!";
         }
         if (password.length() < 6) {
-            return "Password must be at least 6 characters";
+            return "Mật khẩu phải có ít nhất 6 ký tự!";
         }
         if (password.contains(" ")) {
-            return "Password cannot contain whitespace";
+            return "Mật khẩu không thể chứa dấu cách!";
         }
         return null;
     }

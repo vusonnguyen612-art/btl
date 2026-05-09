@@ -26,7 +26,8 @@ public class Message implements Serializable {
         GET_BID_HISTORY,
         NOTIFICATION,
         ERROR,
-        SUCCESS
+        SUCCESS,
+        GET_WINNING_HISTORY
     }
 
     private Type type;

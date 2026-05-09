@@ -63,7 +63,7 @@
                             <children>
                                 <HBox alignment="CENTER_LEFT" spacing="10">
                                     <children>
-                                        <Label fx:id="selectedAuctionName" style="-fx-text-fill: white; -fx-font-size: 22px; -fx-font-weight: bold;" text="Ten san pham" />
+                                        <Label fx:id="selectedAuctionName" style="-fx-text-fill: white; -fx-font-size: 22px; -fx-font-weight: bold;" text="Tên sản phẩm" />
                                         <Region HBox.hgrow="ALWAYS" />
                                         <Button onAction="#backToList" style="-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 20;" text="X">
                                             <font>
@@ -81,8 +81,11 @@
                                         <Insets bottom="15.0" />
                                     </VBox.margin>
                                     <children>
-                                        <Label fx:id="selectedAuctionStatus" style="-fx-text-fill: #eacd8f; -fx-font-size: 14px;" text="Trang thai: RUNNING" />
-                                        <Label fx:id="durationDisplayLabel" style="-fx-text-fill: #888888; -fx-font-size: 13px;" text="Thoi gian: 60 phut" />
+                                        <Label fx:id="selectedAuctionStatus" style="-fx-text-fill: #eacd8f; -fx-font-size: 14px;" text="Trạng thái: RUNNING" />
+                                        <Label fx:id="durationDisplayLabel" style="-fx-text-fill: #888888; -fx-font-size: 13px;" text="Thời gian: 60 phút" />
+                                        <Label fx:id="loaiSanPhamLabel" text="Loại: Art"
+                                               style="-fx-text-fill: #eacd8f; -fx-font-size: 12px; -fx-font-weight: bold;">
+                                        </Label>
                                     </children>
                                 </HBox>
 
@@ -93,14 +96,14 @@
                                     <children>
                                         <VBox alignment="CENTER" spacing="5">
                                             <children>
-                                                <Label style="-fx-text-fill: #888888; -fx-font-size: 12px;" text="THOI GIAN CON LAI" />
+                                                <Label style="-fx-text-fill: #888888; -fx-font-size: 12px;" text="THỜI GIAN CÒN LẠI" />
                                                 <Label fx:id="timerLabel" style="-fx-text-fill: #eacd8f; -fx-font-size: 28px; -fx-font-weight: bold;" text="00:00" />
                                             </children>
                                         </VBox>
 
                                         <VBox alignment="CENTER" spacing="5">
                                             <children>
-                                                <Label style="-fx-text-fill: #888888; -fx-font-size: 12px;" text="GIA HIEN TAI" />
+                                                <Label style="-fx-text-fill: #888888; -fx-font-size: 12px;" text="GIÁ HIỆN TẠI" />
                                                 <Label fx:id="currentPriceLabel" style="-fx-text-fill: #4CAF50; -fx-font-size: 28px; -fx-font-weight: bold;" text="100,000 $" />
                                             </children>
                                         </VBox>
@@ -113,16 +116,16 @@
                                     </VBox.margin>
                                     <children>
                                         <VBox>
-                                            <Label style="-fx-text-fill: #888888; -fx-font-size: 11px;" text="BAT DAU" />
+                                            <Label style="-fx-text-fill: #888888; -fx-font-size: 11px;" text="BẮT ĐẦU" />
                                             <Label fx:id="startTimeLabel" style="-fx-text-fill: #eacd8f; -fx-font-size: 13px;" text="--:--" />
                                         </VBox>
                                         <VBox>
-                                            <Label style="-fx-text-fill: #888888; -fx-font-size: 11px;" text="KET THUC" />
+                                            <Label style="-fx-text-fill: #888888; -fx-font-size: 11px;" text="KẾT THÚC" />
                                             <Label fx:id="endTimeLabel" style="-fx-text-fill: #ff6b6b; -fx-font-size: 13px;" text="--:--" />
                                         </VBox>
                                         <VBox>
-                                            <Label style="-fx-text-fill: #888888; -fx-font-size: 11px;" text="NGUOI GIA CAO NHAT" />
-                                            <Label fx:id="highestBidderLabel" style="-fx-text-fill: #eacd8f; -fx-font-size: 13px;" text="Chua co" />
+                                            <Label style="-fx-text-fill: #888888; -fx-font-size: 11px;" text="NGƯỜI RA GIÁ CAO NHẤT" />
+                                            <Label fx:id="highestBidderLabel" style="-fx-text-fill: #eacd8f; -fx-font-size: 13px;" text="Chưa có" />
                                         </VBox>
                                     </children>
                                 </HBox>
@@ -135,7 +138,7 @@
 
                                 <HBox alignment="CENTER_LEFT" spacing="10">
                                     <children>
-                                        <TextField fx:id="bidAmountField" prefHeight="45.0" prefWidth="200.0" promptText="Nhap so tien" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-prompt-text-fill: #666666; -fx-font-size: 16px;">
+                                        <TextField fx:id="bidAmountField" prefHeight="45.0" prefWidth="200.0" promptText="Nhập số tiền" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-prompt-text-fill: #666666; -fx-font-size: 16px;">
                                             <font>
                                                 <Font size="16.0" />
                                             </font>

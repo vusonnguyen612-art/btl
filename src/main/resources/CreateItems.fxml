@@ -21,41 +21,18 @@
             <Font name="Arial" size="23.0" />
          </font>
       </TextField>
-      <Label layoutX="140.0" layoutY="430.0" style="-fx-text-fill: #eacd8f; -fx-font-size: 16px;" text="Thời gian đấu giá (phút)" />
-      <TextField fx:id="thoiGianDauGia" alignment="CENTER" layoutX="134.0" layoutY="460.0" prefHeight="50.0" prefWidth="398.0" promptText="60" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-border-radius: 30; -fx-background-radius: 30; -fx-text-fill: white;">
+      <Label layoutX="143.0" layoutY="476.0" style="-fx-text-fill: #eacd8f; -fx-font-size: 16px;" text="Thời gian đấu giá (phút)" />
+      <TextField fx:id="thoiGianDauGia" alignment="CENTER" layoutX="134.0" layoutY="502.0" prefHeight="50.0" prefWidth="398.0" promptText="60" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-border-radius: 30; -fx-background-radius: 30; -fx-text-fill: white;">
          <font>
             <Font size="23.0" />
          </font>
       </TextField>
-      <HBox layoutX="134.0" layoutY="525.0" spacing="10">
-         <children>
-            <Button fx:id="btn30Phut" onAction="#setDuration30" prefHeight="35.0" prefWidth="90.0" style="-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 15;" text="30 phút">
-               <font>
-                  <Font size="13.0" />
-               </font>
-            </Button>
-            <Button fx:id="btn60Phut" onAction="#setDuration60" prefHeight="35.0" prefWidth="90.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 15;" text="60 phút">
-               <font>
-                  <Font size="13.0" />
-               </font>
-            </Button>
-            <Button fx:id="btn120Phut" onAction="#setDuration120" prefHeight="35.0" prefWidth="90.0" style="-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 15;" text="120 phút">
-               <font>
-                  <Font size="13.0" />
-               </font>
-            </Button>
-            <Button fx:id="btn180Phut" onAction="#setDuration180" prefHeight="35.0" prefWidth="90.0" style="-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 15;" text="180 phút">
-               <font>
-                  <Font size="13.0" />
-               </font>
-            </Button>
-         </children>
-      </HBox>
+      <HBox layoutX="134.0" layoutY="525.0" spacing="10" />
       <ImageView fitHeight="128.0" fitWidth="125.0" layoutX="274.0" layoutY="14.0" pickOnBounds="true" preserveRatio="true">
          <image>
             <Image url="@../../../image/images.jpg" />
          </image></ImageView>
-      <Button fx:id="taoSanPhamButton" alignment="CENTER" contentDisplay="CENTER" layoutX="211.0" layoutY="600.0" mnemonicParsing="false" onAction="#TaoSanPham" prefHeight="50.0" prefWidth="249.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Tạo sản phẩm">
+      <Button fx:id="taoSanPhamButton" alignment="CENTER" contentDisplay="CENTER" layoutX="212.0" layoutY="629.0" mnemonicParsing="false" onAction="#TaoSanPham" prefHeight="50.0" prefWidth="249.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Tạo sản phẩm">
          <font>
             <Font name="System Bold" size="21.0" />
          </font>
@@ -70,5 +47,40 @@
             <Font name="Arial" size="23.0" />
          </font>
       </TextField>
+      <Button fx:id="btn30Phut" layoutX="121.0" layoutY="574.0" onAction="#setDuration30" prefHeight="35.0" prefWidth="90.0" style="-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 15;" text="30 phút">
+         <font>
+            <Font size="13.0" />
+         </font>
+      </Button>
+      <Button fx:id="btn120Phut" layoutX="333.0" layoutY="574.0" onAction="#setDuration120" prefHeight="35.0" prefWidth="90.0" style="-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 15;" text="120 phút">
+         <font>
+            <Font size="13.0" />
+         </font>
+      </Button>
+      <Button fx:id="btn60Phut" layoutX="228.0" layoutY="574.0" onAction="#setDuration60" prefHeight="35.0" prefWidth="90.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 15;" text="60 phút">
+         <font>
+            <Font size="13.0" />
+         </font>
+      </Button>
+      <Button fx:id="btn180Phut" layoutX="444.0" layoutY="574.0" onAction="#setDuration180" prefHeight="35.0" prefWidth="90.0" style="-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 15;" text="180 phút">
+         <font>
+            <Font size="13.0" />
+         </font>
+      </Button>
+      <Button fx:id="Vehicle" layoutX="154.0" layoutY="427.0" onAction="#setCategoryVehicle" prefHeight="35.0" prefWidth="90.0" style="-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 15;" text="Vehicles">
+         <font>
+            <Font size="13.0" />
+         </font>
+      </Button>
+      <Button fx:id="Electronics" layoutX="291.0" layoutY="427.0" onAction="#setCategoryElectronics" prefHeight="35.0" prefWidth="90.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 15;" text="Electronics">
+         <font>
+            <Font size="13.0" />
+         </font>
+      </Button>
+      <Button fx:id="Art" layoutX="423.0" layoutY="427.0" onAction="#setCategoryArt" prefHeight="35.0" prefWidth="90.0" style="-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 15;" text="Art">
+         <font>
+            <Font size="13.0" />
+         </font>
+      </Button>
    </children>
 </AnchorPane>

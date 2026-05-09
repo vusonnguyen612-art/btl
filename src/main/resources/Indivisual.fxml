@@ -88,7 +88,7 @@
                          </Button>
                       </children>
                    </AnchorPane>
-                  <AnchorPane fx:id="KhoPane" prefHeight="200.0" prefWidth="200.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;">
+                  <AnchorPane fx:id="KhoPane" prefHeight="200.0" prefWidth="200.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" visible="false">
                      <children>
                         <Button layoutX="450.0" layoutY="46.0" mnemonicParsing="false" onAction="#CreateItems" prefHeight="59.0" prefWidth="206.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Tạo sản phẩm">
                            <font>
@@ -103,8 +103,7 @@
                         </Label>
                      </children>
                   </AnchorPane>
-                  <AnchorPane fx:id="LichsudaugiaPane" prefHeight="200.0" prefWidth="200.0" visible="false" />
-                  <AnchorPane fx:id="NaptienPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;">
+                  <AnchorPane fx:id="NaptienPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" visible="false">
                      <children>
                         <Label fx:id="Sodutaikhoan" alignment="CENTER" layoutX="48.0" layoutY="93.0" prefHeight="36.0" prefWidth="486.0" style="-fx-text-fill: white; -fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-font-weight: bold;" text=" 300000">
                            <font>
@@ -154,7 +153,7 @@
                         </Label>
                      </children>
                   </AnchorPane>
-                  <AnchorPane fx:id="CaidatPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;">
+                  <AnchorPane fx:id="CaidatPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" visible="false">
                      <children>
                         <Label layoutX="48.0" layoutY="26.0" prefHeight="50.0" prefWidth="486.0" style="-fx-text-fill: #eacd8f;" text="Đổi mật khẩu" textFill="TRANSPARENT">
                            <font>
@@ -191,6 +190,16 @@
                               <Font name="Arial" size="24.0" />
                            </font>
                         </Button>
+                     </children>
+                  </AnchorPane>
+                  <AnchorPane fx:id="HistoryPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;">
+                     <children>
+                        <Label alignment="CENTER" layoutX="14.0" layoutY="14.0" prefHeight="78.0" prefWidth="246.0" style="-fx-text-fill: #eacd8f;" text="Lịch sử đấu giá">
+                           <font>
+                              <Font name="Arial Bold" size="27.0" />
+                           </font>
+                        </Label>
+                        <VBox fx:id="HistoryVbox" layoutY="100.0" prefHeight="522.0" prefWidth="678.0" />
                      </children>
                   </AnchorPane>
                </children>

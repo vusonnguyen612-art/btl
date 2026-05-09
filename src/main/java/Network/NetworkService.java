@@ -148,4 +148,10 @@ public class NetworkService {
     public boolean isConnected() {
         return socket != null && !socket.isClosed();
     }
+
+    public Message getWinningHistory(String userId) {
+        Message request = new Message(Message.Type.GET_WINNING_HISTORY, userId);
+
+        return sendMessage(request);
+    }
 }

@@ -70,6 +70,13 @@ public abstract class Item implements Serializable {
 
     public abstract String getSpecificInfo();
 
+    public String getCategoryName() {
+        if (this instanceof Art) return "Art";
+        if (this instanceof Vehicle) return "Vehicles";
+        if (this instanceof Electronics) return "Electronics";
+        return "Unknown";
+    }
+
     @Override
     public String toString() {
         return String.format("[%s] %s - %s - Start: $%.2f", id, name, description, startPrice);

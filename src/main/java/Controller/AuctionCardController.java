@@ -22,6 +22,7 @@ public class AuctionCardController {
     @FXML private Label statusLabel;
     @FXML private Label timeInfoLabel;
     @FXML private VBox actionBox;
+    @FXML private Label categoryLabel;
 
     private AuctionSession auction;
     private AuctionDAO auctionDAO = new AuctionDAO();
@@ -64,6 +65,23 @@ public class AuctionCardController {
         timeInfoLabel.setText("Thời gian: " + durationText);
 
         actionBox.getChildren().clear();
+
+        if (auction != null && auction.getItem() != null) {
+            Model.Item item = auction.getItem();
+            String type = "Không xác định";
+
+            if (item instanceof Model.Art) {
+                type = "Art";
+            } else if (item instanceof Model.Vehicle) {
+                type = "Vehicles";
+            } else if (item instanceof Model.Electronics) {
+                type = "Electronics";
+            }
+
+            categoryLabel.setText("Loại: " + type);
+
+            categoryLabel.setStyle("-fx-text-fill: #d9b15f; -fx-font-weight: bold;");
+        }
 
         if (isRunning) {
             Button joinBtn = new Button("Vào phòng");
