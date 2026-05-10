@@ -17,6 +17,7 @@ import Model.User;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+/** Controller cho form tạo sản phẩm mới (FXML: CreateItems.fxml). */
 public class CreateItemsController implements UserController.LinkedController {
 
     private User currentUser;
@@ -65,6 +66,7 @@ public class CreateItemsController implements UserController.LinkedController {
     private final AuctionSessionDAO sessionDAO = new AuctionSessionDAO();
 
     @FXML
+    /** Khởi tạo ComboBox danh mục và giá trị mặc định. */
     private void initialize() {
         thoiGianDauGia.setText("60");
         categoryComboBox.getItems().addAll("Art", "Electronics", "Vehicle", "Fashion", "Books", "Sports", "Jewelry", "Music", "Furniture");
@@ -72,6 +74,7 @@ public class CreateItemsController implements UserController.LinkedController {
     }
 
     @FXML
+    /** Chọn thời gian 30 phút. */
     private void setDuration30(ActionEvent event) {
         selectedDuration = 30;
         thoiGianDauGia.setText("30");
@@ -79,6 +82,7 @@ public class CreateItemsController implements UserController.LinkedController {
     }
 
     @FXML
+    /** Chọn thời gian 60 phút (mặc định). */
     private void setDuration60(ActionEvent event) {
         selectedDuration = 60;
         thoiGianDauGia.setText("60");
@@ -86,6 +90,7 @@ public class CreateItemsController implements UserController.LinkedController {
     }
 
     @FXML
+    /** Chọn thời gian 120 phút. */
     private void setDuration120(ActionEvent event) {
         selectedDuration = 120;
         thoiGianDauGia.setText("120");
@@ -93,6 +98,7 @@ public class CreateItemsController implements UserController.LinkedController {
     }
 
     @FXML
+    /** Chọn thời gian 180 phút. */
     private void setDuration180(ActionEvent event) {
         selectedDuration = 180;
         thoiGianDauGia.setText("180");
@@ -109,6 +115,7 @@ public class CreateItemsController implements UserController.LinkedController {
     }
 
     @FXML
+    /** Tạo sản phẩm + phiên đấu giá: validate input, lưu DB qua DAO, đóng cửa sổ. */
     private void TaoSanPham(ActionEvent event) {
         String ten = tenSanPham.getText().trim();
         String giaStr = giaKhoiDau.getText().trim();

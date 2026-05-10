@@ -3,6 +3,7 @@ package Model;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+/** Đại diện cho một lượt đặt giá trong phiên đấu giá. */
 public class Bid implements Serializable {
     private static final long serialVersionUID = 1L;
     private String id;
@@ -13,6 +14,9 @@ public class Bid implements Serializable {
     private String itemName;
     private LocalDateTime timestamp;
 
+    /** @param auctionId ID phiên đấu giá
+     *  @param bidderId  ID người đặt giá
+     *  @param amount    số tiền đặt */
     public Bid(String auctionId, String bidderId, double amount) {
         this.auctionId = auctionId;
         this.bidderId = bidderId;

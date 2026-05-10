@@ -1,5 +1,6 @@
 package Model;
 
+/** Vật phẩm danh mục thời trang (quần áo, phụ kiện…). */
 public class Fashion extends Item {
     private static final long serialVersionUID = 1L;
     private String brand;

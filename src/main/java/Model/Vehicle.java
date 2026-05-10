@@ -1,5 +1,6 @@
 package Model;
 
+/** Vật phẩm danh mục xe cộ (ô tô, xe máy…). */
 public class Vehicle extends Item {
     private static final long serialVersionUID = 1L;
 private String brand;

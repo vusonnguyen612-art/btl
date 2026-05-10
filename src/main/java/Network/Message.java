@@ -3,9 +3,11 @@ package Network;
 import java.io.Serializable;
 import java.util.List;
 
+/** Giao thức message trao đổi giữa client và server qua TCP socket. */
 public class Message implements Serializable {
     private static final long serialVersionUID = 1L;
     
+    /** Các loại message hỗ trợ. */
     public enum Type {
         LOGIN,
         LOGOUT,
@@ -44,11 +46,14 @@ public class Message implements Serializable {
     private List<Message> notifications;
     private long timestamp;
 
+    /** @param type loại message */
     public Message(Type type) {
         this.type = type;
         this.timestamp = System.currentTimeMillis();
     }
 
+    /** @param type     loại message
+     *  @param senderId ID người gửi */
     public Message(Type type, String senderId) {
         this.type = type;
         this.senderId = senderId;

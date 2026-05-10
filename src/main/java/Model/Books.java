@@ -1,5 +1,6 @@
 package Model;
 
+/** Vật phẩm danh mục sách. */
 public class Books extends Item {
     private static final long serialVersionUID = 1L;
     private String author;

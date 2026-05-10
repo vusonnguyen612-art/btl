@@ -7,10 +7,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/** DAO cho bảng auction_sessions: CRUD phiên đấu giá. */
 public class AuctionSessionDAO {
     
     private final ItemDAO itemDAO = new ItemDAO();
     
+    /** Lưu phiên đấu giá mới. */
     public boolean save(AuctionSession session) {
         String sql = "INSERT INTO auction_sessions (id, item_id, seller_id, status, current_price, start_price, duration_minutes, min_increment) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -30,6 +32,7 @@ public class AuctionSessionDAO {
         }
     }
     
+    /** Cập nhật trạng thái, giá, winner, thời gian của phiên. */
     public boolean update(AuctionSession session) {
         String sql = "UPDATE auction_sessions SET status = ?, current_price = ?, highest_bidder_id = ?, winner_id = ?, start_time = ?, end_time = ? WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -48,6 +51,7 @@ public class AuctionSessionDAO {
         }
     }
     
+    /** Tìm phiên theo ID. */
     public Optional<AuctionSession> findById(String id) {
         String sql = "SELECT * FROM auction_sessions WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -64,6 +68,7 @@ public class AuctionSessionDAO {
         return Optional.empty();
     }
     
+    /** Tìm phiên theo trạng thái. */
     public List<AuctionSession> findByStatus(AuctionSession.Status status) {
         String sql = "SELECT * FROM auction_sessions WHERE status = ?";
         List<AuctionSession> sessions = new ArrayList<>();
@@ -81,6 +86,7 @@ public class AuctionSessionDAO {
         return sessions;
     }
     
+    /** Tìm phiên theo ID người bán. */
     public List<AuctionSession> findBySellerId(String sellerId) {
         String sql = "SELECT * FROM auction_sessions WHERE seller_id = ?";
         List<AuctionSession> sessions = new ArrayList<>();
@@ -98,6 +104,7 @@ public class AuctionSessionDAO {
         return sessions;
     }
     
+    /** Lấy tất cả phiên đấu giá. */
     public List<AuctionSession> findAll() {
         String sql = "SELECT * FROM auction_sessions";
         List<AuctionSession> sessions = new ArrayList<>();

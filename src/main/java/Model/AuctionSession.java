@@ -14,9 +14,11 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+/** Quản lý một phiên đấu giá: trạng thái, giá, lịch sử đặt giá, observer, auto-close timer. */
 public class AuctionSession implements Serializable {
     private static final long serialVersionUID = 1L;
 
+    /** Các trạng thái của phiên đấu giá. */
     public enum Status {
         OPEN,
         RUNNING,
@@ -43,6 +45,11 @@ public class AuctionSession implements Serializable {
     private transient ScheduledFuture<?> autoCloseTask;
     private double minIncrement;
 
+    /** @param id              mã phiên
+     *  @param item            vật phẩm đấu giá
+     *  @param sellerId        ID người bán
+     *  @param startPrice      giá khởi điểm
+     *  @param durationMinutes thời lượng (phút) */
     public AuctionSession(String id, Item item, String sellerId, double startPrice, long durationMinutes) {
         this.id = id;
         this.item = item;
@@ -57,6 +64,7 @@ public class AuctionSession implements Serializable {
         this.minIncrement = 1.0;
     }
 
+    /** Bắt đầu phiên đấu giá: chuyển trạng thái RUNNING, đặt startTime/endTime, lên lịch tự động kết thúc. */
     public synchronized void start() {
         if (status != Status.OPEN) {
             return;
@@ -77,6 +85,14 @@ public class AuctionSession implements Serializable {
         }
     }
 
+    /**
+     * Đặt giá cho phiên. Chỉ hiệu lực khi phiên RUNNING và chưa hết giờ.
+     *
+     * @param bidderId ID người đặt giá
+     * @param amount   số tiền muốn đặt
+     * @throws AuctionClosedException nếu phiên không ở trạng thái RUNNING
+     * @throws InvalidBidException    nếu amount <= currentPrice hoặc không đủ minIncrement
+     */
     public synchronized void placeBid(String bidderId, double amount) 
             throws AuctionClosedException, InvalidBidException {
         if (status != Status.RUNNING) {
@@ -113,6 +129,7 @@ public class AuctionSession implements Serializable {
         notifyBidPlaced(bidderId, amount);
     }
 
+    /** Kết thúc phiên: chuyển FINISHED, ghi nhận winnerId, dọn dẹp scheduler, thông báo observer. */
     public synchronized void finish() {
         if (status == Status.PAYMENT_PENDING || status == Status.FINISHED || status == Status.PAID || status == Status.CANCELED) {
             return;
@@ -128,6 +145,7 @@ public class AuctionSession implements Serializable {
         notifyAuctionFinished(winnerId, currentPrice);
     }
 
+    /** Hủy phiên với lý do cụ thể. */
     public synchronized void cancel(String reason) {
         if (status == Status.PAID || status == Status.CANCELED) {
             return;
@@ -139,6 +157,7 @@ public class AuctionSession implements Serializable {
         notifyAuctionCanceled(reason);
     }
 
+    /** Xử lý thanh toán: kiểm tra winnerId và amount, chuyển trạng thái PAID. */
     public synchronized boolean processPayment(String winnerId, double amount) {
         if (!winnerId.equals(this.winnerId)) {
             return false;
@@ -287,6 +306,7 @@ public class AuctionSession implements Serializable {
         this.endTime = endTime;
     }
 
+    /** @return số milliseconds còn lại trước khi phiên kết thúc */
     public long getRemainingTimeMillis() {
         if (endTime == null) {
             return durationMinutes * 60 * 1000;

@@ -17,6 +17,7 @@ import javafx.stage.Stage;
 import Network.NetworkService;
 import Model.User;
 
+/** Controller cho màn hình đăng nhập và đăng ký (FXML: login.fxml, signin.fxml). */
 public class logincontroller {
     @FXML
     private TextField loginUsernameField;
@@ -44,15 +45,18 @@ public class logincontroller {
 
     private static User currentUser;
 
+    /** @return người dùng đã đăng nhập */
     public static User getCurrentUser() {
         return currentUser;
     }
 
+    /** Xóa thông tin người dùng hiện tại. */
     public static void logout() {
         currentUser = null;
     }
 
     @FXML
+    /** Xử lý đăng nhập: kiểm tra đầu vào, gọi NetworkService.login(), chuyển sang màn hình chính. */
     private void Login(ActionEvent event) {
         String username = read(loginUsernameField);
         String password = read(loginPasswordField);
@@ -82,6 +86,7 @@ public class logincontroller {
     }
 
     @FXML
+    /** Xử lý đăng ký: kiểm tra đầu vào, gọi NetworkService.register(). */
     private void Signup(ActionEvent event) {
         String fullName = read(signupNameField);
         String email = read(signupEmailField);
@@ -118,19 +123,23 @@ public class logincontroller {
     }
 
     @FXML
+    /** Chuyển sang form đăng ký. */
     private void ComeSignup(ActionEvent event) {
         switchScene(event, "/signin.fxml", 450, 605);
     }
 
     @FXML
+    /** Chuyển về form đăng nhập. */
     private void ComeLogin(ActionEvent event) {
         switchScene(event, "/login.fxml", 600, 400);
     }
 
+    /** Đọc text từ TextField, xử lý null, trim khoảng trắng. */
     private String read(TextField field) {
         return field == null ? "" : field.getText().trim();
     }
 
+    /** Hiển thị thông báo qua Label messageLabel hoặc Alert nếu Label null. */
     private void showMessage(String message) {
         if (messageLabel != null) {
             messageLabel.setText(message);
@@ -143,6 +152,7 @@ public class logincontroller {
         alert.showAndWait();
     }
 
+    /** Chuyển scene JavaFX với kích thước cho trước. */
     private void switchScene(ActionEvent event, String resourcePath, double width, double height) {
         try {
             URL resource = getClass().getResource(resourcePath);
@@ -160,6 +170,7 @@ public class logincontroller {
         }
     }
 
+    /** Chuyển đến màn hình chính UserController sau khi đăng nhập thành công. */
     private void navigateToMain(ActionEvent event) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/Indivisual.fxml"));

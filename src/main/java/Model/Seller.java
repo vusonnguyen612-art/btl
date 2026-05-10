@@ -1,5 +1,6 @@
 package Model;
 
+/** Người bán hàng, kế thừa User, có thêm tên cửa hàng. */
 public class Seller extends User {
     private static final long serialVersionUID = 1L;
     private String storeName;

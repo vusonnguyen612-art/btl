@@ -1,5 +1,6 @@
 package Model;
 
+/** Quản trị viên hệ thống, kế thừa User, có cấp quản trị riêng. */
 public class Admin extends User {
     private static final long serialVersionUID = 1L;
     private String adminLevel;

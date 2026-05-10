@@ -6,8 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/** DAO cho bảng items: thêm, sửa, xóa, tìm kiếm vật phẩm. */
 public class ItemDAO {
     
+    /** Lưu vật phẩm mới vào database. */
     public boolean save(Item item) {
         String sql = "INSERT INTO items (id, name, description, start_price, seller_id, category, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -26,6 +28,7 @@ public class ItemDAO {
         }
     }
     
+    /** Cập nhật thông tin vật phẩm (name, description, startPrice, imagePath). */
     public boolean update(Item item) {
         String sql = "UPDATE items SET name = ?, description = ?, start_price = ?, image_path = ? WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -42,6 +45,7 @@ public class ItemDAO {
         }
     }
     
+    /** Tìm vật phẩm theo ID. */
     public Optional<Item> findById(String id) {
         String sql = "SELECT * FROM items WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -58,6 +62,7 @@ public class ItemDAO {
         return Optional.empty();
     }
     
+    /** Tìm tất cả vật phẩm của một người bán. */
     public List<Item> findBySellerId(String sellerId) {
         String sql = "SELECT * FROM items WHERE seller_id = ?";
         List<Item> items = new ArrayList<>();
@@ -75,6 +80,7 @@ public class ItemDAO {
         return items;
     }
     
+    /** Lấy tất cả vật phẩm. */
     public List<Item> findAll() {
         String sql = "SELECT * FROM items";
         List<Item> items = new ArrayList<>();
@@ -90,6 +96,7 @@ public class ItemDAO {
         return items;
     }
     
+    /** Xóa vật phẩm theo ID. */
     public boolean delete(String id) {
         String sql = "DELETE FROM items WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();

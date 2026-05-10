@@ -35,6 +35,7 @@ import Model.Bid;
 import Network.NetworkService;
 import Network.Message;
 
+/** Controller chính: quản lý menu, hiển thị sản phẩm, kho, nạp tiền, cài đặt. */
 public class UserController {
 
     @FXML
@@ -120,6 +121,7 @@ public class UserController {
     private static final String LOGIN_FXML = "/login.fxml";
 
     @FXML
+    /** Khởi tạo: setup menu buttons, load dữ liệu trang chủ và kho. */
     private void initialize() {
         setupMenuButtons();
         setupDefaultScreen();
@@ -204,6 +206,7 @@ public class UserController {
         }
     }
 
+    /** Format số tiền với dấu phẩy phân cách. */
     private String formatMoney(BigDecimal value) {
         DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
         symbols.setGroupingSeparator(',');
@@ -212,6 +215,7 @@ public class UserController {
         return format.format(value);
     }
 
+    /** Parse chuỗi tiền tệ (loại bỏ ký tự đặc biệt, dấu phẩy). */
     private BigDecimal parseMoney(String rawText) {
         if (rawText == null || rawText.trim().isEmpty()) {
             throw new IllegalArgumentException("Vui lòng nhập số tiền cần nạp!");
@@ -239,6 +243,7 @@ public class UserController {
     }
 
     @FXML
+    /** Xử lý nạp tiền: kiểm tra input, gọi NetworkService.deposit(), cập nhật số dư. */
     private void Naptien(ActionEvent event) {
         try {
             String nganHang = Nganhangnaptien.getText().trim();
@@ -279,6 +284,7 @@ public class UserController {
     }
 
     @FXML
+    /** Xử lý đổi mật khẩu (chưa hỗ trợ server-side). */
     private void Doimatkhau(ActionEvent event) {
         if (currentUser == null) {
             showWarning("Lỗi", "Vui lòng đăng nhập.");
@@ -312,6 +318,7 @@ public class UserController {
     }
 
     @FXML
+    /** Mở modal tạo sản phẩm, sau đó reload dữ liệu. */
     private void CreateItems(ActionEvent event) {
         openModalFXML(CREATE_ITEM_FXML, "Tạo sản phẩm");
         loadHomeItems();
@@ -319,6 +326,7 @@ public class UserController {
     }
 
     @FXML
+    /** Mở phòng đấu giá (modal), reload số dư khi đóng. */
     private void OpenAuctionRoom(ActionEvent event) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/auctionRoom.fxml"));
@@ -350,6 +358,7 @@ public class UserController {
     }
 
     @FXML
+    /** Đăng xuất và quay về màn hình đăng nhập. */
     private void Doitaikhoan(ActionEvent event) {
         boolean confirmed = showConfirm(
                 "Đổi tài khoản",
@@ -364,6 +373,7 @@ public class UserController {
     }
 
     @FXML
+    /** Thoát chương trình (có xác nhận). */
     private void Exit(ActionEvent event) {
         boolean confirmed = showConfirm(
                 "Thoát",
@@ -380,6 +390,7 @@ public class UserController {
         }
     }
 
+    /** Gán dữ liệu người dùng hiện tại và cập nhật UI. */
     public void setUserData(User user) {
         this.currentUser = user;
 
@@ -419,6 +430,7 @@ public class UserController {
         return currentUser;
     }
 
+    /** Refresh toàn bộ dữ liệu hiển thị. */
     public void refreshAllData() {
         updateBalanceLabels();
         loadHomeItems();
@@ -730,6 +742,7 @@ public class UserController {
         }
     }
 
+    /** Interface cho các controller con (modal) cần liên kết với UserController. */
     public interface LinkedController {
         void setUserController(UserController userController);
     }

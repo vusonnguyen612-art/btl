@@ -1,5 +1,6 @@
 package Model;
 
+/** Vật phẩm danh mục nội thất (bàn ghế, tủ…). */
 public class Furniture extends Item {
     private static final long serialVersionUID = 1L;
     private String brand;

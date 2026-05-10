@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+/** Server TCP đa luồng xử lý các yêu cầu đấu giá. Quản lý AutoBid, penalty, notification. */
 public class AuctionServer {
     private static final Map<String, List<AutoBid>> autoBids = new ConcurrentHashMap<>();
     private static final Object autoBidLock = new Object();
@@ -28,6 +29,7 @@ public class AuctionServer {
     private ItemDAO itemDAO;
     private AuctionDAO auctionDAO;
 
+    /** @param port cổng lắng nghe kết nối */
     public AuctionServer(int port) {
         this.port = port;
         this.userDAO = new UserDAO();
@@ -36,6 +38,7 @@ public class AuctionServer {
         System.out.println("Server initialized with DAO pattern (MySQL)");
     }
 
+    /** Khởi động server, lắng nghe kết nối và chạy penalty scheduler 30 giây. */
     public void start() throws IOException {
         serverSocket = new ServerSocket(port);
         running = true;
@@ -67,6 +70,7 @@ public class AuctionServer {
         }
     }
 
+    /** Dừng server và giải phóng tài nguyên. */
     public void stop() {
         running = false;
         if (penaltyScheduler != null) {
@@ -81,6 +85,7 @@ public class AuctionServer {
         }
     }
 
+    /** Xử lý kết nối từ một client riêng biệt. */
     private class ClientHandler extends Thread {
         private Socket socket;
         private ObjectInputStream input;
@@ -115,6 +120,7 @@ public class AuctionServer {
             }
         }
 
+        /** Phân loại message và gọi handler tương ứng. */
         private Message processMessage(Message message) {
             try {
                 Message response;
@@ -197,6 +203,7 @@ public class AuctionServer {
             }
         }
 
+        /** Xử lý đăng nhập: xác thực user, đăng ký notification. */
         private Message handleLogin(Message message) {
             try {
                 User user = userDAO.authenticate(
@@ -215,6 +222,7 @@ public class AuctionServer {
             }
         }
 
+        /** Xử lý đăng ký: validate password, tạo user, lưu DB. */
         private Message handleRegister(Message message) {
             String passwordError = UserFactory.getPasswordError(message.getContent());
             if (passwordError != null) {
@@ -232,6 +240,7 @@ public class AuctionServer {
             return response;
         }
 
+        /** Lấy danh sách tất cả phiên đấu giá. */
         private Message handleGetAuctions() {
             List<AuctionSession> auctions = auctionDAO.findAllAuctions();
             Message response = new Message(Message.Type.SUCCESS);
@@ -239,6 +248,7 @@ public class AuctionServer {
             return response;
         }
 
+        /** Lấy chi tiết một phiên. */
         private Message handleGetAuction(Message message) {
             Optional<AuctionSession> auction = auctionDAO.findAuctionById(message.getAuctionId());
             if (auction.isPresent()) {
@@ -249,6 +259,7 @@ public class AuctionServer {
             return createErrorMessage("Auction not found");
         }
 
+        /** Tạo phiên đấu giá mới (seller only). */
         private Message handleCreateAuction(Message message) {
             if (currentUser == null || !currentUser.isSeller()) {
                 return createErrorMessage("Only sellers can create auctions");
@@ -278,6 +289,7 @@ public class AuctionServer {
             }
         }
 
+        /** Bắt đầu phiên đấu giá. */
         private Message handleStartAuction(Message message) {
             auctionDAO.startAuction(message.getAuctionId());
             Message response = new Message(Message.Type.SUCCESS);
@@ -285,6 +297,7 @@ public class AuctionServer {
             return response;
         }
 
+        /** Xử lý đặt giá: kiểm tra quyền, ghi nhận, kích hoạt AutoBid. */
         private Message handlePlaceBid(Message message) {
             if (currentUser == null || !currentUser.isBidder()) {
                 return createErrorMessage("Only bidders can place bids");
@@ -313,6 +326,7 @@ public class AuctionServer {
             }
         }
 
+        /** Kết thúc phiên đấu giá. */
         private Message handleFinishAuction(Message message) {
             auctionDAO.finishAuction(message.getAuctionId());
             Message response = new Message(Message.Type.SUCCESS);
@@ -320,6 +334,7 @@ public class AuctionServer {
             return response;
         }
 
+        /** Hủy phiên đấu giá. */
         private Message handleCancelAuction(Message message) {
             auctionDAO.cancelAuction(message.getAuctionId(), message.getContent());
             Message response = new Message(Message.Type.SUCCESS);
@@ -327,6 +342,7 @@ public class AuctionServer {
             return response;
         }
 
+        /** Lấy danh sách tất cả vật phẩm. */
         private Message handleGetItems() {
             List<Item> items = itemDAO.findAll();
             Message response = new Message(Message.Type.SUCCESS);
@@ -334,6 +350,7 @@ public class AuctionServer {
             return response;
         }
 
+        /** Tạo vật phẩm mới (seller only). */
         private Message handleCreateItem(Message message) {
             if (currentUser == null || !currentUser.isSeller()) {
                 return createErrorMessage("Only sellers can create items");
@@ -355,6 +372,7 @@ public class AuctionServer {
             return response;
         }
 
+        /** Lấy số dư tài khoản. */
         private Message handleGetUserBalance(Message message) {
             if (currentUser == null) {
                 return createErrorMessage("Not logged in");
@@ -365,6 +383,7 @@ public class AuctionServer {
             return response;
         }
 
+        /** Cài đặt AutoBid và chạy xử lý ngay. */
         private Message handleSetAutoBid(Message message) {
             if (currentUser == null) {
                 return createErrorMessage("Not logged in");
@@ -395,6 +414,7 @@ public class AuctionServer {
             return response;
         }
 
+        /** Gỡ AutoBid của user khỏi phiên. */
         private Message handleRemoveAutoBid(Message message) {
             if (currentUser == null) {
                 return createErrorMessage("Not logged in");
@@ -411,6 +431,7 @@ public class AuctionServer {
             return response;
         }
 
+        /** Xử lý AutoBid theo second-price logic: tìm người tự động trả cao nhất và đặt giá phù hợp. */
         private void processAutoBids(String auctionId) {
             System.out.println("[AutoBid] processAutoBids called for auction: " + auctionId);
             int maxIterations = 100;
@@ -490,6 +511,7 @@ public class AuctionServer {
             }
         }
 
+        /** Xử lý nạp tiền vào tài khoản. */
         private Message handleDeposit(Message message) {
             if (currentUser == null) {
                 return createErrorMessage("Not logged in");
@@ -509,6 +531,7 @@ public class AuctionServer {
             return createErrorMessage("Deposit failed");
         }
 
+        /** Dừng phiên đấu giá (seller only) và gửi notification đến các client khác. */
         private Message handleStopAuction(Message message) {
             if (currentUser == null) {
                 return createErrorMessage("Not logged in");
@@ -541,6 +564,7 @@ public class AuctionServer {
             return createErrorMessage("Failed to stop auction");
         }
 
+        /** Xử lý thanh toán (chỉ người thắng mới được phép). */
         private Message handleProcessPayment(Message message) {
             if (currentUser == null) {
                 return createErrorMessage("Not logged in");
@@ -563,6 +587,7 @@ public class AuctionServer {
             return createErrorMessage("Payment failed");
         }
 
+        /** Lấy lịch sử đặt giá của phiên. */
         private Message handleGetBidHistory(Message message) {
             List<Bid> bids = auctionDAO.getBidHistory(message.getAuctionId());
             Message response = new Message(Message.Type.SUCCESS);

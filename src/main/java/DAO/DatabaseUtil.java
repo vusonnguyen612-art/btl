@@ -4,6 +4,7 @@ import java.sql.*;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+/** Tiện ích quản lý kết nối MySQL và đóng tài nguyên. */
 public class DatabaseUtil {
     private static final String DB_URL = "jdbc:mysql://localhost:3306/auction_db";
     private static final String DB_USER = "root";
@@ -19,12 +20,14 @@ public class DatabaseUtil {
         Runtime.getRuntime().addShutdownHook(new Thread(DatabaseUtil::closeAllConnections));
     }
 
+    /** Lấy kết nối mới từ DriverManager và ghi nhận vào activeConnections. */
     public static Connection getConnection() throws SQLException {
         Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
         activeConnections.add(conn);
         return conn;
     }
 
+    /** Đóng một hoặc nhiều tài nguyên (Connection, Statement, ResultSet…). */
     public static void close(AutoCloseable... resources) {
         for (AutoCloseable resource : resources) {
             if (resource != null) {
@@ -40,6 +43,7 @@ public class DatabaseUtil {
         }
     }
 
+    /** Đóng tất cả kết nối đang hoạt động (dùng trong shutdown hook). */
     public static void closeAllConnections() {
         for (Connection conn : activeConnections) {
             try {

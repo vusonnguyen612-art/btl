@@ -2,6 +2,10 @@ package Model;
 
 import java.io.Serializable;
 
+/**
+ * Lớp trừu tượng đại diện cho một vật phẩm đấu giá.
+ * Các lớp con: Vehicle, Electronics, Fashion, Books, Art, Music, Sports, Jewelry, Furniture.
+ */
 public abstract class Item implements Serializable {
     private static final long serialVersionUID = 1L;
     private String id;
@@ -12,6 +16,13 @@ public abstract class Item implements Serializable {
     protected String category;
     private String imagePath;
 
+    /**
+     * @param id          mã vật phẩm
+     * @param name        tên vật phẩm
+     * @param description mô tả
+     * @param startPrice  giá khởi điểm
+     * @param sellerId    ID người bán
+     */
     public Item(String id, String name, String description, double startPrice, String sellerId) {
         this.id = id;
         this.name = name;
@@ -68,6 +79,7 @@ public abstract class Item implements Serializable {
         this.imagePath = imagePath;
     }
 
+    /** @return thông tin chi tiết đặc thù theo từng danh mục */
     public abstract String getSpecificInfo();
 
     @Override
