@@ -11,6 +11,7 @@ import java.text.DecimalFormatSymbols;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+/** Controller cho card lịch sử đấu giá (hiển thị thời gian, số tiền, phiên). */
 public class BidHistoryCardController {
 
     @FXML private HBox cardRoot;
@@ -26,6 +27,7 @@ public class BidHistoryCardController {
         moneyFormat = new DecimalFormat("#,###", symbols);
     }
 
+    /** Gán dữ liệu bid và hiển thị lên card. */
     public void setBid(Bid bid) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
         String timeStr = bid.getTimestamp().format(formatter);
@@ -37,6 +39,7 @@ public class BidHistoryCardController {
         auctionLabel.setText("Phiên: " + bid.getAuctionId());
     }
 
+    /** @return root HBox của card */
     public HBox getRoot() {
         return cardRoot;
     }

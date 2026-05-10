@@ -10,10 +10,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+/** DAO cho bảng auction_sessions và bids: quản lý đấu giá, thanh toán, phạt, lịch sử. */
 public class AuctionDAO {
     
     private final ItemDAO itemDAO = new ItemDAO();
     
+    /** Ghi nhận lượt đặt giá vào bảng bids và cập nhật current_price / highest_bidder_id. */
     public boolean placeBid(String auctionId, String bidderId, double amount) {
         String sql = "INSERT INTO bids (id, auction_id, bidder_id, amount, timestamp) VALUES (?, ?, ?, ?, NOW())";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -47,6 +49,7 @@ public class AuctionDAO {
         }
     }
     
+    /** Gia hạn phiên đấu giá thêm 5 phút. */
     public boolean stopAuction(String auctionId) {
         String sql = "UPDATE auction_sessions SET end_time = DATE_ADD(NOW(), INTERVAL 5 MINUTE) WHERE id = ? AND status = 'RUNNING'";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -59,6 +62,7 @@ public class AuctionDAO {
         }
     }
 
+    /** Bắt đầu phiên: chuyển trạng thái RUNNING, đặt start_time và end_time. */
     public boolean startAuction(String auctionId) {
         String sql = "UPDATE auction_sessions SET status = 'RUNNING', start_time = NOW(), end_time = DATE_ADD(NOW(), INTERVAL duration_minutes MINUTE) WHERE id = ? AND status = 'OPEN'";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -71,6 +75,7 @@ public class AuctionDAO {
         }
     }
     
+    /** Kết thúc phiên: nếu có highest_bidder -> PAYMENT_PENDING, nếu không -> FINISHED. */
     public boolean finishAuction(String auctionId) {
         String checkSql = "SELECT highest_bidder_id FROM auction_sessions WHERE id = ? AND status = 'RUNNING'";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -97,6 +102,10 @@ public class AuctionDAO {
         return false;
     }
 
+    /**
+     * Xử lý thanh toán trong transaction: trừ tiền người thắng -> cộng cho người bán -> chuyển PAID.
+     * Rollback nếu số dư không đủ hoặc lỗi.
+     */
     public boolean processPayment(String auctionId) {
         String sql = "SELECT current_price, highest_bidder_id, seller_id FROM auction_sessions WHERE id = ? AND status = 'PAYMENT_PENDING'";
         try (Connection conn = DatabaseUtil.getConnection()) {
@@ -144,6 +153,7 @@ public class AuctionDAO {
         return false;
     }
 
+    /** Phạt người thắng quá hạn thanh toán 50,000 và chuyển phiên về FINISHED. */
     public boolean penalizeWinner(String auctionId) {
         String sql = "SELECT highest_bidder_id FROM auction_sessions WHERE id = ? AND status = 'PAYMENT_PENDING'";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -174,6 +184,7 @@ public class AuctionDAO {
         return false;
     }
 
+    /** Tìm các phiên PAYMENT_PENDING quá hạn >1 giờ kể từ endTime. */
     public List<AuctionSession> findOverduePaymentAuctions() {
         String sql = "SELECT * FROM auction_sessions WHERE status = 'PAYMENT_PENDING' AND end_time IS NOT NULL AND DATE_ADD(end_time, INTERVAL 1 HOUR) <= NOW()";
         List<AuctionSession> sessions = new ArrayList<>();
@@ -189,6 +200,7 @@ public class AuctionDAO {
         return sessions;
     }
     
+    /** Hủy phiên đấu giá. */
     public boolean cancelAuction(String auctionId, String content) {
         String sql = "UPDATE auction_sessions SET status = 'CANCELED' WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -201,6 +213,7 @@ public class AuctionDAO {
         }
     }
     
+    /** Tìm phiên đấu giá theo ID (join với items). */
     public Optional<AuctionSession> findAuctionById(String auctionId) {
         String sql = "SELECT * FROM auction_sessions WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -217,6 +230,7 @@ public class AuctionDAO {
         return Optional.empty();
     }
     
+    /** Tìm các phiên đang chạy (RUNNING) sắp kết thúc trước. */
     public List<AuctionSession> findRunningAuctions() {
         String sql = "SELECT * FROM auction_sessions WHERE status = 'RUNNING' ORDER BY end_time ASC";
         List<AuctionSession> sessions = new ArrayList<>();
@@ -232,6 +246,7 @@ public class AuctionDAO {
         return sessions;
     }
     
+    /** Tìm các phiên mở (OPEN) mới nhất trước. */
     public List<AuctionSession> findOpenAuctions() {
         String sql = "SELECT * FROM auction_sessions WHERE status = 'OPEN' ORDER BY created_at DESC";
         List<AuctionSession> sessions = new ArrayList<>();
@@ -247,6 +262,7 @@ public class AuctionDAO {
         return sessions;
     }
     
+    /** Tìm các phiên chờ thanh toán (PAYMENT_PENDING). */
     public List<AuctionSession> findPaymentPendingAuctions() {
         String sql = "SELECT * FROM auction_sessions WHERE status = 'PAYMENT_PENDING' ORDER BY end_time ASC";
         List<AuctionSession> sessions = new ArrayList<>();
@@ -262,6 +278,7 @@ public class AuctionDAO {
         return sessions;
     }
 
+    /** Lấy tất cả phiên đấu giá, mới nhất trước. */
     public List<AuctionSession> findAllAuctions() {
         String sql = "SELECT * FROM auction_sessions ORDER BY created_at DESC";
         List<AuctionSession> sessions = new ArrayList<>();
@@ -277,6 +294,7 @@ public class AuctionDAO {
         return sessions;
     }
     
+    /** Lấy lịch sử đặt giá của một phiên, mới nhất trước. */
     public List<Bid> getBidHistory(String auctionId) {
         String sql = "SELECT * FROM bids WHERE auction_id = ? ORDER BY timestamp DESC";
         List<Bid> bids = new ArrayList<>();
@@ -302,6 +320,7 @@ public class AuctionDAO {
         return bids;
     }
     
+    /** Lấy lịch sử đặt giá của một người dùng (join với auction_sessions để lấy item_id). */
     public List<Bid> getUserBidHistory(String userId) {
         String sql = "SELECT b.*, a.item_id FROM bids b JOIN auction_sessions a ON b.auction_id = a.id WHERE b.bidder_id = ? ORDER BY b.timestamp DESC";
         List<Bid> bids = new ArrayList<>();
@@ -327,6 +346,7 @@ public class AuctionDAO {
         return bids;
     }
     
+    /** Lấy giá hiện tại của phiên. */
     public double getCurrentPrice(String auctionId) {
         String sql = "SELECT current_price FROM auction_sessions WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -343,6 +363,7 @@ public class AuctionDAO {
         return 0;
     }
     
+    /** Trừ tiền từ tài khoản người dùng (kiểm tra số dư >= amount). */
     public boolean deductBalance(String userId, double amount) {
         String sql = "UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -357,6 +378,7 @@ public class AuctionDAO {
         }
     }
     
+    /** Lấy số dư người dùng (đơn vị BigDecimal). */
     public BigDecimal getUserBalance(String userId) {
         String sql = "SELECT balance FROM users WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -400,6 +422,7 @@ public class AuctionDAO {
         return session;
     }
 
+    /** Lưu phiên đấu giá mới với thông tin cơ bản. */
     public void saveAuction(AuctionSession auction) {
         String sql = "INSERT INTO auction_sessions (id, item_id, seller_id, status, current_price, start_price, duration_minutes, min_increment) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseUtil.getConnection();

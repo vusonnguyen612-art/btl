@@ -2,6 +2,7 @@ package Model;
 
 import java.math.BigDecimal;
 
+/** Người tham gia đấu giá, kế thừa User, có số dư tài khoản riêng. */
 public class Bidder extends User {
     private static final long serialVersionUID = 1L;
     private BigDecimal balance;

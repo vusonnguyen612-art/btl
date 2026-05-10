@@ -2,6 +2,7 @@ package Model;
 
 import java.io.Serializable;
 
+/** Cấu hình tự động trả giá cho một người dùng trên một phiên đấu giá. */
 public class AutoBid implements Serializable {
     private static final long serialVersionUID = 1L;
 
@@ -10,6 +11,10 @@ public class AutoBid implements Serializable {
     private double maxAmount;
     private double increment;
 
+    /** @param userId    ID người dùng
+     *  @param auctionId ID phiên đấu giá
+     *  @param maxAmount số tiền tối đa có thể trả
+     *  @param increment bước giá mỗi lần tự động trả */
     public AutoBid(String userId, String auctionId, double maxAmount, double increment) {
         this.userId = userId;
         this.auctionId = auctionId;

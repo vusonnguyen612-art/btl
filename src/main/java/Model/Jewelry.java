@@ -1,5 +1,6 @@
 package Model;
 
+/** Vật phẩm danh mục trang sức (nhẫn, vòng cổ…). */
 public class Jewelry extends Item {
     private static final long serialVersionUID = 1L;
     private String material;

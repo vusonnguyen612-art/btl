@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+/** Quản lý toàn bộ dữ liệu hệ thống (users, items, auctions) in-memory với ReadWriteLock. Singleton. */
 public class AuctionManager implements Serializable {
     private static final long serialVersionUID = 1L;
     private static AuctionManager instance;
@@ -31,6 +32,7 @@ public class AuctionManager implements Serializable {
         this.auctionCounter = 0;
     }
 
+    /** Lấy instance singleton (tạo mới nếu chưa có). */
     public static synchronized AuctionManager getInstance() {
         if (instance == null) {
             instance = new AuctionManager();
@@ -38,12 +40,14 @@ public class AuctionManager implements Serializable {
         return instance;
     }
 
+    /** Reset instance về trạng thái mới. */
     public static synchronized void resetInstance() {
         if (instance != null) {
             instance = new AuctionManager();
         }
     }
 
+    /** Tạo phiên đấu giá mới từ itemId. */
     public AuctionSession createAuction(String itemId, long durationMinutes) 
             throws ItemNotFoundException {
         lock.writeLock().lock();
@@ -69,6 +73,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Đặt giá cho phiên và thông báo cho tất cả globalObservers. */
     public synchronized String placeBid(String auctionId, String bidderId, double amount)
             throws AuctionClosedException, InvalidBidException {
         lock.writeLock().lock();
@@ -90,6 +95,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Bắt đầu phiên đấu giá. */
     public void startAuction(String auctionId) {
         lock.writeLock().lock();
         try {
@@ -102,6 +108,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Kết thúc phiên đấu giá. */
     public void finishAuction(String auctionId) {
         lock.writeLock().lock();
         try {
@@ -114,6 +121,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Hủy phiên đấu giá với lý do. */
     public void cancelAuction(String auctionId, String reason) {
         lock.writeLock().lock();
         try {
@@ -126,6 +134,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Xử lý thanh toán cho phiên. */
     public boolean processPayment(String auctionId, String winnerId, double amount) {
         lock.writeLock().lock();
         try {
@@ -139,6 +148,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Thêm vật phẩm vào danh sách. */
     public void addItem(Item item) {
         lock.writeLock().lock();
         try {
@@ -148,6 +158,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Lấy vật phẩm theo ID. */
     public Item getItem(String itemId) {
         lock.readLock().lock();
         try {
@@ -157,6 +168,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Lấy tất cả vật phẩm. */
     public List<Item> getAllItems() {
         lock.readLock().lock();
         try {
@@ -166,6 +178,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Cập nhật thông tin vật phẩm. */
     public boolean updateItem(String itemId, String name, String description, Double startPrice) {
         lock.writeLock().lock();
         try {
@@ -181,6 +194,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Xóa vật phẩm theo ID. */
     public boolean deleteItem(String itemId) {
         lock.writeLock().lock();
         try {
@@ -190,6 +204,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Lấy phiên đấu giá theo ID. */
     public AuctionSession getAuction(String auctionId) {
         lock.readLock().lock();
         try {
@@ -199,6 +214,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Lấy tất cả phiên đấu giá. */
     public List<AuctionSession> getAllAuctions() {
         lock.readLock().lock();
         try {
@@ -208,6 +224,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Lọc phiên theo trạng thái. */
     public List<AuctionSession> getAuctionsByStatus(AuctionSession.Status status) {
         lock.readLock().lock();
         try {
@@ -223,6 +240,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Thêm người dùng. */
     public void addUser(User user) {
         lock.writeLock().lock();
         try {
@@ -232,6 +250,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Lấy người dùng theo ID. */
     public User getUser(String userId) {
         lock.readLock().lock();
         try {
@@ -241,6 +260,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Xác thực username/password. */
     public User authenticate(String username, String password) throws AuthenticationException {
         lock.readLock().lock();
         try {
@@ -258,14 +278,17 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Đăng ký observer toàn cục. */
     public void addGlobalObserver(AuctionObserver observer) {
         globalObservers.add(observer);
     }
 
+    /** Hủy đăng ký observer toàn cục. */
     public void removeGlobalObserver(AuctionObserver observer) {
         globalObservers.remove(observer);
     }
 
+    /** Lưu toàn bộ dữ liệu ra file auction_data.ser. */
     public void saveData() throws IOException {
         lock.readLock().lock();
         try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(DATA_FILE))) {
@@ -275,6 +298,7 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /** Tải dữ liệu từ file auction_data.ser. */
     public static AuctionManager loadData() throws IOException, ClassNotFoundException {
         File file = new File(DATA_FILE);
         if (!file.exists()) {

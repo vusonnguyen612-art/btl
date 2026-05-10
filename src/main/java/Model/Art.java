@@ -1,5 +1,6 @@
 package Model;
 
+/** Vật phẩm danh mục nghệ thuật (tranh, điêu khắc…). */
 public class Art extends Item {
     private static final long serialVersionUID = 1L;
     private String artist;

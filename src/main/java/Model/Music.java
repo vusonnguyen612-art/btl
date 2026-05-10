@@ -1,5 +1,6 @@
 package Model;
 
+/** Vật phẩm danh mục âm nhạc (đĩa nhạc, nhạc cụ…). */
 public class Music extends Item {
     private static final long serialVersionUID = 1L;
     private String artist;

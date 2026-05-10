@@ -7,6 +7,7 @@ import java.util.Scanner;
 import Model.*;
 import Factory.*;
 
+/** CLI client console tương tác với AuctionServer qua menu text. */
 public class AuctionClient {
     private Socket socket;
     private ObjectOutputStream output;
@@ -14,11 +15,14 @@ public class AuctionClient {
     private String serverAddress;
     private int port;
 
+    /** @param serverAddress địa chỉ server
+     *  @param port          cổng kết nối */
     public AuctionClient(String serverAddress, int port) {
         this.serverAddress = serverAddress;
         this.port = port;
     }
 
+    /** Kết nối tới server. */
     public boolean connect() {
         try {
             socket = new Socket(serverAddress, port);
@@ -33,6 +37,7 @@ public class AuctionClient {
         }
     }
 
+    /** Ngắt kết nối. */
     public void disconnect() {
         try {
             if (socket != null) socket.close();
@@ -42,6 +47,7 @@ public class AuctionClient {
         }
     }
 
+    /** Gửi message và nhận response. */
     public Message sendMessage(Message message) {
         try {
             output.writeObject(message);
@@ -53,6 +59,7 @@ public class AuctionClient {
         }
     }
 
+    /** Gửi yêu cầu đăng nhập. */
     public Message login(String username, String password) {
         Message message = new Message(Message.Type.LOGIN);
         message.setData(username);
@@ -60,6 +67,7 @@ public class AuctionClient {
         return sendMessage(message);
     }
 
+    /** Gửi yêu cầu đăng ký. */
     public Message register(String username, String password) {
         Message message = new Message(Message.Type.REGISTER);
         message.setData(username);
@@ -67,16 +75,19 @@ public class AuctionClient {
         return sendMessage(message);
     }
 
+    /** Lấy danh sách phiên đấu giá. */
     public Message getAuctions() {
         return sendMessage(new Message(Message.Type.GET_AUCTIONS));
     }
 
+    /** Lấy thông tin một phiên. */
     public Message getAuction(String auctionId) {
         Message message = new Message(Message.Type.GET_AUCTION);
         message.setAuctionId(auctionId);
         return sendMessage(message);
     }
 
+    /** Tạo phiên đấu giá mới. */
     public Message createAuction(String itemId, long durationMinutes) {
         Message message = new Message(Message.Type.CREATE_AUCTION);
         message.setItemId(itemId);
@@ -84,12 +95,14 @@ public class AuctionClient {
         return sendMessage(message);
     }
 
+    /** Bắt đầu phiên đấu giá. */
     public Message startAuction(String auctionId) {
         Message message = new Message(Message.Type.START_AUCTION);
         message.setAuctionId(auctionId);
         return sendMessage(message);
     }
 
+    /** Đặt giá. */
     public Message placeBid(String auctionId, double amount) {
         Message message = new Message(Message.Type.PLACE_BID);
         message.setAuctionId(auctionId);
@@ -97,12 +110,14 @@ public class AuctionClient {
         return sendMessage(message);
     }
 
+    /** Kết thúc phiên. */
     public Message finishAuction(String auctionId) {
         Message message = new Message(Message.Type.FINISH_AUCTION);
         message.setAuctionId(auctionId);
         return sendMessage(message);
     }
 
+    /** Hủy phiên với lý do. */
     public Message cancelAuction(String auctionId, String reason) {
         Message message = new Message(Message.Type.CANCEL_AUCTION);
         message.setAuctionId(auctionId);
@@ -110,10 +125,12 @@ public class AuctionClient {
         return sendMessage(message);
     }
 
+    /** Lấy danh sách vật phẩm. */
     public Message getItems() {
         return sendMessage(new Message(Message.Type.GET_ITEMS));
     }
 
+    /** Tạo vật phẩm mới. */
     public Message createItem(Model.Item item) {
         Message message = new Message(Message.Type.CREATE_ITEM);
         message.setData(item);

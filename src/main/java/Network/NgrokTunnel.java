@@ -7,6 +7,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
+/** Lấy thông tin public URL từ ngrok API (http://localhost:4040) để expose server ra ngoài. */
 public class NgrokTunnel {
     private static final String NGROK_API_URL = "http://localhost:4040/api/tunnels";
     private static final Duration TIMEOUT = Duration.ofSeconds(3);
@@ -14,6 +15,8 @@ public class NgrokTunnel {
     private final String host;
     private final int port;
 
+    /** @param host host từ ngrok URL
+     *  @param port port từ ngrok URL */
     private NgrokTunnel(String host, int port) {
         this.host = host;
         this.port = port;
@@ -27,6 +30,7 @@ public class NgrokTunnel {
         return port;
     }
 
+    /** Gọi API ngrok để lấy thông tin tunnel public. */
     public static NgrokTunnel fetch() throws IOException {
         HttpClient client = HttpClient.newBuilder()
                 .connectTimeout(TIMEOUT)

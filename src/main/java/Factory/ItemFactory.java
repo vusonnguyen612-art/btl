@@ -2,6 +2,7 @@ package Factory;
 
 import Model.*;
 
+/** Factory tạo các đối tượng Item (theo danh mục) với ID tự sinh. */
 public class ItemFactory {
     private static int electronicsCounter = 0;
     private static int artCounter = 0;
@@ -13,6 +14,7 @@ public class ItemFactory {
     private static int musicCounter = 0;
     private static int furnitureCounter = 0;
 
+    /** Tạo item danh mục Electronics với ID "ELCxxxx". */
     public static Item createElectronics(String name, String description, double startPrice,
                                          String sellerId, String brand, int warrantyMonths,
                                          String model, String condition) {
@@ -21,6 +23,7 @@ public class ItemFactory {
                 brand, warrantyMonths, model, condition);
     }
 
+    /** Tạo item danh mục Art với ID "ARTxxxx". */
     public static Item createArt(String name, String description, double startPrice,
                                  String sellerId, String artist, int yearCreated,
                                  String medium, String style) {
@@ -29,6 +32,7 @@ public class ItemFactory {
                 artist, yearCreated, medium, style);
     }
 
+    /** Tạo item danh mục Vehicle với ID "VEHxxxx". */
     public static Item createVehicle(String name, String description, double startPrice,
                                      String sellerId, String brand, String model, int year,
                                      int mileage, String fuelType, String transmission,
@@ -38,6 +42,7 @@ public class ItemFactory {
                 brand, model, year, mileage, fuelType, transmission, color, condition);
     }
 
+    /** Tạo item danh mục Fashion với ID "FSHxxxx". */
     public static Item createFashion(String name, String description, double startPrice,
                                      String sellerId, String brand, String size,
                                      String material, String condition, String gender) {
@@ -46,6 +51,7 @@ public class ItemFactory {
                 brand, size, material, condition, gender);
     }
 
+    /** Tạo item danh mục Books với ID "BOKxxxx". */
     public static Item createBooks(String name, String description, double startPrice,
                                    String sellerId, String author, String publisher,
                                    String genre, int pageCount, String isbn) {
@@ -54,6 +60,7 @@ public class ItemFactory {
                 author, publisher, genre, pageCount, isbn);
     }
 
+    /** Tạo item danh mục Sports với ID "SPTxxxx". */
     public static Item createSports(String name, String description, double startPrice,
                                     String sellerId, String brand, String sportType,
                                     String condition, String material) {
@@ -62,6 +69,7 @@ public class ItemFactory {
                 brand, sportType, condition, material);
     }
 
+    /** Tạo item danh mục Jewelry với ID "JWLxxxx". */
     public static Item createJewelry(String name, String description, double startPrice,
                                      String sellerId, String material, String gemstone,
                                      double weight, String brand, String condition) {
@@ -70,6 +78,7 @@ public class ItemFactory {
                 material, gemstone, weight, brand, condition);
     }
 
+    /** Tạo item danh mục Music với ID "MSCxxxx". */
     public static Item createMusic(String name, String description, double startPrice,
                                    String sellerId, String artist, String genre,
                                    String format, int releaseYear, String label) {
@@ -78,6 +87,7 @@ public class ItemFactory {
                 artist, genre, format, releaseYear, label);
     }
 
+    /** Tạo item danh mục Furniture với ID "FNTxxxx". */
     public static Item createFurniture(String name, String description, double startPrice,
                                        String sellerId, String brand, String material,
                                        String color, String dimensions, String condition) {
@@ -86,8 +96,19 @@ public class ItemFactory {
                 brand, material, color, dimensions, condition);
     }
 
+    /**
+     * Factory method tổng quát: tạo Item dựa trên tên danh mục (không phân biệt hoa thường).
+     * Các thông số chi tiết mặc định (brand="Unknown", condition="New"...).
+     *
+     * @param category   danh mục (ELECTRONICS, ART, VEHICLE, FASHION, BOOKS, SPORTS, JEWELRY, MUSIC, FURNITURE)
+     * @param name       tên sản phẩm
+     * @param description mô tả
+     * @param startPrice giá khởi điểm
+     * @param sellerId   ID người bán
+     * @return Item tương ứng
+     */
     public static Item createItem(String category, String name, String description, 
-                                  double startPrice, String sellerId) {
+                                   double startPrice, String sellerId) {
         switch (category.toUpperCase()) {
             case "ELECTRONICS":
                 return createElectronics(name, description, startPrice, sellerId, 

@@ -17,6 +17,7 @@ import java.text.DecimalFormatSymbols;
 import java.util.List;
 import java.util.Locale;
 
+/** Controller cho card hiển thị thông tin vật phẩm kèm trạng thái phiên đấu giá và countdown. */
 public class ItemCardController {
 
     @FXML private HBox cardRoot;
@@ -37,10 +38,12 @@ public class ItemCardController {
         moneyFormat = new DecimalFormat("#,###", symbols);
     }
 
+    /** Gán item (không có thông tin auction). */
     public void setItem(Item item) {
         this.setItem(item, null);
     }
 
+    /** Gán item và danh sách auction để hiển thị trạng thái + countdown nếu đang chạy. */
     public void setItem(Item item, List<AuctionSession> auctions) {
         stopTimeUpdate();
 
@@ -145,6 +148,7 @@ public class ItemCardController {
         }
     }
 
+    /** @return root HBox của card */
     public HBox getRoot() {
         return cardRoot;
     }

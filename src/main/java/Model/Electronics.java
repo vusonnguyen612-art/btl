@@ -1,5 +1,6 @@
 package Model;
 
+/** Vật phẩm danh mục điện tử (điện thoại, laptop, thiết bị…). */
 public class Electronics extends Item {
     private static final long serialVersionUID = 1L;
     private String brand;

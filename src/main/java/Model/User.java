@@ -3,6 +3,10 @@ package Model;
 import java.io.Serializable;
 import java.math.BigDecimal;
 
+/**
+ * Lớp đại diện cho người dùng trong hệ thống.
+ * Mặc định vừa là seller vừa là bidder, số dư ban đầu 300,000.
+ */
 public class User implements Serializable {
     private static final long serialVersionUID = 1L;
     private String id;
@@ -13,6 +17,9 @@ public class User implements Serializable {
     private boolean isBidder;
     private BigDecimal balance;
 
+    /** @param id       mã người dùng
+     *  @param username tên đăng nhập
+     *  @param password mật khẩu */
     public User(String id, String username, String password) {
         this.id = id;
         this.username = username;
@@ -58,10 +65,12 @@ public class User implements Serializable {
         this.email = email;
     }
 
+    /** @return vai trò mặc định BIDDER_SELLER */
     public String getRole() {
         return "BIDDER_SELLER";
     }
 
+    /** @return false vì User không phải Admin */
     public boolean isAdmin() {
         return false;
     }

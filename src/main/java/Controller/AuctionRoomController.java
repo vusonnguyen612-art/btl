@@ -29,6 +29,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 
+/** Controller cho phòng đấu giá chi tiết: đặt giá, auto-bid, timer, lịch sử, thanh toán. */
 public class AuctionRoomController {
 
     @FXML
@@ -113,11 +114,13 @@ public class AuctionRoomController {
             "-fx-text-fill: #eacd8f; -fx-font-size: 14px;";
 
     @FXML
+    /** Khởi tạo: đăng ký notification listener, bắt đầu auto refresh. */
     private void initialize() {
         setupNotificationListener();
         startAutoRefresh();
     }
 
+    /** Gán user hiện tại, load số dư và danh sách phiên. */
     public void setCurrentUser(User user) {
         this.currentUser = user;
         if (user != null) {
@@ -526,6 +529,7 @@ public class AuctionRoomController {
     }
 
     @FXML
+    /** Xử lý đặt giá thủ công: kiểm tra điều kiện, gọi NetworkService.placeBid(), cập nhật UI. */
     private void placeBid(ActionEvent event) {
         if (currentUser == null || selectedAuction == null) {
             showAlert(Alert.AlertType.WARNING, "Lỗi", "Vui lòng chọn phiên đấu giá.");
@@ -587,6 +591,7 @@ public class AuctionRoomController {
     }
 
     @FXML
+    /** Bật/tắt AutoBid: gọi NetworkService.setAutoBid() hoặc removeAutoBid(). */
     private void toggleAutoBid(ActionEvent event) {
         if (currentUser == null || selectedAuction == null) {
             showAlert(Alert.AlertType.WARNING, "Lỗi", "Vui lòng chọn phiên đấu giá.");
@@ -647,6 +652,7 @@ public class AuctionRoomController {
     }
 
     @FXML
+    /** Đặt giá nhanh với mức tăng tối thiểu (currentPrice + minIncrement). */
     private void quickBid(ActionEvent event) {
         if (selectedAuction == null) return;
 
@@ -782,6 +788,7 @@ public class AuctionRoomController {
     }
 
     @FXML
+    /** Quay lại danh sách: dừng timer, xóa AutoBid nếu có. */
     private void backToList(ActionEvent event) {
         if (selectedAuction != null && autoBidActive) {
             networkService.removeAutoBid(selectedAuction.getId());
@@ -823,6 +830,7 @@ public class AuctionRoomController {
         });
     }
 
+    /** Dừng tất cả timeline refresh khi đóng phòng. */
     public void stopRefresh() {
         if (refreshTimeline != null) {
             refreshTimeline.stop();

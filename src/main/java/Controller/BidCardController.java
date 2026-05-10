@@ -11,6 +11,7 @@ import java.text.DecimalFormatSymbols;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+/** Controller cho card hiển thị một lượt đặt giá (bidder, amount, time) trong phòng đấu giá. */
 public class BidCardController {
 
     @FXML private HBox cardRoot;
@@ -27,6 +28,7 @@ public class BidCardController {
         moneyFormat = new DecimalFormat("#,###", symbols);
     }
 
+    /** Gán dữ liệu bid: hiển thị tên bidder, số tiền, thời gian. */
     public void setBid(Bid bid) {
         String username = userDAO.getUsernameById(bid.getBidderId());
         bidderLabel.setText(username);
@@ -37,6 +39,7 @@ public class BidCardController {
         timeLabel.setText(timeStr);
     }
 
+    /** @return root HBox của card */
     public HBox getRoot() {
         return cardRoot;
     }

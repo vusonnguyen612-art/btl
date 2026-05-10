@@ -1,5 +1,6 @@
 package Model;
 
+/** Vật phẩm danh mục thể thao (dụng cụ, trang phục thể thao…). */
 public class Sports extends Item {
     private static final long serialVersionUID = 1L;
     private String brand;

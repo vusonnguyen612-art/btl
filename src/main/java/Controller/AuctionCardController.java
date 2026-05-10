@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
+/** Controller cho card phiên đấu giá: hiển thị thông tin, nút Vào phòng / Bắt đầu, countdown. */
 public class AuctionCardController {
 
     @FXML private HBox cardRoot;
@@ -41,12 +42,14 @@ public class AuctionCardController {
         moneyFormat = new DecimalFormat("#,###", symbols);
     }
 
+    /** Gán dữ liệu phiên (3 tham số). */
     public void setAuction(AuctionSession auction, boolean isRunning, boolean canStart) {
         this.auction = auction;
         stopTimeUpdate();
         updateCard(isRunning, canStart, false);
     }
 
+    /** Gán dữ liệu phiên (4 tham số, có isPaymentPending). */
     public void setAuction(AuctionSession auction, boolean isRunning, boolean canStart, boolean isPaymentPending) {
         this.auction = auction;
         stopTimeUpdate();
@@ -75,10 +78,12 @@ public class AuctionCardController {
         timeRemainingLabel.setText(getTimeRemaining(auction));
     }
 
+    /** Đăng ký callback khi nhấn "Vào phòng". */
     public void setOnSelectAuction(Runnable callback) {
         this.onSelectAuction = callback;
     }
 
+    /** Đăng ký callback khi nhấn "Bắt đầu". */
     public void setOnStartAuction(Runnable callback) {
         this.onStartAuction = callback;
     }
@@ -193,6 +198,7 @@ public class AuctionCardController {
         }
     }
 
+    /** @return root HBox của card */
     public HBox getRoot() {
         return cardRoot;
     }

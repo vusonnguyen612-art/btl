@@ -6,8 +6,10 @@ import java.math.BigDecimal;
 import java.sql.*;
 import java.util.Optional;
 
+/** DAO cho bảng users: đăng ký, đăng nhập, xác thực, quản lý số dư. */
 public class UserDAO {
 
+    /** Đăng ký người dùng mới vào bảng users. */
     public boolean register(User user) {
         String sql = "INSERT INTO users (id, username, password, email, is_seller, is_bidder) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -28,6 +30,7 @@ public class UserDAO {
         }
     }
 
+    /** Đăng nhập với username/password, trả về Optional<User>. */
     public Optional<User> login(String username, String password) {
         String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -45,6 +48,7 @@ public class UserDAO {
         return Optional.empty();
     }
 
+    /** Xác thực đăng nhập, throw AuthenticationException nếu sai. */
     public User authenticate(String username, String password) throws AuthenticationException {
         Optional<User> userOpt = login(username, password);
         if (userOpt.isPresent()) {
@@ -53,6 +57,7 @@ public class UserDAO {
         throw new AuthenticationException("Invalid username or password", username);
     }
 
+    /** Tìm user theo ID. */
     public Optional<User> findById(String id) {
         String sql = "SELECT * FROM users WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -69,6 +74,7 @@ public class UserDAO {
         return Optional.empty();
     }
 
+    /** Kiểm tra username đã tồn tại chưa. */
     public boolean existsByUsername(String username) {
         String sql = "SELECT 1 FROM users WHERE username = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -83,6 +89,7 @@ public class UserDAO {
         }
     }
 
+    /** Đổi mật khẩu (yêu cầu mật khẩu cũ). */
     public boolean changePassword(String username, String oldPassword, String newPassword) {
         String sql = "UPDATE users SET password = ? WHERE username = ? AND password = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -109,6 +116,7 @@ public class UserDAO {
         return user;
     }
 
+    /** Cập nhật số dư người dùng. */
     public boolean updateBalance(String username, BigDecimal newBalance) {
         String sql = "UPDATE users SET balance = ? WHERE username = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -122,6 +130,7 @@ public class UserDAO {
         }
     }
 
+    /** Cộng thêm số dư cho người dùng. */
     public boolean addBalance(String userId, BigDecimal amount) {
         String sql = "UPDATE users SET balance = balance + ? WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -135,6 +144,7 @@ public class UserDAO {
         }
     }
 
+    /** Lấy số dư hiện tại. */
     public BigDecimal getBalance(String userId) {
         String sql = "SELECT balance FROM users WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -151,6 +161,7 @@ public class UserDAO {
         return BigDecimal.ZERO;
     }
 
+    /** Lấy tên đăng nhập từ ID, trả về userId nếu không tìm thấy. */
     public String getUsernameById(String userId) {
         String sql = "SELECT username FROM users WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
