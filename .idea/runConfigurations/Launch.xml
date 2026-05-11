@@ -1,7 +1,7 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Launch" type="Application" factoryName="Application" singleton="false">
     <envs>
-      <env name="JAVA_HOME" value="C:\Program Files\Java\jdk-26" />
+      <env name="JAVA_HOME" value="$PROJECT_DIR$/../../../../Program Files/Java/jdk-25.0.2" />
     </envs>
     <option name="MAIN_CLASS_NAME" value="Launch" />
     <module name="demotempt" />
