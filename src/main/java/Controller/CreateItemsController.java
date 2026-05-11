@@ -6,6 +6,9 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
 import javafx.scene.control.TextField;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import Model.Item;
@@ -14,7 +17,12 @@ import DAO.ItemDAO;
 import DAO.AuctionSessionDAO;
 import Factory.ItemFactory;
 import Model.User;
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
 /** Controller cho form tạo sản phẩm mới (FXML: CreateItems.fxml). */
@@ -54,7 +62,14 @@ public class CreateItemsController implements UserController.LinkedController {
     @FXML
     private Button btn180Phut;
 
+    @FXML
+    private ImageView productImageView;
+
+    @FXML
+    private Button chonAnhButton;
+
     private long selectedDuration = 60;
+    private File selectedImageFile;
 
     private final String BUTTON_STYLE_DEFAULT =
             "-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 15;";
@@ -71,6 +86,24 @@ public class CreateItemsController implements UserController.LinkedController {
         thoiGianDauGia.setText("60");
         categoryComboBox.getItems().addAll("Art", "Electronics", "Vehicle", "Fashion", "Books", "Sports", "Jewelry", "Music", "Furniture");
         categoryComboBox.setValue("Art");
+    }
+
+    @FXML
+    private void chonAnhSanPham(ActionEvent event) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Chon anh san pham");
+        fileChooser.getExtensionFilters().add(
+                new FileChooser.ExtensionFilter("Image files", "*.png", "*.jpg", "*.jpeg", "*.gif", "*.bmp")
+        );
+
+        Stage stage = (Stage) chonAnhButton.getScene().getWindow();
+        File file = fileChooser.showOpenDialog(stage);
+        if (file == null) {
+            return;
+        }
+
+        selectedImageFile = file;
+        productImageView.setImage(new Image(file.toURI().toString(), true));
     }
 
     @FXML
@@ -163,6 +196,14 @@ public class CreateItemsController implements UserController.LinkedController {
             String category = categoryComboBox.getValue();
             Item item = ItemFactory.createItem(category, ten, Mota, gia.doubleValue(), currentUser.getId());
             item.setSellerId(currentUser.getId());
+            if (selectedImageFile != null) {
+                try {
+                    item.setImagePath(saveSelectedImage(item.getId()));
+                } catch (IOException e) {
+                    showWarning("Loi", "Khong the luu anh san pham: " + e.getMessage());
+                    return;
+                }
+            }
 
             if (itemDAO.save(item)) {
                 String sessionId = UUID.randomUUID().toString();
@@ -188,6 +229,23 @@ public class CreateItemsController implements UserController.LinkedController {
         } catch (NumberFormatException e) {
             showWarning("Lỗi", "Giá không hợp lệ.");
         }
+    }
+
+    private String saveSelectedImage(String itemId) throws IOException {
+        String fileName = selectedImageFile.getName();
+        String extension = "";
+        int dotIndex = fileName.lastIndexOf('.');
+        if (dotIndex >= 0) {
+            extension = fileName.substring(dotIndex).toLowerCase();
+        }
+
+        Path uploadDir = Path.of("image", "uploads");
+        Files.createDirectories(uploadDir);
+
+        String targetFileName = itemId + extension;
+        Path targetPath = uploadDir.resolve(targetFileName);
+        Files.copy(selectedImageFile.toPath(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        return targetPath.toString();
     }
 
     private void closeWindow() {

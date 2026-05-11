@@ -52,7 +52,7 @@
             </Button>
          </children>
       </HBox>
-      <ImageView fitHeight="128.0" fitWidth="125.0" layoutX="274.0" layoutY="14.0" pickOnBounds="true" preserveRatio="true">
+      <ImageView fx:id="productImageView" fitHeight="128.0" fitWidth="125.0" layoutX="274.0" layoutY="14.0" pickOnBounds="true" preserveRatio="true">
          <image>
             <Image url="@../../image/images.jpg" />
          </image></ImageView>
@@ -61,7 +61,7 @@
             <Font name="System Bold" size="21.0" />
          </font>
       </Button>
-      <Button alignment="CENTER" contentDisplay="CENTER" layoutX="277.0" layoutY="150.0" mnemonicParsing="false" style="-fx-background-color: #1E1E1D; -fx-text-fill: #eacd8f;" text="Thêm ảnh">
+      <Button fx:id="chonAnhButton" alignment="CENTER" contentDisplay="CENTER" layoutX="277.0" layoutY="150.0" mnemonicParsing="false" onAction="#chonAnhSanPham" style="-fx-background-color: #1E1E1D; -fx-text-fill: #eacd8f;" text="Thêm ảnh">
          <font>
             <Font size="19.0" />
          </font>
