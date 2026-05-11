@@ -13,6 +13,7 @@ public class Bid implements Serializable {
     private double amount;
     private String itemName;
     private LocalDateTime timestamp;
+    private boolean Winner;
 
     /** @param auctionId ID phiên đấu giá
      *  @param bidderId  ID người đặt giá
@@ -51,6 +52,10 @@ public class Bid implements Serializable {
     public String getItemName() {
         return itemName;
     }
+
+    public boolean isWinner() { return Winner; }
+
+    public void setWinner(boolean winner) { Winner = winner; }
 
     public void setItemName(String itemName) {
         this.itemName = itemName;
