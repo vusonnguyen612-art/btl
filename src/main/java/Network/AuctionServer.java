@@ -108,10 +108,6 @@ public class AuctionServer {
                     Message response = processMessage(message);
                     output.writeObject(response);
                     output.flush();
-
-                    if (response.getType() == Message.Type.ERROR) {
-                        break;
-                    }
                 }
             } catch (IOException | ClassNotFoundException e) {
                 System.err.println("Client handler error: " + e.getMessage());
@@ -229,11 +225,26 @@ public class AuctionServer {
                 return createErrorMessage(passwordError);
             }
 
+            if (!(message.getData() instanceof String) || ((String) message.getData()).isBlank()) {
+                return createErrorMessage("Username cannot be empty");
+            }
+
             User newUser = UserFactory.createUser(
-                (String) message.getData(),
+                ((String) message.getData()).trim(),
                 message.getContent()
             );
-            userDAO.register(newUser);
+            if (message.getSenderId() != null && !message.getSenderId().isBlank()) {
+                newUser.setEmail(message.getSenderId().trim());
+            }
+
+            if (userDAO.existsByUsername(newUser.getUsername())) {
+                return createErrorMessage("Username already exists");
+            }
+
+            if (!userDAO.register(newUser)) {
+                return createErrorMessage("Could not create account");
+            }
+
             Message response = new Message(Message.Type.SUCCESS);
             response.setContent("Registration successful");
             response.setData(newUser);

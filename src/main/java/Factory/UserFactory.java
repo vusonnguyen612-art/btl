@@ -1,11 +1,10 @@
 package Factory;
 
 import Model.User;
+import java.util.UUID;
 
 /** Factory tạo User mới và validate mật khẩu. */
 public class UserFactory {
-    private static int userCounter = 0;
-
     /** Kiểm tra mật khẩu hợp lệ (>=6 ký tự, không khoảng trắng). */
     public static boolean isValidPassword(String password) {
         if (password == null || password.length() < 6) {
@@ -35,7 +34,7 @@ public class UserFactory {
 
     /** Tạo user mới với ID "USRxxxx". */
     public static User createUser(String username, String password) {
-        String id = "USR" + String.format("%04d", ++userCounter);
+        String id = "USR-" + UUID.randomUUID();
         return new Model.User(id, username, password);
     }
 }

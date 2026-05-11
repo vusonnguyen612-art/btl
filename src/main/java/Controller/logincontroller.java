@@ -67,8 +67,9 @@ public class logincontroller {
         }
 
         NetworkService networkService = NetworkService.getInstance();
-        if (!networkService.isConnected()) {
-            networkService.connect();
+        if (!networkService.isConnected() && !networkService.connect()) {
+            showMessage("Khong the ket noi server. Hay chay AuctionServer truoc.");
+            return;
         }
 
         try {
@@ -105,12 +106,13 @@ public class logincontroller {
         }
 
         NetworkService networkService = NetworkService.getInstance();
-        if (!networkService.isConnected()) {
-            networkService.connect();
+        if (!networkService.isConnected() && !networkService.connect()) {
+            showMessage("Khong the ket noi server. Hay chay AuctionServer truoc.");
+            return;
         }
 
         try {
-            var response = networkService.register(fullName, password);
+            var response = networkService.register(fullName, email, password);
             if (response.getType() == Network.Message.Type.SUCCESS) {
                 showMessage("Đăng ký thành công! Vui lòng đăng nhập.");
                 ComeLogin(event);

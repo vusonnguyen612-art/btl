@@ -34,6 +34,7 @@ public class NetworkService {
     /** Kết nối tới server. */
     public boolean connect() {
         try {
+            closeSocket();
             socket = new Socket(serverAddress, port);
             output = new ObjectOutputStream(socket.getOutputStream());
             output.flush();
@@ -41,6 +42,7 @@ public class NetworkService {
             System.out.println("Connected to server at " + serverAddress + ":" + port);
             return true;
         } catch (IOException e) {
+            closeSocket();
             System.err.println("Connection failed: " + e.getMessage());
             return false;
         }
@@ -66,6 +68,10 @@ public class NetworkService {
     /** Gửi message và nhận response. Tự động xử lý notification nếu có. */
     public Message sendMessage(Message message) {
         try {
+            if (!isConnected() || output == null || input == null) {
+                return createError("Not connected to server");
+            }
+
             output.writeObject(message);
             output.flush();
             Message response = (Message) input.readObject();
@@ -73,11 +79,10 @@ public class NetworkService {
                 onNotifications.accept(response.getNotifications());
             }
             return response;
-        } catch (IOException | ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException | RuntimeException e) {
+            closeSocket();
             System.err.println("Send message error: " + e.getMessage());
-            Message error = new Message(Message.Type.ERROR);
-            error.setContent(e.getMessage());
-            return error;
+            return createError(e.getMessage());
         }
     }
 
@@ -102,6 +107,14 @@ public class NetworkService {
     public Message register(String username, String password) {
         Message message = new Message(Message.Type.REGISTER);
         message.setData(username);
+        message.setContent(password);
+        return sendMessage(message);
+    }
+
+    public Message register(String username, String email, String password) {
+        Message message = new Message(Message.Type.REGISTER);
+        message.setData(username);
+        message.setSenderId(email);
         message.setContent(password);
         return sendMessage(message);
     }
@@ -215,5 +228,24 @@ public class NetworkService {
     /** Kiểm tra trạng thái kết nối socket. */
     public boolean isConnected() {
         return socket != null && !socket.isClosed();
+    }
+
+    private Message createError(String content) {
+        Message error = new Message(Message.Type.ERROR);
+        error.setContent(content == null || content.isBlank() ? "Unknown network error" : content);
+        return error;
+    }
+
+    private void closeSocket() {
+        try {
+            if (socket != null) {
+                socket.close();
+            }
+        } catch (IOException ignored) {
+        } finally {
+            socket = null;
+            output = null;
+            input = null;
+        }
     }
 }
