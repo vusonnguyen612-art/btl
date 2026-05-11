@@ -322,7 +322,15 @@ public class AuctionDAO {
     
     /** Lấy lịch sử đặt giá của một người dùng (join với auction_sessions để lấy item_id). */
     public List<Bid> getUserBidHistory(String userId) {
-        String sql = "SELECT b.*, a.item_id FROM bids b JOIN auction_sessions a ON b.auction_id = a.id WHERE b.bidder_id = ? ORDER BY b.timestamp DESC";
+        String sql = """
+                SELECT b.*, i.name AS item_name,
+                       CASE WHEN a.winner_id = b.bidder_id THEN 1 ELSE 0 END AS is_winner
+                FROM bids b
+                JOIN auction_sessions a ON b.auction_id = a.id
+                JOIN items i ON a.item_id = i.id
+                WHERE b.bidder_id = ?
+                ORDER BY b.timestamp DESC
+                """;
         List<Bid> bids = new ArrayList<>();
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -337,6 +345,8 @@ public class AuctionDAO {
                     bid.setId(rs.getString("id"));
                     Timestamp ts = rs.getTimestamp("timestamp");
                     if (ts != null) bid.setTimestamp(ts.toLocalDateTime());
+                    bid.setItemName(rs.getString("item_name"));
+                    bid.setWinner(rs.getInt("is_winner") == 1);
                     bids.add(bid);
                 }
             }

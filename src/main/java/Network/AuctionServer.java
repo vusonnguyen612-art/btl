@@ -188,6 +188,9 @@ public class AuctionServer {
                     case GET_BID_HISTORY:
                         response = handleGetBidHistory(message);
                         break;
+                    case GET_USER_BID_HISTORY:
+                        response = handleGetUserBidHistory(message);
+                        break;
                     case GET_WINNING_HISTORY:
                         return handleGetWinningHistory(message);
                     default:
@@ -592,6 +595,18 @@ public class AuctionServer {
         /** Lấy lịch sử đặt giá của phiên. */
         private Message handleGetBidHistory(Message message) {
             List<Bid> bids = auctionDAO.getBidHistory(message.getAuctionId());
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setData(bids);
+            return response;
+        }
+
+        private Message handleGetUserBidHistory(Message message) {
+            String userId = message.getSenderId();
+            if (userId == null || userId.isBlank()) {
+                return createErrorMessage("Missing user id");
+            }
+
+            List<Bid> bids = auctionDAO.getUserBidHistory(userId);
             Message response = new Message(Message.Type.SUCCESS);
             response.setData(bids);
             return response;

@@ -30,6 +30,7 @@ public class Message implements Serializable {
         STOP_AUCTION,
         PROCESS_PAYMENT,
         GET_BID_HISTORY,
+        GET_USER_BID_HISTORY,
         NOTIFICATION,
         ERROR,
         SUCCESS,

@@ -594,8 +594,16 @@ public class UserController {
         if (HistoryPane == null) {
             return;
         }
+        if (currentUser == null) {
+            HistoryPane.getChildren().clear();
+            Label label = createEmptyLabel("Vui lòng đăng nhập để xem lịch sử.");
+            label.setLayoutX(150);
+            label.setLayoutY(250);
+            HistoryPane.getChildren().add(label);
+            return;
+        }
         try {
-            Message response = networkService.getBidHistory(currentUser.getId());
+            Message response = networkService.getUserBidHistory(currentUser.getId());
 
             List<Bid> userBids = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
                     ? (List<Bid>) response.getData() : List.of();
@@ -614,9 +622,9 @@ public class UserController {
                     .filter(Bid::isWinner)
                     .collect(Collectors.toList());
 
-            if (winningBids.isEmpty()) {
+            if (false && winningBids.isEmpty()) {
                 HistoryVbox.getChildren().add(createEmptyLabel("Bạn chưa thắng sản phẩm nào."));
-            } else {
+            } else if (false) {
                 for (Bid bid : winningBids) {
                     HBox bidCard = createBidCard(bid);
                     HistoryVbox.getChildren().add(bidCard);

@@ -8,6 +8,7 @@ D:\btl\src\main\java\Controller\logincontroller.java
 D:\btl\src\main\java\Controller\UserController.java
 D:\btl\src\main\java\DAO\AuctionDAO.java
 D:\btl\src\main\java\DAO\AuctionSessionDAO.java
+D:\btl\src\main\java\DAO\BidDAO.java
 D:\btl\src\main\java\DAO\DatabaseUtil.java
 D:\btl\src\main\java\DAO\ItemDAO.java
 D:\btl\src\main\java\DAO\UserDAO.java
