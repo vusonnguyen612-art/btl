@@ -1,5 +1,6 @@
 package Controller;
 
+import DAO.BidDAO;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -27,6 +28,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 import Model.Item;
 import Model.User;
@@ -72,7 +74,7 @@ public class UserController {
     private AnchorPane NaptienPane;
 
     @FXML
-    private AnchorPane LichsudaugiaPane;
+    private AnchorPane HistoryPane;
 
     @FXML
     private AnchorPane CaidatPane;
@@ -82,6 +84,9 @@ public class UserController {
 
     @FXML
     private VBox Items;
+
+    @FXML
+    private VBox HistoryVbox;
 
     @FXML
     private TextField Nganhangnaptien;
@@ -127,13 +132,14 @@ public class UserController {
         setupDefaultScreen();
         loadHomeItems();
         loadWarehouseItems();
+        loadBidHistory();
     }
 
     private void setupMenuButtons() {
         bindMenuButton(TrangchuButton, TrangchuPane);
         bindMenuButton(KhoButton, KhoPane);
         bindMenuButton(NaptienButton, NaptienPane);
-        bindMenuButton(BidHistory, LichsudaugiaPane);
+        bindMenuButton(BidHistory, HistoryPane);
         bindMenuButton(CaidatButton, CaidatPane);
     }
 
@@ -167,7 +173,7 @@ public class UserController {
                 TrangchuPane,
                 KhoPane,
                 NaptienPane,
-                LichsudaugiaPane,
+                HistoryPane,
                 CaidatPane
         };
 
@@ -585,24 +591,93 @@ public class UserController {
     }
 
     private void loadBidHistory() {
-        if (LichsudaugiaPane == null) {
+        if (HistoryPane == null) {
             return;
         }
+        try {
+            Message response = networkService.getBidHistory(currentUser.getId());
 
-        LichsudaugiaPane.getChildren().clear();
+            List<Bid> userBids = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
+                    ? (List<Bid>) response.getData() : List.of();
+
+        HistoryPane.getChildren().clear();
 
         if (currentUser == null) {
             Label label = createEmptyLabel("Vui lòng đăng nhập để xem lịch sử.");
             label.setLayoutX(150);
             label.setLayoutY(250);
-            LichsudaugiaPane.getChildren().add(label);
+            HistoryPane.getChildren().add(label);
             return;
         }
 
-        Label label = createEmptyLabel("Chưa có lịch sử đấu giá");
-        label.setLayoutX(220);
-        label.setLayoutY(250);
-        LichsudaugiaPane.getChildren().add(label);
+            List<Bid> winningBids = userBids.stream()
+                    .filter(Bid::isWinner)
+                    .collect(Collectors.toList());
+
+            if (winningBids.isEmpty()) {
+                HistoryVbox.getChildren().add(createEmptyLabel("Bạn chưa thắng sản phẩm nào."));
+            } else {
+                for (Bid bid : winningBids) {
+                    HBox bidCard = createBidCard(bid);
+                    HistoryVbox.getChildren().add(bidCard);
+                }
+            }
+
+            if (userBids.isEmpty()) {
+                Label label = createEmptyLabel("Chưa có lịch sử đấu giá");
+                label.setLayoutX(220);
+                label.setLayoutY(250);
+                HistoryPane.getChildren().add(label);
+            } else {
+                VBox vbox = new VBox(10);
+                vbox.setPadding(new Insets(20));
+
+                Label headerLabel = new Label("Lịch sử các lần ra giá");
+                headerLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 20px; -fx-font-weight: bold;");
+                headerLabel.setPadding(new Insets(0, 0, 10, 0));
+                vbox.getChildren().add(headerLabel);
+
+                for (Bid bid : userBids) {
+                    HBox bidCard = createBidCard(bid);
+                    vbox.getChildren().add(bidCard);
+                }
+
+                ScrollPane scrollPane = new ScrollPane(vbox);
+                scrollPane.setStyle("-fx-background-color: transparent; -fx-background: transparent;");
+                scrollPane.setFitToWidth(true);
+
+                AnchorPane.setTopAnchor(scrollPane, 0.0);
+                AnchorPane.setBottomAnchor(scrollPane, 0.0);
+                AnchorPane.setLeftAnchor(scrollPane, 0.0);
+                AnchorPane.setRightAnchor(scrollPane, 0.0);
+
+                HistoryPane.getChildren().add(scrollPane);
+            }
+        } catch (Exception e) {
+            Label errorLabel = createEmptyLabel("Lỗi tải lịch sử: " + e.getMessage());
+            errorLabel.setLayoutX(150);
+            errorLabel.setLayoutY(250);
+            HistoryPane.getChildren().add(errorLabel);
+        }
+    }
+
+    private HBox createBidCard(Bid bid) {
+        HBox hbox = new HBox(20);
+        hbox.setPadding(new Insets(15));
+        hbox.setStyle("-fx-background-color: #2A2A29; -fx-background-radius: 10;");
+        Label nameLabel = new Label("Mã phiên / ID: " + bid.getAuctionId());
+        nameLabel.setStyle("-fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: bold;");
+
+        Label amountLabel = new Label("Mức giá: " + bid.getAmount() +  " $");
+        amountLabel.setStyle("-fx-text-fill: #d9b15f; -fx-font-size: 16px;");
+
+        VBox infoBox = new VBox(5);
+        infoBox.getChildren().add(nameLabel);
+
+        HBox.setHgrow(infoBox, javafx.scene.layout.Priority.ALWAYS);
+
+        hbox.getChildren().addAll(infoBox, amountLabel);
+        return hbox;
     }
 
     private Label createEmptyLabel(String text) {

@@ -188,6 +188,8 @@ public class AuctionServer {
                     case GET_BID_HISTORY:
                         response = handleGetBidHistory(message);
                         break;
+                    case GET_WINNING_HISTORY:
+                        return handleGetWinningHistory(message);
                     default:
                         return createErrorMessage("Unknown message type");
                 }
@@ -599,6 +601,20 @@ public class AuctionServer {
             Message response = new Message(Message.Type.ERROR);
             response.setContent(error);
             return response;
+        }
+
+        private Message handleGetWinningHistory(Message message) {
+            try {
+                String userId = (String) message.getData();
+
+                BidDAO bidDAO = new BidDAO();
+                List<Bid> winningBids = bidDAO.getWinningBidsByUserId(userId);
+
+                return new Message(Message.Type.SUCCESS, (Serializable) winningBids);
+
+            } catch (Exception e) {
+                return createErrorMessage("Lỗi khi lấy lịch sử thắng: " + e.getMessage());
+            }
         }
 
         private void close() {
