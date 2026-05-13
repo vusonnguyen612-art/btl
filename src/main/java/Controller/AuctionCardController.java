@@ -7,10 +7,13 @@ import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
+import java.io.File;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.time.LocalDateTime;
@@ -21,6 +24,7 @@ import java.util.Locale;
 public class    AuctionCardController {
 
     @FXML private HBox cardRoot;
+    @FXML private ImageView itemImageView;
     @FXML private Label nameLabel;
     @FXML private Label priceLabel;
     @FXML private Label statusLabel;
@@ -91,6 +95,7 @@ public class    AuctionCardController {
     private void updateCard(boolean isRunning, boolean canStart, boolean isPaymentPending) {
         String itemName = auction.getItem() != null ? auction.getItem().getName() : "Unknown";
         nameLabel.setText(itemName);
+        updateItemImage();
 
         priceLabel.setText("Giá hiện tại: " + moneyFormat.format(auction.getCurrentPrice()) + " $");
 
@@ -160,6 +165,33 @@ public class    AuctionCardController {
             startBtn.setDisable(true);
             actionBox.getChildren().add(startBtn);
         }
+    }
+
+    private void updateItemImage() {
+        if (auction.getItem() == null || auction.getItem().getImagePath() == null || auction.getItem().getImagePath().isBlank()) {
+            itemImageView.setImage(null);
+            itemImageView.setVisible(false);
+            itemImageView.setManaged(false);
+            return;
+        }
+
+        String imagePath = auction.getItem().getImagePath();
+        String imageUrl;
+        File imageFile = new File(imagePath);
+        if (imageFile.exists()) {
+            imageUrl = imageFile.toURI().toString();
+        } else if (imagePath.startsWith("file:") || imagePath.startsWith("http:") || imagePath.startsWith("https:")) {
+            imageUrl = imagePath;
+        } else {
+            itemImageView.setImage(null);
+            itemImageView.setVisible(false);
+            itemImageView.setManaged(false);
+            return;
+        }
+
+        itemImageView.setImage(new Image(imageUrl, true));
+        itemImageView.setVisible(true);
+        itemImageView.setManaged(true);
     }
 
     private String formatDuration(long minutes) {

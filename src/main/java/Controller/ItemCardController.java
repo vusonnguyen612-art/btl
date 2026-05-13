@@ -7,10 +7,13 @@ import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
+import java.io.File;
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
@@ -21,6 +24,7 @@ import java.util.Locale;
 public class ItemCardController {
 
     @FXML private HBox cardRoot;
+    @FXML private ImageView itemImageView;
     @FXML private Label nameLabel;
     @FXML private Label priceLabel;
     @FXML private VBox actionBox;
@@ -47,6 +51,7 @@ public class ItemCardController {
     public void setItem(Item item, List<AuctionSession> auctions) {
         stopTimeUpdate();
 
+        updateItemImage(item);
         nameLabel.setText(item.getName());
 
         BigDecimal price = new BigDecimal(String.valueOf(item.getStartPrice()));
@@ -88,6 +93,33 @@ public class ItemCardController {
             noAuctionLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 12px;");
             actionBox.getChildren().add(noAuctionLabel);
         }
+    }
+
+    private void updateItemImage(Item item) {
+        String imagePath = item.getImagePath();
+        if (imagePath == null || imagePath.isBlank()) {
+            itemImageView.setImage(null);
+            itemImageView.setVisible(false);
+            itemImageView.setManaged(false);
+            return;
+        }
+
+        String imageUrl;
+        File imageFile = new File(imagePath);
+        if (imageFile.exists()) {
+            imageUrl = imageFile.toURI().toString();
+        } else if (imagePath.startsWith("file:") || imagePath.startsWith("http:") || imagePath.startsWith("https:")) {
+            imageUrl = imagePath;
+        } else {
+            itemImageView.setImage(null);
+            itemImageView.setVisible(false);
+            itemImageView.setManaged(false);
+            return;
+        }
+
+        itemImageView.setImage(new Image(imageUrl, true));
+        itemImageView.setVisible(true);
+        itemImageView.setManaged(true);
     }
 
     private void stopTimeUpdate() {

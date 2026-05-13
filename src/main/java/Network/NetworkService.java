@@ -218,6 +218,12 @@ public class NetworkService {
     }
 
     /** @return người dùng hiện tại */
+    public Message getUserBidHistory(String userId) {
+        Message message = new Message(Message.Type.GET_USER_BID_HISTORY);
+        message.setSenderId(userId);
+        return sendMessage(message);
+    }
+
     public User getCurrentUser() {
         return currentUser;
     }
