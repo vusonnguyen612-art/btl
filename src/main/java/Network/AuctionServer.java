@@ -2,6 +2,7 @@ package Network;
 
 import Exception.*;
 import Model.*;
+import Model.SearchCriteria;
 import DAO.*;
 import Factory.ItemFactory;
 import Factory.UserFactory;
@@ -187,6 +188,12 @@ public class AuctionServer {
                         break;
                     case GET_BID_HISTORY:
                         response = handleGetBidHistory(message);
+                        break;
+                    case SEARCH_AUCTIONS:
+                        response = handleSearchAuctions(message);
+                        break;
+                    case GET_USER_AUCTIONS:
+                        response = handleGetUserAuctions(message);
                         break;
                     default:
                         return createErrorMessage("Unknown message type");
@@ -592,6 +599,21 @@ public class AuctionServer {
             List<Bid> bids = auctionDAO.getBidHistory(message.getAuctionId());
             Message response = new Message(Message.Type.SUCCESS);
             response.setData(bids);
+            return response;
+        }
+
+        private Message handleGetUserAuctions(Message message) {
+            List<AuctionSession> auctions = auctionDAO.findUserParticipatedAuctions(message.getContent());
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setData(auctions);
+            return response;
+        }
+
+        private Message handleSearchAuctions(Message message) {
+            SearchCriteria criteria = (SearchCriteria) message.getData();
+            List<AuctionSession> results = auctionDAO.searchAuctions(criteria);
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setData(results);
             return response;
         }
 

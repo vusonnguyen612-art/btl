@@ -6,16 +6,22 @@ import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.Cursor;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -25,15 +31,19 @@ import java.math.BigDecimal;
 import java.net.URL;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
-import Model.Item;
-import Model.User;
 import Model.AuctionSession;
 import Model.Bid;
-import Network.NetworkService;
+import Model.Item;
+import Model.SearchCriteria;
+import Model.User;
 import Network.Message;
+import Network.NetworkService;
 
 /** Controller chính: quản lý menu, hiển thị sản phẩm, kho, nạp tiền, cài đặt. */
 public class UserController {
@@ -84,6 +94,9 @@ public class UserController {
     private VBox Items;
 
     @FXML
+    private VBox bidHistoryList;
+
+    @FXML
     private TextField Nganhangnaptien;
 
     @FXML
@@ -101,8 +114,21 @@ public class UserController {
     @FXML
     private TextField Nhaplaimatkhaumoi;
 
-    private final ToggleGroup menuGroup = new ToggleGroup();
+    // Home search fields
+    @FXML
+    private TextField homeSearchKeyword;
+    @FXML
+    private ComboBox<String> homeSearchCategory;
+    @FXML
+    private ComboBox<String> homeSearchStatus;
+    @FXML
+    private TextField homeSearchMinPrice;
+    @FXML
+    private TextField homeSearchMaxPrice;
+    @FXML
+    private ComboBox<String> homeSearchSort;
 
+    private ToggleGroup menuGroup = new ToggleGroup();
     private User currentUser;
     private NetworkService networkService = NetworkService.getInstance();
     private BigDecimal soDuTaiKhoan = new BigDecimal("300000");
@@ -125,8 +151,26 @@ public class UserController {
     private void initialize() {
         setupMenuButtons();
         setupDefaultScreen();
+        initHomeSearchCombos();
         loadHomeItems();
         loadWarehouseItems();
+    }
+
+    private void initHomeSearchCombos() {
+        if (homeSearchCategory != null) {
+            homeSearchCategory.getItems().add("Tất cả");
+            homeSearchCategory.getItems().addAll("Điện tử", "Xe cộ", "Nghệ thuật", "Thời trang", "Sách", "Thể thao", "Trang sức", "Âm nhạc", "Nội thất");
+            homeSearchCategory.getSelectionModel().select("Tất cả");
+        }
+        if (homeSearchStatus != null) {
+            homeSearchStatus.getItems().add("Tất cả");
+            homeSearchStatus.getItems().addAll("Đang diễn ra", "Sắp diễn ra", "Chờ thanh toán", "Đã kết thúc", "Đã hủy");
+            homeSearchStatus.getSelectionModel().select("Tất cả");
+        }
+        if (homeSearchSort != null) {
+            homeSearchSort.getItems().addAll("Mới nhất", "Cũ nhất", "Giá tăng dần", "Giá giảm dần", "Tên A-Z");
+            homeSearchSort.getSelectionModel().select("Mới nhất");
+        }
     }
 
     private void setupMenuButtons() {
@@ -181,6 +225,9 @@ public class UserController {
         if (paneToShow != null) {
             paneToShow.setVisible(true);
             paneToShow.setManaged(true);
+            if (paneToShow == LichsudaugiaPane) {
+                loadBidHistory();
+            }
         }
     }
 
@@ -437,6 +484,113 @@ public class UserController {
         loadWarehouseItems();
     }
 
+    @FXML
+    private void searchHomeAuctions() {
+        if (AllItems == null) return;
+
+        SearchCriteria criteria = new SearchCriteria();
+
+        String keyword = homeSearchKeyword.getText().trim();
+        if (!keyword.isEmpty()) {
+            criteria.setKeyword(keyword);
+        }
+
+        String category = homeSearchCategory.getValue();
+        if (category != null && !category.equals("Tất cả")) {
+            String catMap = switch (category) {
+                case "Điện tử" -> "ELECTRONICS";
+                case "Xe cộ" -> "VEHICLE";
+                case "Nghệ thuật" -> "ART";
+                case "Thời trang" -> "FASHION";
+                case "Sách" -> "BOOKS";
+                case "Thể thao" -> "SPORTS";
+                case "Trang sức" -> "JEWELRY";
+                case "Âm nhạc" -> "MUSIC";
+                case "Nội thất" -> "FURNITURE";
+                default -> null;
+            };
+            criteria.setCategory(catMap);
+        }
+
+        String status = homeSearchStatus.getValue();
+        if (status != null && !status.equals("Tất cả")) {
+            List<AuctionSession.Status> statuses = new ArrayList<>();
+            switch (status) {
+                case "Đang diễn ra" -> statuses.add(AuctionSession.Status.RUNNING);
+                case "Sắp diễn ra" -> statuses.add(AuctionSession.Status.OPEN);
+                case "Chờ thanh toán" -> statuses.add(AuctionSession.Status.PAYMENT_PENDING);
+                case "Đã kết thúc" -> {
+                    statuses.add(AuctionSession.Status.FINISHED);
+                    statuses.add(AuctionSession.Status.PAID);
+                }
+                case "Đã hủy" -> statuses.add(AuctionSession.Status.CANCELED);
+            }
+            if (!statuses.isEmpty()) {
+                criteria.setStatuses(statuses);
+            }
+        }
+
+        String minPriceText = homeSearchMinPrice.getText().trim();
+        if (!minPriceText.isEmpty()) {
+            try {
+                criteria.setMinPrice(Double.parseDouble(minPriceText));
+            } catch (NumberFormatException ignored) {}
+        }
+
+        String maxPriceText = homeSearchMaxPrice.getText().trim();
+        if (!maxPriceText.isEmpty()) {
+            try {
+                criteria.setMaxPrice(Double.parseDouble(maxPriceText));
+            } catch (NumberFormatException ignored) {}
+        }
+
+        String sort = homeSearchSort.getValue();
+        if (sort != null) {
+            String sortKey = switch (sort) {
+                case "Cũ nhất" -> "oldest";
+                case "Giá tăng dần" -> "price_asc";
+                case "Giá giảm dần" -> "price_desc";
+                case "Tên A-Z" -> "name";
+                default -> "newest";
+            };
+            criteria.setSortBy(sortKey);
+        }
+
+        AllItems.getChildren().clear();
+        Message response = networkService.searchAuctions(criteria);
+        List<AuctionSession> results = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
+                ? (List<AuctionSession>) response.getData() : List.of();
+
+        if (results.isEmpty()) {
+            Label emptyLabel = createEmptyLabel("Không tìm thấy phiên đấu giá nào.");
+            AllItems.getChildren().add(emptyLabel);
+            return;
+        }
+
+        Label headerLabel = new Label("Kết quả tìm kiếm (" + results.size() + ")");
+        headerLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 20px; -fx-font-weight: bold;");
+        headerLabel.setPadding(new Insets(0, 0, 10, 0));
+        AllItems.getChildren().add(headerLabel);
+
+        for (AuctionSession auction : results) {
+            if (auction.getItem() != null) {
+                HBox itemBox = createItemCard(auction.getItem(), results);
+                AllItems.getChildren().add(itemBox);
+            }
+        }
+    }
+
+    @FXML
+    private void resetHomeSearch() {
+        if (homeSearchKeyword != null) homeSearchKeyword.clear();
+        if (homeSearchCategory != null) homeSearchCategory.getSelectionModel().select("Tất cả");
+        if (homeSearchStatus != null) homeSearchStatus.getSelectionModel().select("Tất cả");
+        if (homeSearchMinPrice != null) homeSearchMinPrice.clear();
+        if (homeSearchMaxPrice != null) homeSearchMaxPrice.clear();
+        if (homeSearchSort != null) homeSearchSort.getSelectionModel().select("Mới nhất");
+        loadHomeItems();
+    }
+
     private void loadHomeItems() {
         if (AllItems == null) {
             return;
@@ -585,24 +739,95 @@ public class UserController {
     }
 
     private void loadBidHistory() {
-        if (LichsudaugiaPane == null) {
+        if (bidHistoryList == null) return;
+
+        bidHistoryList.getChildren().clear();
+
+        if (currentUser == null) return;
+
+        Message response = networkService.getUserAuctions(currentUser.getId());
+        List<AuctionSession> auctions = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
+                ? (List<AuctionSession>) response.getData() : List.of();
+
+        if (auctions.isEmpty()) {
+            Label emptyLabel = new Label("Chưa có lịch sử đấu giá");
+            emptyLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 14px;");
+            bidHistoryList.getChildren().add(emptyLabel);
             return;
         }
 
-        LichsudaugiaPane.getChildren().clear();
-
-        if (currentUser == null) {
-            Label label = createEmptyLabel("Vui lòng đăng nhập để xem lịch sử.");
-            label.setLayoutX(150);
-            label.setLayoutY(250);
-            LichsudaugiaPane.getChildren().add(label);
-            return;
+        for (AuctionSession auction : auctions) {
+            HBox card = createFinishedAuctionCard(auction);
+            bidHistoryList.getChildren().add(card);
         }
+    }
 
-        Label label = createEmptyLabel("Chưa có lịch sử đấu giá");
-        label.setLayoutX(220);
-        label.setLayoutY(250);
-        LichsudaugiaPane.getChildren().add(label);
+    private HBox createFinishedAuctionCard(AuctionSession auction) {
+        HBox card = new HBox(15);
+        card.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        card.setStyle("-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-padding: 12; -fx-background-radius: 5; -fx-border-radius: 5;");
+        card.setPrefWidth(Double.MAX_VALUE);
+        card.setCursor(Cursor.HAND);
+
+        String itemName = auction.getItem() != null ? auction.getItem().getName() : "Unknown";
+        Label nameLabel = new Label(itemName);
+        nameLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 14px; -fx-font-weight: bold;");
+        nameLabel.setPrefWidth(180);
+
+        String statusText = auction.getStatus() == AuctionSession.Status.FINISHED ? "Đã kết thúc" : "Đã thanh toán";
+        Label statusLabel = new Label(statusText);
+        statusLabel.setStyle("-fx-text-fill: " + (auction.getStatus() == AuctionSession.Status.FINISHED ? "#ff6b6b" : "#4CAF50") + "; -fx-font-size: 12px;");
+        statusLabel.setPrefWidth(100);
+
+        Label priceLabel = new Label(formatMoney(new BigDecimal(String.valueOf(auction.getCurrentPrice()))) + " $");
+        priceLabel.setStyle("-fx-text-fill: #4CAF50; -fx-font-size: 14px; -fx-font-weight: bold;");
+        priceLabel.setPrefWidth(120);
+
+        String endTimeStr = auction.getEndTime() != null
+                ? auction.getEndTime().format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))
+                : "--";
+        Label timeLabel = new Label(endTimeStr);
+        timeLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 12px;");
+        timeLabel.setPrefWidth(80);
+
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, Priority.ALWAYS);
+
+        Label viewLabel = new Label("Xem >");
+        viewLabel.setStyle("-fx-text-fill: #d9b15f; -fx-font-size: 13px; -fx-font-weight: bold;");
+
+        card.getChildren().addAll(nameLabel, statusLabel, priceLabel, timeLabel, spacer, viewLabel);
+
+        card.setOnMouseClicked(e -> openBidChartPopup(auction));
+
+        return card;
+    }
+
+    private void openBidChartPopup(AuctionSession auction) {
+        try {
+            URL resourceUrl = getClass().getResource("/bid_chart_view.fxml");
+            if (resourceUrl == null) {
+                resourceUrl = Thread.currentThread().getContextClassLoader().getResource("bid_chart_view.fxml");
+            }
+            FXMLLoader loader = new FXMLLoader(resourceUrl);
+            Parent root = loader.load();
+
+            Object childController = loader.getController();
+            if (childController instanceof BidChartViewController chartController) {
+                chartController.setAuction(auction);
+            }
+
+            Stage stage = new Stage();
+            stage.setTitle("Lịch sử đấu giá - " + auction.getItem().getName());
+            stage.setScene(new Scene(root));
+            stage.initOwner(getCurrentStage());
+            stage.initModality(Modality.WINDOW_MODAL);
+            stage.showAndWait();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            showError("Lỗi", "Không thể mở biểu đồ: " + e.getMessage());
+        }
     }
 
     private Label createEmptyLabel(String text) {

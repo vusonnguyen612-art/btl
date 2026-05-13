@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
 /** Controller cho card phiên đấu giá: hiển thị thông tin, nút Vào phòng / Bắt đầu, countdown. */
-public class AuctionCardController {
+public class    AuctionCardController {
 
     @FXML private HBox cardRoot;
     @FXML private Label nameLabel;

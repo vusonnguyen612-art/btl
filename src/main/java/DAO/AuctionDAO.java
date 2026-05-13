@@ -3,6 +3,7 @@ package DAO;
 import Model.Bid;
 import Model.AuctionSession;
 import Model.Item;
+import Model.SearchCriteria;
 
 import java.sql.*;
 import java.math.BigDecimal;
@@ -296,7 +297,7 @@ public class AuctionDAO {
     
     /** Lấy lịch sử đặt giá của một phiên, mới nhất trước. */
     public List<Bid> getBidHistory(String auctionId) {
-        String sql = "SELECT * FROM bids WHERE auction_id = ? ORDER BY timestamp DESC";
+        String sql = "SELECT b.*, u.username FROM bids b JOIN users u ON b.bidder_id = u.id WHERE b.auction_id = ? ORDER BY b.timestamp DESC";
         List<Bid> bids = new ArrayList<>();
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -309,6 +310,7 @@ public class AuctionDAO {
                         rs.getDouble("amount")
                     );
                     bid.setId(rs.getString("id"));
+                    bid.setBidderUsername(rs.getString("username"));
                     Timestamp ts = rs.getTimestamp("timestamp");
                     if (ts != null) bid.setTimestamp(ts.toLocalDateTime());
                     bids.add(bid);
@@ -322,7 +324,7 @@ public class AuctionDAO {
     
     /** Lấy lịch sử đặt giá của một người dùng (join với auction_sessions để lấy item_id). */
     public List<Bid> getUserBidHistory(String userId) {
-        String sql = "SELECT b.*, a.item_id FROM bids b JOIN auction_sessions a ON b.auction_id = a.id WHERE b.bidder_id = ? ORDER BY b.timestamp DESC";
+        String sql = "SELECT b.*, a.item_id, u.username FROM bids b JOIN auction_sessions a ON b.auction_id = a.id JOIN users u ON b.bidder_id = u.id WHERE b.bidder_id = ? ORDER BY b.timestamp DESC";
         List<Bid> bids = new ArrayList<>();
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -335,6 +337,7 @@ public class AuctionDAO {
                         rs.getDouble("amount")
                     );
                     bid.setId(rs.getString("id"));
+                    bid.setBidderUsername(rs.getString("username"));
                     Timestamp ts = rs.getTimestamp("timestamp");
                     if (ts != null) bid.setTimestamp(ts.toLocalDateTime());
                     bids.add(bid);
@@ -346,6 +349,29 @@ public class AuctionDAO {
         return bids;
     }
     
+    /** Lấy danh sách phiên đã kết thúc (FINISHED/PAID) mà user đã tham gia (bidder hoặc seller). */
+    public List<AuctionSession> findUserParticipatedAuctions(String userId) {
+        String sql = "SELECT DISTINCT a.* FROM auction_sessions a " +
+                     "LEFT JOIN bids b ON a.id = b.auction_id " +
+                     "WHERE (b.bidder_id = ? OR a.seller_id = ?) " +
+                     "AND a.status IN ('FINISHED', 'PAID') " +
+                     "ORDER BY a.end_time DESC";
+        List<AuctionSession> sessions = new ArrayList<>();
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, userId);
+            stmt.setString(2, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    sessions.add(mapResultSetToSession(rs));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return sessions;
+    }
+
     /** Lấy giá hiện tại của phiên. */
     public double getCurrentPrice(String auctionId) {
         String sql = "SELECT current_price FROM auction_sessions WHERE id = ?";
@@ -420,6 +446,94 @@ public class AuctionDAO {
         if (endTime != null) session.setEndTime(endTime.toLocalDateTime());
         
         return session;
+    }
+
+    /** Tìm kiếm phiên đấu giá theo nhiều tiêu chí (keyword, category, status, price range, seller). */
+    public List<AuctionSession> searchAuctions(SearchCriteria criteria) {
+        StringBuilder sql = new StringBuilder();
+        sql.append("SELECT DISTINCT a.* FROM auction_sessions a ");
+        sql.append("JOIN items i ON a.item_id = i.id ");
+        sql.append("WHERE 1=1 ");
+
+        List<Object> params = new ArrayList<>();
+
+        if (criteria.getKeyword() != null && !criteria.getKeyword().trim().isEmpty()) {
+            sql.append("AND (i.name LIKE ? OR i.description LIKE ?) ");
+            String kw = "%" + criteria.getKeyword().trim() + "%";
+            params.add(kw);
+            params.add(kw);
+        }
+
+        if (criteria.getCategory() != null && !criteria.getCategory().isEmpty()) {
+            sql.append("AND i.category = ? ");
+            params.add(criteria.getCategory());
+        }
+
+        if (criteria.getStatuses() != null && !criteria.getStatuses().isEmpty()) {
+            sql.append("AND a.status IN (");
+            for (int i = 0; i < criteria.getStatuses().size(); i++) {
+                sql.append(i > 0 ? ",?" : "?");
+            }
+            sql.append(") ");
+            for (AuctionSession.Status s : criteria.getStatuses()) {
+                params.add(s.name());
+            }
+        }
+
+        if (criteria.getMinPrice() != null) {
+            sql.append("AND a.current_price >= ? ");
+            params.add(criteria.getMinPrice());
+        }
+
+        if (criteria.getMaxPrice() != null) {
+            sql.append("AND a.current_price <= ? ");
+            params.add(criteria.getMaxPrice());
+        }
+
+        if (criteria.getSellerId() != null && !criteria.getSellerId().isEmpty()) {
+            sql.append("AND a.seller_id = ? ");
+            params.add(criteria.getSellerId());
+        }
+
+        if (criteria.getSortBy() != null) {
+            switch (criteria.getSortBy()) {
+                case "price_asc":
+                    sql.append("ORDER BY a.current_price ASC ");
+                    break;
+                case "price_desc":
+                    sql.append("ORDER BY a.current_price DESC ");
+                    break;
+                case "oldest":
+                    sql.append("ORDER BY a.created_at ASC ");
+                    break;
+                case "name":
+                    sql.append("ORDER BY i.name ASC ");
+                    break;
+                default:
+                    sql.append("ORDER BY a.created_at DESC ");
+                    break;
+            }
+        } else {
+            sql.append("ORDER BY a.created_at DESC ");
+        }
+
+        List<AuctionSession> sessions = new ArrayList<>();
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql.toString())) {
+
+            for (int i = 0; i < params.size(); i++) {
+                stmt.setObject(i + 1, params.get(i));
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    sessions.add(mapResultSetToSession(rs));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return sessions;
     }
 
     /** Lưu phiên đấu giá mới với thông tin cơ bản. */

@@ -1,6 +1,7 @@
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Controller\AuctionCardController.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Controller\AuctionRoomController.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Controller\BidCardController.java
+C:\Users\Redmi\IdeaProjects\btl\src\main\java\Controller\BidChartViewController.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Controller\BidHistoryCardController.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Controller\CreateItemsController.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Controller\ItemCardController.java
@@ -23,11 +24,19 @@ C:\Users\Redmi\IdeaProjects\btl\src\main\java\LoginApp.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Admin.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Art.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\AuctionSession.java
+C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\AutoBid.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Bid.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Bidder.java
+C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Books.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Electronics.java
+C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Fashion.java
+C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Furniture.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Item.java
+C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Jewelry.java
+C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Music.java
+C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\SearchCriteria.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Seller.java
+C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Sports.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\User.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Model\Vehicle.java
 C:\Users\Redmi\IdeaProjects\btl\src\main\java\Network\AuctionClient.java

@@ -1,6 +1,7 @@
 package Network;
 
 import Model.*;
+import Model.SearchCriteria;
 import java.io.*;
 import java.math.BigDecimal;
 import java.net.*;
@@ -199,6 +200,20 @@ public class NetworkService {
     public Message getBidHistory(String auctionId) {
         Message message = new Message(Message.Type.GET_BID_HISTORY);
         message.setAuctionId(auctionId);
+        return sendMessage(message);
+    }
+
+    /** Lấy danh sách phiên đã kết thúc mà user tham gia. */
+    public Message getUserAuctions(String userId) {
+        Message message = new Message(Message.Type.GET_USER_AUCTIONS);
+        message.setContent(userId);
+        return sendMessage(message);
+    }
+
+    /** Tìm kiếm phiên đấu giá theo tiêu chí (keyword, category, status, price range, seller). */
+    public Message searchAuctions(SearchCriteria criteria) {
+        Message message = new Message(Message.Type.SEARCH_AUCTIONS);
+        message.setData(criteria);
         return sendMessage(message);
     }
 
