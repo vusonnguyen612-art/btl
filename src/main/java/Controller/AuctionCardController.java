@@ -9,7 +9,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
@@ -23,7 +22,7 @@ import java.util.Locale;
 /** Controller cho card phiên đấu giá: hiển thị thông tin, nút Vào phòng / Bắt đầu, countdown. */
 public class    AuctionCardController {
 
-    @FXML private HBox cardRoot;
+    @FXML private VBox cardRoot;
     @FXML private ImageView itemImageView;
     @FXML private Label nameLabel;
     @FXML private Label priceLabel;
@@ -244,8 +243,8 @@ public class    AuctionCardController {
         }
     }
 
-    /** @return root HBox của card */
-    public HBox getRoot() {
+    /** @return root VBox của card */
+    public VBox getRoot() {
         return cardRoot;
     }
 }

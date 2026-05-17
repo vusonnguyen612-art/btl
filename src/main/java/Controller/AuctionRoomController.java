@@ -252,7 +252,7 @@ public class AuctionRoomController {
             auctionList.getChildren().add(runningHeader);
 
             for (AuctionSession auction : runningAuctions) {
-                HBox card = createAuctionCard(auction, "running");
+                VBox card = createAuctionCard(auction, "running");
                 auctionList.getChildren().add(card);
             }
         }
@@ -264,7 +264,7 @@ public class AuctionRoomController {
             auctionList.getChildren().add(pendingHeader);
 
             for (AuctionSession auction : paymentPendingAuctions) {
-                HBox card = createAuctionCard(auction, "payment_pending");
+                VBox card = createAuctionCard(auction, "payment_pending");
                 auctionList.getChildren().add(card);
             }
         }
@@ -276,7 +276,7 @@ public class AuctionRoomController {
             auctionList.getChildren().add(openHeader);
 
             for (AuctionSession auction : openAuctions) {
-                HBox card = createAuctionCard(auction, "open");
+                VBox card = createAuctionCard(auction, "open");
                 auctionList.getChildren().add(card);
             }
         }
@@ -376,7 +376,7 @@ public class AuctionRoomController {
             String type = auction.isRunning() ? "running"
                     : auction.isPaymentPending() ? "payment_pending"
                     : auction.isOpen() ? "open" : "other";
-            HBox card = createAuctionCard(auction, type);
+            VBox card = createAuctionCard(auction, type);
             auctionList.getChildren().add(card);
         }
     }
@@ -394,10 +394,10 @@ public class AuctionRoomController {
         loadAuctions();
     }
 
-    private HBox createAuctionCard(AuctionSession auction, String statusType) {
+    private VBox createAuctionCard(AuctionSession auction, String statusType) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/auction_card.fxml"));
-            HBox card = loader.load();
+            VBox card = loader.load();
             AuctionCardController controller = loader.getController();
             boolean canStart = currentUser != null && auction.getSellerId().equals(currentUser.getId());
             boolean isRunning = "running".equals(statusType);
@@ -409,7 +409,7 @@ public class AuctionRoomController {
             return card;
         } catch (Exception e) {
             e.printStackTrace();
-            return new HBox();
+            return new VBox();
         }
     }
 

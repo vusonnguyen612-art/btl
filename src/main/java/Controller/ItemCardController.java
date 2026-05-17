@@ -9,7 +9,6 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 
@@ -23,7 +22,7 @@ import java.util.Locale;
 /** Controller cho card hiển thị thông tin vật phẩm kèm trạng thái phiên đấu giá và countdown. */
 public class ItemCardController {
 
-    @FXML private HBox cardRoot;
+    @FXML private VBox cardRoot;
     @FXML private ImageView itemImageView;
     @FXML private Label nameLabel;
     @FXML private Label priceLabel;
@@ -180,8 +179,8 @@ public class ItemCardController {
         }
     }
 
-    /** @return root HBox của card */
-    public HBox getRoot() {
+    /** @return root VBox của card */
+    public VBox getRoot() {
         return cardRoot;
     }
 }

@@ -181,6 +181,8 @@ public class logincontroller {
 
             Stage stage = (Stage) ((javafx.scene.Node) event.getSource()).getScene().getWindow();
             stage.setScene(new Scene(root, 900, 600));
+            stage.setMinWidth(823);
+            stage.setMinHeight(608);
             stage.show();
         } catch (IOException e) {
             showMessage("Không thể mở giao diện: " + e.getMessage());

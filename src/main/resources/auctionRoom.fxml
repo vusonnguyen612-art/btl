@@ -17,7 +17,7 @@
 <AnchorPane prefHeight="600.0" prefWidth="900.0" style="-fx-background-color: #1E1E1D;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.AuctionRoomController">
 
     <children>
-        <BorderPane prefHeight="600.0" prefWidth="900.0">
+        <BorderPane prefHeight="600.0" prefWidth="900.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <top>
                 <HBox alignment="CENTER_LEFT" spacing="20" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-border-width: 0 0 2 0;" BorderPane.alignment="CENTER">
                     <padding>
