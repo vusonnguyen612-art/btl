@@ -35,6 +35,7 @@ public class    AuctionCardController {
     private AuctionDAO auctionDAO = new AuctionDAO();
     private Runnable onSelectAuction;
     private Runnable onStartAuction;
+    private Runnable onEditAuction;
     private Label timeRemainingLabel;
     private Timeline timeUpdateTimeline;
 
@@ -90,6 +91,11 @@ public class    AuctionCardController {
     /** Đăng ký callback khi nhấn "Bắt đầu". */
     public void setOnStartAuction(Runnable callback) {
         this.onStartAuction = callback;
+    }
+
+    /** Đăng ký callback khi nhấn "Chỉnh sửa". */
+    public void setOnEditAuction(Runnable callback) {
+        this.onEditAuction = callback;
     }
 
     private void updateCard(boolean isRunning, boolean canStart, boolean isPaymentPending) {
@@ -152,12 +158,20 @@ public class    AuctionCardController {
             actionBox.getChildren().add(viewBtn);
         } else if (auction.isOpen() && canStart) {
             Button startBtn = new Button("Bắt đầu");
-            startBtn.setStyle("-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30; -fx-font-size: 14px;");
+            startBtn.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30; -fx-font-size: 14px;");
             startBtn.setPrefSize(100, 35);
             startBtn.setOnAction(e -> {
                 if (onStartAuction != null) onStartAuction.run();
             });
             actionBox.getChildren().add(startBtn);
+
+            Button editBtn = new Button("Sửa");
+            editBtn.setStyle("-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30; -fx-font-size: 14px;");
+            editBtn.setPrefSize(80, 35);
+            editBtn.setOnAction(e -> {
+                if (onEditAuction != null) onEditAuction.run();
+            });
+            actionBox.getChildren().add(editBtn);
         } else if (auction.isOpen()) {
             Button startBtn = new Button("Bắt đầu");
             startBtn.setStyle("-fx-background-color: #555555; -fx-text-fill: #999999; -fx-background-radius: 30; -fx-font-size: 14px;");

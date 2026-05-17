@@ -32,7 +32,7 @@ public class UserDAO {
 
     /** Đăng nhập với username/password, trả về Optional<User>. */
     public Optional<User> login(String username, String password) {
-        String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+        String sql = "SELECT * FROM users WHERE BINARY username = ? AND BINARY password = ?";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, username);
@@ -76,7 +76,7 @@ public class UserDAO {
 
     /** Kiểm tra username đã tồn tại chưa. */
     public boolean existsByUsername(String username) {
-        String sql = "SELECT 1 FROM users WHERE username = ?";
+        String sql = "SELECT 1 FROM users WHERE BINARY username = ?";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, username);
@@ -91,7 +91,7 @@ public class UserDAO {
 
     /** Đổi mật khẩu (yêu cầu mật khẩu cũ). */
     public boolean changePassword(String username, String oldPassword, String newPassword) {
-        String sql = "UPDATE users SET password = ? WHERE username = ? AND password = ?";
+        String sql = "UPDATE users SET password = ? WHERE BINARY username = ? AND BINARY password = ?";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, newPassword);
@@ -118,7 +118,7 @@ public class UserDAO {
 
     /** Cập nhật số dư người dùng. */
     public boolean updateBalance(String username, BigDecimal newBalance) {
-        String sql = "UPDATE users SET balance = ? WHERE username = ?";
+        String sql = "UPDATE users SET balance = ? WHERE BINARY username = ?";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setBigDecimal(1, newBalance);

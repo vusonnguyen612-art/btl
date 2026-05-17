@@ -217,6 +217,13 @@ public class NetworkService {
         return sendMessage(message);
     }
 
+    /** Gửi yêu cầu cập nhật thông tin vật phẩm. */
+    public Message updateItem(Item item) {
+        Message message = new Message(Message.Type.UPDATE_ITEM);
+        message.setData(item);
+        return sendMessage(message);
+    }
+
     /** @return người dùng hiện tại */
     public Message getUserBidHistory(String userId) {
         Message message = new Message(Message.Type.GET_USER_BID_HISTORY);

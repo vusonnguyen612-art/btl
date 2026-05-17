@@ -22,13 +22,13 @@
             <Font name="Arial" size="23.0" />
          </font>
       </TextField>
-      <Label layoutX="140.0" layoutY="495.0" style="-fx-text-fill: #eacd8f; -fx-font-size: 16px;" text="Thời gian đấu giá (phút)" />
+      <Label fx:id="thoiGianLabel" layoutX="140.0" layoutY="495.0" style="-fx-text-fill: #eacd8f; -fx-font-size: 16px;" text="Thời gian đấu giá (phút)" />
       <TextField fx:id="thoiGianDauGia" alignment="CENTER" layoutX="134.0" layoutY="525.0" prefHeight="50.0" prefWidth="398.0" promptText="60" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-border-radius: 30; -fx-background-radius: 30; -fx-text-fill: white;">
          <font>
             <Font size="23.0" />
          </font>
       </TextField>
-      <HBox layoutX="134.0" layoutY="590.0" spacing="10">
+      <HBox fx:id="durationButtonBox" layoutX="134.0" layoutY="590.0" spacing="10">
          <children>
             <Button fx:id="btn30Phut" onAction="#setDuration30" prefHeight="35.0" prefWidth="90.0" style="-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 15;" text="30 phút">
                <font>

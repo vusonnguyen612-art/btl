@@ -51,6 +51,12 @@ public class AuctionRoomController {
     private VBox bidChartContainer;
 
     @FXML
+    private ScrollPane auctionListScrollPane;
+
+    @FXML
+    private ScrollPane bidHistoryScrollPane;
+
+    @FXML
     private Label currentPriceLabel;
 
     @FXML
@@ -149,11 +155,21 @@ public class AuctionRoomController {
             "-fx-text-fill: #eacd8f; -fx-font-size: 14px;";
 
     @FXML
-    /** Khởi tạo: đăng ký notification listener, bắt đầu auto refresh, setup search combos. */
+    /** Khởi tạo: đăng ký notification listener, bắt đầu auto refresh, setup search combos, focus cho scroll. */
     private void initialize() {
         setupNotificationListener();
         startAutoRefresh();
         initSearchCombos();
+        setupScrollFocus();
+    }
+
+    private void setupScrollFocus() {
+        if (auctionListScrollPane != null) {
+            auctionListScrollPane.setOnMouseEntered(e -> auctionListScrollPane.requestFocus());
+        }
+        if (bidHistoryScrollPane != null) {
+            bidHistoryScrollPane.setOnMouseEntered(e -> bidHistoryScrollPane.requestFocus());
+        }
     }
 
     private void initSearchCombos() {

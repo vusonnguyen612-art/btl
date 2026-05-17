@@ -536,6 +536,23 @@ public class AuctionDAO {
         return sessions;
     }
 
+    /** Tìm phiên đấu giá theo item_id. */
+    public Optional<AuctionSession> findByItemId(String itemId) {
+        String sql = "SELECT * FROM auction_sessions WHERE item_id = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, itemId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(mapResultSetToSession(rs));
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return Optional.empty();
+    }
+
     /** Lưu phiên đấu giá mới với thông tin cơ bản. */
     public void saveAuction(AuctionSession auction) {
         String sql = "INSERT INTO auction_sessions (id, item_id, seller_id, status, current_price, start_price, duration_minutes, min_increment) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";

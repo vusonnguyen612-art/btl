@@ -192,6 +192,9 @@ public class AuctionServer {
                     case SEARCH_AUCTIONS:
                         response = handleSearchAuctions(message);
                         break;
+                    case UPDATE_ITEM:
+                        response = handleUpdateItem(message);
+                        break;
                     case GET_USER_AUCTIONS:
                         response = handleGetUserAuctions(message);
                         break;
@@ -599,6 +602,38 @@ public class AuctionServer {
             List<Bid> bids = auctionDAO.getBidHistory(message.getAuctionId());
             Message response = new Message(Message.Type.SUCCESS);
             response.setData(bids);
+            return response;
+        }
+
+        /** Xử lý cập nhật vật phẩm: chỉ người bán và phiên chưa bắt đầu (OPEN) mới được sửa. */
+        private Message handleUpdateItem(Message message) {
+            if (currentUser == null) {
+                return createErrorMessage("Not logged in");
+            }
+            Item updatedItem = (Item) message.getData();
+            if (updatedItem == null || updatedItem.getId() == null) {
+                return createErrorMessage("Invalid item data");
+            }
+
+            Optional<Item> existingOpt = itemDAO.findById(updatedItem.getId());
+            if (existingOpt.isEmpty()) {
+                return createErrorMessage("Item not found");
+            }
+            if (!existingOpt.get().getSellerId().equals(currentUser.getId())) {
+                return createErrorMessage("Bạn không phải người tạo sản phẩm này");
+            }
+
+            Optional<AuctionSession> auctionOpt = auctionDAO.findByItemId(updatedItem.getId());
+            if (auctionOpt.isPresent()) {
+                AuctionSession.Status status = auctionOpt.get().getStatus();
+                if (status != AuctionSession.Status.OPEN) {
+                    return createErrorMessage("Không thể chỉnh sửa sản phẩm sau khi phiên đấu giá đã bắt đầu");
+                }
+            }
+
+            itemDAO.update(updatedItem);
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setContent("Item updated");
             return response;
         }
 

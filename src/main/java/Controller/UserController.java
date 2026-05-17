@@ -88,6 +88,12 @@ public class UserController {
     private AnchorPane CaidatPane;
 
     @FXML
+    private ScrollPane homeScrollPane;
+
+    @FXML
+    private ScrollPane bidHistoryScrollPane;
+
+    @FXML
     private VBox AllItems;
 
     @FXML
@@ -154,6 +160,16 @@ public class UserController {
         initHomeSearchCombos();
         loadHomeItems();
         loadWarehouseItems();
+        setupScrollFocus();
+    }
+
+    private void setupScrollFocus() {
+        if (homeScrollPane != null) {
+            homeScrollPane.setOnMouseEntered(e -> homeScrollPane.requestFocus());
+        }
+        if (bidHistoryScrollPane != null) {
+            bidHistoryScrollPane.setOnMouseEntered(e -> bidHistoryScrollPane.requestFocus());
+        }
     }
 
     private void initHomeSearchCombos() {

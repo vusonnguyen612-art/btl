@@ -67,7 +67,11 @@
                <children>
                     <AnchorPane fx:id="TrangchuPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;">
                        <children>
-                          <VBox fx:id="AllItems" layoutX="8.0" layoutY="260.0" prefHeight="250.0" prefWidth="666.0" style="-fx-background-color: #1E1E1D;" />
+                          <ScrollPane fx:id="homeScrollPane" layoutX="8.0" layoutY="260.0" prefHeight="250.0" prefWidth="666.0" style="-fx-background-color: transparent; -fx-border-color: transparent;" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" focusTraversable="true">
+    <content>
+        <VBox fx:id="AllItems" spacing="8" style="-fx-background-color: #1E1E1D;" />
+    </content>
+</ScrollPane>
                           <Label layoutX="4.0" layoutY="62.0" prefHeight="18.0" prefWidth="674.0" style="-fx-text-fill: #eacd8f;" text="_______________________________________________________________________________________________________________________________________" />
                           <Label layoutX="25.0" layoutY="21.0" prefHeight="33.0" prefWidth="71.0" style="-fx-text-fill: #eacd8f;" text="Số dư">
                              <font>
@@ -133,7 +137,7 @@
                                     <Font name="Arial Bold" size="20.0" />
                                 </font>
                             </Label>
-                            <ScrollPane layoutX="10.0" layoutY="60.0" prefHeight="440.0" prefWidth="560.0" style="-fx-background-color: transparent; -fx-border-color: transparent;">
+                            <ScrollPane fx:id="bidHistoryScrollPane" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" style="-fx-background-color: transparent; -fx-border-color: transparent;" focusTraversable="true" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="60.0">
                                 <content>
                                     <VBox fx:id="bidHistoryList" spacing="8" style="-fx-background-color: transparent;" />
                                 </content>

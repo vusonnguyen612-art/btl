@@ -38,7 +38,7 @@
             </top>
 
             <center>
-                <HBox spacing="0" BorderPane.alignment="CENTER">
+                <HBox spacing="0" fillHeight="true" BorderPane.alignment="CENTER">
                     <children>
                         <VBox prefWidth="300.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-border-width: 0 1 0 0;" HBox.hgrow="ALWAYS">
                             <padding>
@@ -74,7 +74,7 @@
                                     </children>
                                 </VBox>
 
-                                <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-border-color: transparent;" VBox.vgrow="ALWAYS">
+                                <ScrollPane fx:id="auctionListScrollPane" fitToWidth="true" style="-fx-background-color: transparent; -fx-border-color: transparent;" VBox.vgrow="ALWAYS" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" focusTraversable="true">
                                     <VBox.margin>
                                         <Insets top="10.0" />
                                     </VBox.margin>
@@ -207,7 +207,7 @@
                                     </VBox.margin>
                                 </Label>
 
-                                <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-border-color: transparent;" VBox.vgrow="ALWAYS">
+                                <ScrollPane fx:id="bidHistoryScrollPane" fitToWidth="true" style="-fx-background-color: transparent; -fx-border-color: transparent;" VBox.vgrow="ALWAYS" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" focusTraversable="true">
                                     <content>
                                         <VBox fx:id="bidHistoryList" spacing="5" style="-fx-background-color: transparent;" />
                                     </content>

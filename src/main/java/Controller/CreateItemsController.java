@@ -5,9 +5,11 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
@@ -17,6 +19,9 @@ import DAO.ItemDAO;
 import DAO.AuctionSessionDAO;
 import Factory.ItemFactory;
 import Model.User;
+import Network.NetworkService;
+import Network.Message;
+
 import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -25,10 +30,12 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
 
-/** Controller cho form tạo sản phẩm mới (FXML: CreateItems.fxml). */
+/** Controller cho form tạo sản phẩm mới (FXML: CreateItems.fxml). Hỗ trợ cả chế độ tạo mới và chỉnh sửa. */
 public class CreateItemsController implements UserController.LinkedController {
 
     private User currentUser;
+    private boolean editMode = false;
+    private Item editingItem;
 
     @Override
     public void setUserController(UserController userController) {
@@ -51,6 +58,12 @@ public class CreateItemsController implements UserController.LinkedController {
     private TextField thoiGianDauGia;
 
     @FXML
+    private Label thoiGianLabel;
+
+    @FXML
+    private HBox durationButtonBox;
+
+    @FXML
     private Button btn30Phut;
 
     @FXML
@@ -68,6 +81,9 @@ public class CreateItemsController implements UserController.LinkedController {
     @FXML
     private Button chonAnhButton;
 
+    @FXML
+    private Button taoSanPhamButton;
+
     private long selectedDuration = 60;
     private File selectedImageFile;
 
@@ -79,6 +95,35 @@ public class CreateItemsController implements UserController.LinkedController {
 
     private final ItemDAO itemDAO = new ItemDAO();
     private final AuctionSessionDAO sessionDAO = new AuctionSessionDAO();
+    private final NetworkService networkService = NetworkService.getInstance();
+
+    /** Đặt chế độ chỉnh sửa với dữ liệu sản phẩm và phiên hiện tại. */
+    public void setEditMode(Item item) {
+        this.editMode = true;
+        this.editingItem = item;
+
+        tenSanPham.setText(item.getName());
+        giaKhoiDau.setText(String.valueOf((long) item.getStartPrice()));
+        moTa.setText(item.getDescription());
+        categoryComboBox.setValue(item.getCategory());
+        categoryComboBox.setDisable(true);
+
+        thoiGianLabel.setVisible(false);
+        thoiGianLabel.setManaged(false);
+        thoiGianDauGia.setVisible(false);
+        thoiGianDauGia.setManaged(false);
+        durationButtonBox.setVisible(false);
+        durationButtonBox.setManaged(false);
+
+        taoSanPhamButton.setText("Lưu thay đổi");
+
+        if (item.getImagePath() != null && !item.getImagePath().isBlank()) {
+            File imgFile = new File(item.getImagePath());
+            if (imgFile.exists()) {
+                productImageView.setImage(new Image(imgFile.toURI().toString(), true));
+            }
+        }
+    }
 
     @FXML
     /** Khởi tạo ComboBox danh mục và giá trị mặc định. */
@@ -148,8 +193,66 @@ public class CreateItemsController implements UserController.LinkedController {
     }
 
     @FXML
-    /** Tạo sản phẩm + phiên đấu giá: validate input, lưu DB qua DAO, đóng cửa sổ. */
+    /** Tạo sản phẩm mới hoặc cập nhật sản phẩm hiện tại. */
     private void TaoSanPham(ActionEvent event) {
+        if (editMode) {
+            saveEdit();
+        } else {
+            createNew();
+        }
+    }
+
+    private void saveEdit() {
+        String ten = tenSanPham.getText().trim();
+        String giaStr = giaKhoiDau.getText().trim();
+        String Mota = moTa.getText().trim();
+
+        if (ten.isBlank()) {
+            showWarning("Lỗi", "Vui lòng nhập tên sản phẩm.");
+            return;
+        }
+
+        if (giaStr.isBlank()) {
+            showWarning("Lỗi", "Vui lòng nhập giá khởi đầu.");
+            return;
+        }
+
+        try {
+            BigDecimal gia = new BigDecimal(giaStr);
+            if (gia.compareTo(BigDecimal.ZERO) <= 0) {
+                showWarning("Lỗi", "Giá phải lớn hơn 0.");
+                return;
+            }
+
+            editingItem.setName(ten);
+            editingItem.setDescription(Mota);
+            editingItem.setStartPrice(gia.doubleValue());
+
+            if (selectedImageFile != null) {
+                try {
+                    editingItem.setImagePath(saveSelectedImage(editingItem.getId()));
+                } catch (IOException e) {
+                    showWarning("Loi", "Khong the luu anh san pham: " + e.getMessage());
+                    return;
+                }
+            }
+
+            Message response = networkService.updateItem(editingItem);
+            if (response.getType() == Message.Type.SUCCESS) {
+                showInfo("Thành công", "Cập nhật sản phẩm thành công!");
+                closeWindow();
+            } else {
+                showWarning("Lỗi", response.getContent());
+            }
+
+        } catch (NumberFormatException e) {
+            showWarning("Lỗi", "Giá không hợp lệ.");
+        } catch (Exception e) {
+            showWarning("Lỗi", "Không thể cập nhật sản phẩm: " + e.getMessage());
+        }
+    }
+
+    private void createNew() {
         String ten = tenSanPham.getText().trim();
         String giaStr = giaKhoiDau.getText().trim();
         String Mota = moTa.getText().trim();
