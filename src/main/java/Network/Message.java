@@ -37,7 +37,9 @@ public class Message implements Serializable {
         NOTIFICATION,
         ERROR,
         SUCCESS,
-        GET_USER_BID_HISTORY
+        GET_USER_BID_HISTORY,
+        UPDATE_AVATAR,
+        GET_AVATAR
     }
 
     private Type type;

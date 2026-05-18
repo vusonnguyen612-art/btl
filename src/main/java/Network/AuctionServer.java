@@ -198,6 +198,12 @@ public class AuctionServer {
                     case GET_USER_AUCTIONS:
                         response = handleGetUserAuctions(message);
                         break;
+                    case UPDATE_AVATAR:
+                        response = handleUpdateAvatar(message);
+                        break;
+                    case GET_AVATAR:
+                        response = handleGetAvatar();
+                        break;
                     default:
                         return createErrorMessage("Unknown message type");
                 }
@@ -641,6 +647,29 @@ public class AuctionServer {
             List<AuctionSession> auctions = auctionDAO.findUserParticipatedAuctions(message.getContent());
             Message response = new Message(Message.Type.SUCCESS);
             response.setData(auctions);
+            return response;
+        }
+
+        private Message handleUpdateAvatar(Message message) {
+            if (currentUser == null) {
+                return createErrorMessage("Not logged in");
+            }
+            boolean success = userDAO.updateAvatarPath(currentUser.getId(), message.getContent());
+            if (success) {
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setContent("Avatar updated");
+                return response;
+            }
+            return createErrorMessage("Failed to update avatar");
+        }
+
+        private Message handleGetAvatar() {
+            if (currentUser == null) {
+                return createErrorMessage("Not logged in");
+            }
+            String avatarPath = userDAO.getAvatarPath(currentUser.getId());
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setContent(avatarPath);
             return response;
         }
 

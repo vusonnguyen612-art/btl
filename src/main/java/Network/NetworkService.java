@@ -231,6 +231,22 @@ public class NetworkService {
         return sendMessage(message);
     }
 
+    /** Gửi yêu cầu cập nhật ảnh đại diện. */
+    public Message updateAvatar(String avatarPath) {
+        Message message = new Message(Message.Type.UPDATE_AVATAR);
+        message.setContent(avatarPath);
+        Message response = sendMessage(message);
+        if (response.getType() == Message.Type.SUCCESS && currentUser != null) {
+            currentUser.setAvatarPath(avatarPath);
+        }
+        return response;
+    }
+
+    /** Lấy đường dẫn ảnh đại diện từ server. */
+    public Message getAvatarPath() {
+        return sendMessage(new Message(Message.Type.GET_AVATAR));
+    }
+
     public User getCurrentUser() {
         return currentUser;
     }
