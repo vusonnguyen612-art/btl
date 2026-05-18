@@ -16,7 +16,7 @@
                      <children>
                         <ImageView fitHeight="398.0" fitWidth="288.0" pickOnBounds="true" preserveRatio="true">
                            <image>
-                              <Image url="@../../image/auction_money_coin_long.gif" />
+                              <Image url="/image/auction_money_coin_long.gif" />
                            </image>
                         </ImageView>
                      </children>

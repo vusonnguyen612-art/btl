@@ -10,10 +10,14 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.AnchorPane;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URL;
@@ -74,6 +78,9 @@ public class UserController {
 
     @FXML
     private CaidatPaneController CaidatPaneController;
+
+    @FXML
+    private ImageView avatarImageView;
 
     private ToggleGroup menuGroup = new ToggleGroup();
     private User currentUser;
@@ -224,6 +231,31 @@ public class UserController {
 
         } catch (Exception e) {
             showError("Lỗi", "Không thể mở phòng đấu giá: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    public void changeAvatar(ActionEvent event) {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Chọn ảnh đại diện");
+        fileChooser.getExtensionFilters().addAll(
+            new FileChooser.ExtensionFilter("Ảnh", "*.jpg", "*.jpeg", "*.png", "*.gif"),
+            new FileChooser.ExtensionFilter("Tất cả", "*.*")
+        );
+        File file = fileChooser.showOpenDialog(getCurrentStage());
+        if (file != null) {
+            try {
+                Image image = new Image(file.toURI().toString());
+                if (avatarImageView != null) {
+                    avatarImageView.setImage(image);
+                }
+                Message response = networkService.updateAvatar(file.getAbsolutePath());
+                if (response.getType() != Message.Type.SUCCESS) {
+                    showWarning("Lỗi", "Không thể cập nhật ảnh đại diện: " + response.getContent());
+                }
+            } catch (Exception e) {
+                showWarning("Lỗi", "Không thể tải ảnh: " + e.getMessage());
+            }
         }
     }
 

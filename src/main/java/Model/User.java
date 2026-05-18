@@ -16,6 +16,7 @@ public class User implements Serializable {
     private boolean isSeller;
     private boolean isBidder;
     private BigDecimal balance;
+    private String avatarPath;
 
     /** @param id       mã người dùng
      *  @param username tên đăng nhập
@@ -81,5 +82,13 @@ public class User implements Serializable {
 
     public boolean isBidder() {
         return isBidder;
+    }
+
+    public String getAvatarPath() {
+        return avatarPath;
+    }
+
+    public void setAvatarPath(String avatarPath) {
+        this.avatarPath = avatarPath;
     }
 }
