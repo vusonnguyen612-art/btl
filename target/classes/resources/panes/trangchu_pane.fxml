@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane fx:id="TrangchuPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.TrangchuPaneController">
+   <children>
+      <Label layoutX="25.0" layoutY="21.0" prefHeight="33.0" prefWidth="71.0" style="-fx-text-fill: #eacd8f;" text="Số dư" AnchorPane.leftAnchor="25.0">
+         <font>
+            <Font name="Arial Bold" size="20.0" />
+         </font>
+      </Label>
+      <Label fx:id="Sodutaikhoan1" alignment="CENTER" layoutX="96.0" layoutY="20.0" prefHeight="29.0" prefWidth="271.0" style="-fx-text-fill: white; -fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-font-weight: bold;" text=" 300000" AnchorPane.leftAnchor="96.0">
+         <font>
+            <Font size="23.0" />
+         </font>
+      </Label>
+      <Label layoutX="341.0" layoutY="19.0" prefHeight="38.0" prefWidth="14.0" style="-fx-text-fill: white;" text="\$" AnchorPane.leftAnchor="341.0">
+         <font>
+            <Font name="Arial Bold" size="24.0" />
+         </font>
+      </Label>
+      <Button layoutX="500.0" layoutY="19.0" mnemonicParsing="false" onAction="#openAuctionRoom" prefHeight="35.0" prefWidth="160.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Phòng Đấu Giá" AnchorPane.rightAnchor="10.0">
+         <font>
+            <Font name="Arial Bold" size="14.0" />
+         </font>
+      </Button>
+      <!-- Home search panel -->
+      <VBox spacing="6" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10;" AnchorPane.leftAnchor="8.0" AnchorPane.rightAnchor="8.0" AnchorPane.topAnchor="80.0">
+         <padding>
+            <Insets bottom="8.0" left="10.0" right="10.0" top="8.0" />
+         </padding>
+         <children>
+            <TextField fx:id="homeSearchKeyword" promptText="Tìm kiếm sản phẩm..." style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-prompt-text-fill: #666666; -fx-font-size: 13px;" />
+            <HBox spacing="5">
+               <ComboBox fx:id="homeSearchCategory" promptText="Danh mục" prefWidth="160.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-font-size: 12px;" />
+               <ComboBox fx:id="homeSearchStatus" promptText="Trạng thái" prefWidth="150.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-font-size: 12px;" />
+               <TextField fx:id="homeSearchMinPrice" promptText="Giá từ" prefWidth="100.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-prompt-text-fill: #666666; -fx-font-size: 12px;" />
+               <TextField fx:id="homeSearchMaxPrice" promptText="Giá đến" prefWidth="100.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-prompt-text-fill: #666666; -fx-font-size: 12px;" />
+            </HBox>
+            <HBox spacing="5">
+               <ComboBox fx:id="homeSearchSort" promptText="Sắp xếp" prefWidth="130.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-font-size: 12px;" />
+               <Button onAction="#searchHomeAuctions" prefHeight="30.0" prefWidth="100.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 20; -fx-font-size: 12px;" text="Tìm kiếm" />
+               <Button onAction="#resetHomeSearch" prefHeight="30.0" prefWidth="100.0" style="-fx-background-color: #333333; -fx-text-fill: white; -fx-background-radius: 20; -fx-font-size: 12px;" text="Xóa lọc" />
+            </HBox>
+         </children>
+      </VBox>
+      <ScrollPane fx:id="homeScrollPane" style="-fx-background-color: transparent; -fx-border-color: transparent;" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" focusTraversable="true" AnchorPane.bottomAnchor="8.0" AnchorPane.leftAnchor="8.0" AnchorPane.rightAnchor="8.0" AnchorPane.topAnchor="215.0">
+           <content>
+                <FlowPane fx:id="AllItems" hgap="10" vgap="10" prefWrapLength="660" style="-fx-background-color: #1E1E1D;" />
+           </content>
+      </ScrollPane>
+   </children>
+</AnchorPane>

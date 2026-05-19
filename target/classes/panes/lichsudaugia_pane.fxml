@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane fx:id="LichsudaugiaPane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.LichsudaugiaPaneController">
+   <children>
+      <Label layoutX="25.0" layoutY="21.0" style="-fx-text-fill: #eacd8f; -fx-font-size: 20px; -fx-font-weight: bold;" text="Lịch sử đấu giá">
+         <font>
+            <Font name="Arial Bold" size="20.0" />
+         </font>
+      </Label>
+      <ScrollPane fx:id="bidHistoryScrollPane" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" style="-fx-background-color: transparent; -fx-border-color: transparent;" focusTraversable="true" AnchorPane.bottomAnchor="10.0" AnchorPane.leftAnchor="10.0" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="60.0">
+         <content>
+            <VBox fx:id="bidHistoryList" spacing="8" style="-fx-background-color: transparent;" />
+         </content>
+      </ScrollPane>
+   </children>
+</AnchorPane>

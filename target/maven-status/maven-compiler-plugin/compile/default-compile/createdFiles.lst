@@ -10,6 +10,7 @@ Model\Art.class
 Model\AuctionSession$Status.class
 Model\Sports.class
 Observer\AuctionObserver.class
+Controller\TrangchuPaneController.class
 Model\Books.class
 Factory\ItemFactory.class
 Exception\UnauthorizedException.class
@@ -20,11 +21,14 @@ Network\Message$Type.class
 Model\Jewelry.class
 Model\Fashion.class
 Service\AuctionManager.class
+Controller\KhoPaneController.class
 Model\Music.class
 Controller\UserController.class
 Exception\AuctionClosedException.class
 Controller\BidCardController.class
 Model\Seller.class
+DAO\BidDAO.class
+Controller\CaidatPaneController.class
 Controller\UserController$LinkedController.class
 Network\AuctionClient.class
 Model\Vehicle.class
@@ -34,6 +38,7 @@ Network\NetworkService.class
 DAO\ItemDAO.class
 DAO\DatabaseUtil.class
 Exception\AuthenticationException.class
+Controller\LichsudaugiaPaneController.class
 Controller\AuctionRoomController.class
 Model\Bidder.class
 Network\Message.class
@@ -47,6 +52,7 @@ Model\User.class
 Network\AuctionServer.class
 Controller\BidHistoryCardController.class
 Model\Bid.class
+Controller\NaptienPaneController.class
 Network\AuctionServer$ClientHandler.class
 Exception\InvalidBidException.class
 Exception\ItemNotFoundException.class
