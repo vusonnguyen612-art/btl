@@ -16,7 +16,10 @@ public class NetworkService {
     private ObjectInputStream input;
     private String serverAddress;
     private int port;
-    private User currentUser;
+    private volatile User currentUser;
+    private volatile boolean connected;
+    private static final int CONNECT_TIMEOUT = 5000;
+    private static final int READ_TIMEOUT = 10000;
     private Consumer<List<Message>> onNotifications;
 
     private NetworkService(String serverAddress, int port) {
@@ -35,14 +38,18 @@ public class NetworkService {
     /** Kết nối tới server. */
     public boolean connect() {
         try {
-            socket = new Socket(serverAddress, port);
+            socket = new Socket();
+            socket.connect(new InetSocketAddress(serverAddress, port), CONNECT_TIMEOUT);
+            socket.setSoTimeout(READ_TIMEOUT);
             output = new ObjectOutputStream(socket.getOutputStream());
             output.flush();
             input = new ObjectInputStream(socket.getInputStream());
+            connected = true;
             System.out.println("Connected to server at " + serverAddress + ":" + port);
             return true;
         } catch (IOException e) {
             System.err.println("Connection failed: " + e.getMessage());
+            connected = false;
             return false;
         }
     }
@@ -51,16 +58,18 @@ public class NetworkService {
     public void disconnect() {
         try {
             if (socket != null && !socket.isClosed()) {
-                // Send logout message
                 if (currentUser != null) {
                     Message logoutMsg = new Message(Message.Type.LOGOUT);
                     sendMessage(logoutMsg);
                 }
                 socket.close();
-                System.out.println("Disconnected from server");
             }
         } catch (IOException e) {
             System.err.println("Disconnect error: " + e.getMessage());
+        } finally {
+            connected = false;
+            currentUser = null;
+            System.out.println("Disconnected from server");
         }
     }
 
@@ -74,12 +83,32 @@ public class NetworkService {
                 onNotifications.accept(response.getNotifications());
             }
             return response;
+        } catch (SocketTimeoutException e) {
+            System.err.println("Send message timeout: " + e.getMessage());
+            closeQuietly();
+            Message error = new Message(Message.Type.ERROR);
+            error.setContent("Kết nối đến server bị timeout, vui lòng thử lại.");
+            return error;
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("Send message error: " + e.getMessage());
+            closeQuietly();
             Message error = new Message(Message.Type.ERROR);
-            error.setContent(e.getMessage());
+            error.setContent("Lỗi kết nối: " + e.getMessage());
             return error;
         }
+    }
+
+    /** Đóng socket im lặng và đánh dấu ngắt kết nối. */
+    private void closeQuietly() {
+        connected = false;
+        try {
+            if (socket != null) {
+                socket.close();
+            }
+        } catch (IOException ignored) {}
+        socket = null;
+        output = null;
+        input = null;
     }
 
     /** Đăng ký callback nhận notification từ server. */
@@ -87,8 +116,11 @@ public class NetworkService {
         this.onNotifications = listener;
     }
 
-    /** Gửi yêu cầu đăng nhập, tự động lưu currentUser nếu thành công. */
+    /** Gửi yêu cầu đăng nhập, tự động reconnect nếu mất kết nối. */
     public Message login(String username, String password) {
+        if (!isConnected()) {
+            connect();
+        }
         Message message = new Message(Message.Type.LOGIN);
         message.setData(username);
         message.setContent(password);
@@ -99,10 +131,15 @@ public class NetworkService {
         return response;
     }
 
-    /** Gửi yêu cầu đăng ký tài khoản mới. */
-    public Message register(String username, String password) {
+    /** Gửi yêu cầu đăng ký tài khoản mới, tự động reconnect nếu mất kết nối. */
+    public Message register(String username, String password, String email, String phone) {
+        if (!isConnected()) {
+            connect();
+        }
+        User user = new User(null, username, password);
+        user.setEmail(email);
         Message message = new Message(Message.Type.REGISTER);
-        message.setData(username);
+        message.setData(user);
         message.setContent(password);
         return sendMessage(message);
     }
@@ -256,8 +293,8 @@ public class NetworkService {
         this.currentUser = user;
     }
 
-    /** Kiểm tra trạng thái kết nối socket. */
+    /** Kiểm tra trạng thái kết nối. */
     public boolean isConnected() {
-        return socket != null && !socket.isClosed();
+        return connected && socket != null && !socket.isClosed();
     }
 }

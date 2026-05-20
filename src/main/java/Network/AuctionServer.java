@@ -238,18 +238,30 @@ public class AuctionServer {
             }
         }
 
-        /** Xử lý đăng ký: validate password, tạo user, lưu DB. */
+        /** Xử lý đăng ký: validate password, kiểm tra trùng username, tạo user, lưu DB. */
         private Message handleRegister(Message message) {
             String passwordError = UserFactory.getPasswordError(message.getContent());
             if (passwordError != null) {
                 return createErrorMessage(passwordError);
             }
 
-            User newUser = UserFactory.createUser(
-                (String) message.getData(),
-                message.getContent()
-            );
-            userDAO.register(newUser);
+            User userData = (User) message.getData();
+            String username = userData.getUsername();
+            String email = userData.getEmail();
+            String password = message.getContent();
+
+            if (userDAO.existsByUsername(username)) {
+                return createErrorMessage("Tên đăng nhập đã tồn tại.");
+            }
+
+            User newUser = UserFactory.createUser(username, password);
+            newUser.setEmail(email);
+
+            boolean registered = userDAO.register(newUser);
+            if (!registered) {
+                return createErrorMessage("Đăng ký thất bại, vui lòng thử lại.");
+            }
+
             Message response = new Message(Message.Type.SUCCESS);
             response.setContent("Registration successful");
             response.setData(newUser);
