@@ -10,19 +10,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BidDAO {
-    private Connection connection;
-
-    public BidDAO() {
-        try {
-            this.connection = DatabaseUtil.getConnection();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
 
     public Bid getHighestBid(String auctionId) {
         String sql = "SELECT * FROM bids WHERE auction_id = ? ORDER BY amount DESC LIMIT 1";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, auctionId);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
@@ -42,7 +34,8 @@ public class BidDAO {
 
     public void markAsWinner(String bidId) {
         String sql = "UPDATE bids SET is_winner = 1 WHERE id = ?";
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, bidId);
             ps.executeUpdate();
         } catch (SQLException e) {
@@ -54,7 +47,8 @@ public class BidDAO {
         List<Bid> winningBids = new ArrayList<>();
         String sql = "SELECT * FROM bids WHERE bidder_id = ? AND Winner = 1";
 
-        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, userId);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {

@@ -110,7 +110,7 @@ public class logincontroller {
         }
 
         try {
-            var response = networkService.register(fullName, password);
+            var response = networkService.register(fullName, password, email, phone);
             if (response.getType() == Network.Message.Type.SUCCESS) {
                 showMessage("Đăng ký thành công! Vui lòng đăng nhập.");
                 ComeLogin(event);
