@@ -1,0 +1,21 @@
+/* 1. Ép màu trắng cho text khi chưa chọn gì (Prompt Text) */
+.combo-box > .list-cell:empty {
+    -fx-text-fill: white !important;
+}
+
+/* 2. Ép màu trắng cho text sau khi đã chọn 1 mục */
+.combo-box > .list-cell {
+    -fx-text-fill: white !important;
+}
+
+/* 3. Đổi màu chữ cho các mục nằm trong danh sách khi bấm xổ xuống (Popup) */
+.combo-box-popup .list-view .list-cell {
+    -fx-text-fill: white !important;
+    -fx-background-color: #1a1a1a; /* Đổi nền menu xổ xuống thành tối để thấy chữ trắng */
+}
+
+/* 4. Đổi màu chữ nếu chuột hover (rê) qua các mục trong menu xổ xuống */
+.combo-box-popup .list-view .list-cell:hover {
+    -fx-text-fill: black !important; /* Khi hover thì chữ đen nền vàng/hoặc nền sáng */
+    -fx-background-color: #d4af3a; 
+}

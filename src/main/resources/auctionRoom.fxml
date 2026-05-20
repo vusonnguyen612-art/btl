@@ -25,20 +25,15 @@
                     </padding>
                     <children>
                         <Label style="-fx-text-fill: #eacd8f; -fx-font-size: 24px; -fx-font-weight: bold;" text="PHÒNG ĐẤU GIÁ" />
-                        <Region HBox.hgrow="ALWAYS" />
-                        <Label style="-fx-text-fill: #eacd8f; -fx-font-size: 14px;" text="Số dư:" />
+                        <Region prefHeight="35.0" prefWidth="445.0" HBox.hgrow="ALWAYS" />
+                        <Label prefHeight="20.0" prefWidth="46.0" style="-fx-text-fill: #eacd8f; -fx-font-size: 14px;" text="Số dư:" />
                         <Label fx:id="userBalanceLabel" style="-fx-text-fill: #4CAF50; -fx-font-size: 16px; -fx-font-weight: bold;" text="300,000 $" />
-                        <Button onAction="#backToList" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 20;" text="Quay lại">
-                            <font>
-                                <Font size="13.0" />
-                            </font>
-                        </Button>
                     </children>
                 </HBox>
             </top>
 
             <center>
-                <HBox spacing="0" fillHeight="true" BorderPane.alignment="CENTER">
+                <HBox fillHeight="true" spacing="0" BorderPane.alignment="CENTER">
                     <children>
                         <VBox prefWidth="300.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-border-width: 0 1 0 0;" HBox.hgrow="ALWAYS">
                             <padding>
@@ -59,13 +54,13 @@
                                     <children>
                                         <TextField fx:id="searchKeywordField" promptText="🔍 Tìm kiếm..." style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-prompt-text-fill: #666666; -fx-font-size: 13px;" />
                                         <HBox spacing="5">
-                                            <ComboBox fx:id="searchCategoryCombo" promptText="Danh mục" prefWidth="130.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-font-size: 12px;" />
-                                            <ComboBox fx:id="searchStatusCombo" promptText="Trạng thái" prefWidth="120.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-font-size: 12px;" />
+                                            <ComboBox fx:id="searchCategoryCombo" prefWidth="130.0" promptText="Danh mục" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-font-size: 12px;" />
+                                            <ComboBox fx:id="searchStatusCombo" prefWidth="120.0" promptText="Trạng thái" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-font-size: 12px;" />
                                         </HBox>
                                         <HBox spacing="5">
-                                            <TextField fx:id="searchMinPriceField" promptText="Giá từ" prefWidth="80.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-prompt-text-fill: #666666; -fx-font-size: 12px;" />
-                                            <TextField fx:id="searchMaxPriceField" promptText="Giá đến" prefWidth="80.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-prompt-text-fill: #666666; -fx-font-size: 12px;" />
-                                            <ComboBox fx:id="searchSortCombo" promptText="Sắp xếp" prefWidth="85.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-font-size: 12px;" />
+                                            <TextField fx:id="searchMinPriceField" prefWidth="80.0" promptText="Giá từ" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-prompt-text-fill: #666666; -fx-font-size: 12px;" />
+                                            <TextField fx:id="searchMaxPriceField" prefWidth="80.0" promptText="Giá đến" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-prompt-text-fill: #666666; -fx-font-size: 12px;" />
+                                            <ComboBox fx:id="searchSortCombo" prefWidth="85.0" promptText="Sắp xếp" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a; -fx-background-radius: 10; -fx-border-radius: 10; -fx-text-fill: white; -fx-font-size: 12px;" />
                                         </HBox>
                                         <HBox spacing="5">
                                             <Button onAction="#searchAuctions" prefHeight="30.0" prefWidth="120.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 20; -fx-font-size: 12px;" text="Tìm kiếm" HBox.hgrow="ALWAYS" />
@@ -74,7 +69,7 @@
                                     </children>
                                 </VBox>
 
-                                <ScrollPane fx:id="auctionListScrollPane" fitToWidth="true" style="-fx-background-color: transparent; -fx-border-color: transparent;" VBox.vgrow="ALWAYS" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" focusTraversable="true">
+                                <ScrollPane fx:id="auctionListScrollPane" fitToWidth="true" focusTraversable="true" hbarPolicy="NEVER" style="-fx-background-color: transparent; -fx-border-color: transparent;" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
                                     <VBox.margin>
                                         <Insets top="10.0" />
                                     </VBox.margin>
@@ -207,7 +202,7 @@
                                     </VBox.margin>
                                 </Label>
 
-                                <ScrollPane fx:id="bidHistoryScrollPane" fitToWidth="true" style="-fx-background-color: transparent; -fx-border-color: transparent;" VBox.vgrow="ALWAYS" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" focusTraversable="true">
+                                <ScrollPane fx:id="bidHistoryScrollPane" fitToWidth="true" focusTraversable="true" hbarPolicy="NEVER" style="-fx-background-color: transparent; -fx-border-color: transparent;" vbarPolicy="AS_NEEDED" VBox.vgrow="ALWAYS">
                                     <content>
                                         <VBox fx:id="bidHistoryList" spacing="5" style="-fx-background-color: transparent;" />
                                     </content>

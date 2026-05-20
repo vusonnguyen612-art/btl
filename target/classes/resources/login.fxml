@@ -46,7 +46,7 @@
                         </LinearGradient>
                      </textFill>
                   </Label>
-                  <TextField fx:id="loginUsernameField" layoutX="14.0" layoutY="131.0" prefHeight="38.0" prefWidth="262.0" promptText="Username" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-text-fill: white; -fx-prompt-text-fill: #a6a6a6;" />
+                  <TextField fx:id="loginUsernameField" layoutX="14.0" layoutY="131.0" prefHeight="38.0" prefWidth="262.0" promptText="Tên đăng nhập" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-text-fill: white; -fx-prompt-text-fill: #a6a6a6;" />
                   <PasswordField fx:id="loginPasswordField" layoutX="14.0" layoutY="188.0" prefHeight="38.0" prefWidth="262.0" promptText="Mật khẩu" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-text-fill: white; -fx-prompt-text-fill: #a6a6a6;" />
                   <Button layoutX="14.0" layoutY="252.0" mnemonicParsing="false" onAction="#Login" prefHeight="38.0" prefWidth="262.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Đăng nhập">
                      <font>
