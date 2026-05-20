@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:id="cardRoot"
+      prefWidth="185" maxWidth="185" spacing="6" alignment="TOP_CENTER"
+      style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-padding: 10; -fx-background-radius: 8; -fx-border-radius: 8;"
+      fx:controller="Controller.ItemCardController">
+
+    <ImageView fx:id="itemImageView" fitHeight="130" fitWidth="180" pickOnBounds="true" preserveRatio="true" />
+
+    <Label fx:id="nameLabel" wrapText="true" alignment="CENTER" maxWidth="170"
+           style="-fx-text-fill: #eacd8f; -fx-font-size: 14px; -fx-font-weight: bold;" />
+
+    <Label fx:id="priceLabel" alignment="CENTER" maxWidth="170"
+           style="-fx-text-fill: white; -fx-font-size: 13px;" />
+
+    <VBox fx:id="actionBox" alignment="CENTER" spacing="3" />
+</VBox>
