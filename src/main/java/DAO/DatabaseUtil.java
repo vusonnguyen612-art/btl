@@ -1,30 +1,34 @@
 package DAO;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 import java.sql.*;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
-/** Tiện ích quản lý kết nối MySQL và đóng tài nguyên. */
+/** Tiện ích quản lý kết nối MySQL bằng HikariCP connection pool. */
 public class DatabaseUtil {
-    private static final String DB_URL = "jdbc:mysql://localhost:3306/auction_db";
-    private static final String DB_USER = "root";
-    private static final String DB_PASSWORD = "123456789";
-    private static final Set<Connection> activeConnections = ConcurrentHashMap.newKeySet();
+    private static final HikariDataSource dataSource;
 
     static {
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            throw new RuntimeException("MySQL Driver not found", e);
-        }
-        Runtime.getRuntime().addShutdownHook(new Thread(DatabaseUtil::closeAllConnections));
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl("jdbc:mysql://localhost:3306/auction_db");
+        config.setUsername("root");
+        config.setPassword("123456789");
+        config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(2);
+        config.setIdleTimeout(300000);
+        config.setConnectionTimeout(5000);
+        config.setMaxLifetime(600000);
+        config.addDataSourceProperty("cachePrepStmts", "true");
+        config.addDataSourceProperty("prepStmtCacheSize", "250");
+        config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+        dataSource = new HikariDataSource(config);
+        Runtime.getRuntime().addShutdownHook(new Thread(dataSource::close));
     }
 
-    /** Lấy kết nối mới từ DriverManager và ghi nhận vào activeConnections. */
+    /** Lấy kết nối từ HikariCP connection pool. */
     public static Connection getConnection() throws SQLException {
-        Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-        activeConnections.add(conn);
-        return conn;
+        return dataSource.getConnection();
     }
 
     /** Đóng một hoặc nhiều tài nguyên (Connection, Statement, ResultSet…). */
@@ -32,28 +36,11 @@ public class DatabaseUtil {
         for (AutoCloseable resource : resources) {
             if (resource != null) {
                 try {
-                    if (resource instanceof Connection) {
-                        activeConnections.remove(resource);
-                    }
                     resource.close();
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             }
         }
-    }
-
-    /** Đóng tất cả kết nối đang hoạt động (dùng trong shutdown hook). */
-    public static void closeAllConnections() {
-        for (Connection conn : activeConnections) {
-            try {
-                if (!conn.isClosed()) {
-                    conn.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        activeConnections.clear();
     }
 }

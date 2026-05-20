@@ -11,6 +11,13 @@ on:
     branches:
       - master
       - DoHaiDang
+      - nguyenvuson13
+      - QuangMaster
+      - nghia
+      - QQ
+      - fakemaster
+      - nguyenvuson13
+      - nhanh1
 
 jobs:
   qodana:
