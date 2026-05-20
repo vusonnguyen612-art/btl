@@ -1,10 +1,11 @@
 package Factory;
 
 import Model.User;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /** Factory tạo User mới và validate mật khẩu. */
 public class UserFactory {
-    private static int userCounter = 0;
+    private static final AtomicInteger userCounter = new AtomicInteger(0);
 
     /** Kiểm tra mật khẩu hợp lệ (>=6 ký tự, không khoảng trắng). */
     public static boolean isValidPassword(String password) {
@@ -35,7 +36,7 @@ public class UserFactory {
 
     /** Tạo user mới với ID "USRxxxx". */
     public static User createUser(String username, String password) {
-        String id = "USR" + String.format("%04d", ++userCounter);
+        String id = "USR" + String.format("%04d", userCounter.incrementAndGet());
         return new Model.User(id, username, password);
     }
 }
