@@ -177,4 +177,35 @@ public class UserDAO {
         }
         return userId;
     }
+
+    /** Lấy đường dẫn ảnh đại diện. */
+    public String getAvatarPath(String userId) {
+        String sql = "SELECT avatar_path FROM users WHERE id = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("avatar_path");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    /** Cập nhật đường dẫn ảnh đại diện. */
+    public boolean updateAvatarPath(String userId, String avatarPath) {
+        String sql = "UPDATE users SET avatar_path = ? WHERE id = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, avatarPath);
+            stmt.setString(2, userId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

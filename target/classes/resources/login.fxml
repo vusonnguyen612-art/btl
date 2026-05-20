@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.paint.*?>
+<?import javafx.scene.text.*?>
+
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.logincontroller">
+   <children>
+      <SplitPane dividerPositions="0.48" prefHeight="400.0" prefWidth="600.0">
+         <items>
+            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="400.0" prefWidth="288.0" style="-fx-background-color: linear-gradient(to bottom right, #141414, #2e2417);">
+               <children>
+                  <StackPane layoutX="-2.0" layoutY="-1.0" prefHeight="400.0" prefWidth="291.0">
+                     <children>
+                        <ImageView fitHeight="398.0" fitWidth="288.0" pickOnBounds="true" preserveRatio="true">
+                           <image>
+                              <Image url="/image/auction_money_coin_long.gif" />
+                           </image>
+                        </ImageView>
+                     </children>
+                  </StackPane>
+               </children>
+            </AnchorPane>
+            <AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="400.0" prefWidth="312.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;">
+               <children>
+                  <Label alignment="CENTER" layoutX="14.0" layoutY="38.0" prefHeight="52.0" prefWidth="262.0" text="ĐĂNG NHẬP">
+                     <font>
+                        <Font name="Arial Bold" size="30.0" />
+                     </font>
+                     <textFill>
+                        <LinearGradient endX="1.0" endY="1.0" startX="0.1" startY="0.2">
+                           <stops>
+                              <Stop>
+                                 <color>
+                                    <Color red="0.8313725591" green="0.6862745285" blue="0.3529411852" />
+                                 </color>
+                              </Stop>
+                              <Stop offset="1.0">
+                                 <color>
+                                    <Color red="1.0" green="1.0" blue="1.0" />
+                                 </color>
+                              </Stop>
+                           </stops>
+                        </LinearGradient>
+                     </textFill>
+                  </Label>
+                  <TextField fx:id="loginUsernameField" layoutX="14.0" layoutY="131.0" prefHeight="38.0" prefWidth="262.0" promptText="Username" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-text-fill: white; -fx-prompt-text-fill: #a6a6a6;" />
+                  <PasswordField fx:id="loginPasswordField" layoutX="14.0" layoutY="188.0" prefHeight="38.0" prefWidth="262.0" promptText="Mật khẩu" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-text-fill: white; -fx-prompt-text-fill: #a6a6a6;" />
+                  <Button layoutX="14.0" layoutY="252.0" mnemonicParsing="false" onAction="#Login" prefHeight="38.0" prefWidth="262.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Đăng nhập">
+                     <font>
+                        <Font size="17.0" />
+                     </font>
+                  </Button>
+                  <Label fx:id="messageLabel" alignment="CENTER" layoutX="14.0" layoutY="301.0" prefHeight="41.0" prefWidth="262.0" textFill="#eacd8f" wrapText="true" />
+                  <Label layoutX="43.0" layoutY="349.0" text="Nếu chưa có tài khoản?" textFill="#eacd8f" />
+                  <Button layoutX="170.0" layoutY="345.0" mnemonicParsing="false" onAction="#ComeSignup" prefHeight="26.0" prefWidth="88.0" style="-fx-background-color: #d9b15f; -fx-background-radius: 30;" text="Đăng ký" textFill="WHITE">
+                     <font>
+                        <Font name="System Bold" size="12.0" />
+                     </font>
+                  </Button>
+               </children>
+            </AnchorPane>
+         </items>
+      </SplitPane>
+   </children>
+</AnchorPane>

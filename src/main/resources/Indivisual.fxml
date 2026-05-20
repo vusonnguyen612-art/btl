@@ -25,11 +25,16 @@
                   <Insets top="10.0" />
                </padding>
                <children>
-                  <ImageView fitHeight="136.0" fitWidth="123.0" pickOnBounds="true" preserveRatio="true">
-                     <image>
-                        <Image url="@../../../image/images.jpg" />
-                     </image></ImageView>
-                  <Label fx:id="Name" alignment="CENTER" contentDisplay="CENTER" prefHeight="62.0" prefWidth="182.0" text="Nguyễn Duy Quang" textAlignment="CENTER" textFill="#eacd8f" wrapText="true">
+                   <ImageView fx:id="avatarImageView" fitHeight="136.0" fitWidth="123.0" pickOnBounds="true" preserveRatio="true">
+                      <image>
+                         <Image url="/image/images.jpg" />
+                      </image></ImageView>
+                   <Button fx:id="changeAvatarButton" mnemonicParsing="false" onAction="#changeAvatar" prefHeight="30.0" prefWidth="123.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 15;" text="Đổi ảnh">
+                      <font>
+                         <Font size="11.0" />
+                      </font>
+                   </Button>
+                   <Label fx:id="Name" alignment="CENTER" contentDisplay="CENTER" prefHeight="62.0" prefWidth="182.0" text="Nguyễn Duy Quang" textAlignment="CENTER" textFill="#eacd8f" wrapText="true">
                      <font>
                         <Font name="Arial Bold" size="20.0" />
                      </font>
