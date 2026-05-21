@@ -105,7 +105,7 @@ public class CreateItemsController implements UserController.LinkedController {
         tenSanPham.setText(item.getName());
         giaKhoiDau.setText(String.valueOf((long) item.getStartPrice()));
         moTa.setText(item.getDescription());
-        categoryComboBox.setValue(item.getCategory());
+        categoryComboBox.setValue(mapCategoryToVietnamese(item.getCategory()));
         categoryComboBox.setDisable(true);
 
         thoiGianLabel.setVisible(false);
@@ -129,8 +129,8 @@ public class CreateItemsController implements UserController.LinkedController {
     /** Khởi tạo ComboBox danh mục và giá trị mặc định. */
     private void initialize() {
         thoiGianDauGia.setText("60");
-        categoryComboBox.getItems().addAll("Art", "Electronics", "Vehicle", "Fashion", "Books", "Sports", "Jewelry", "Music", "Furniture");
-        categoryComboBox.setValue("Art");
+        categoryComboBox.getItems().addAll("Nghệ thuật", "Điện tử", "Xe cộ", "Thời trang", "Sách", "Thể thao", "Trang sức", "Âm nhạc", "Nội thất");
+        categoryComboBox.setValue("Nghệ thuật");
     }
 
     @FXML
@@ -296,7 +296,7 @@ public class CreateItemsController implements UserController.LinkedController {
                 return;
             }
 
-            String category = categoryComboBox.getValue();
+            String category = mapCategoryToEnglish(categoryComboBox.getValue());
             Item item = ItemFactory.createItem(category, ten, Mota, gia.doubleValue(), currentUser.getId());
             item.setSellerId(currentUser.getId());
             if (selectedImageFile != null) {
@@ -332,6 +332,48 @@ public class CreateItemsController implements UserController.LinkedController {
         } catch (NumberFormatException e) {
             showWarning("Lỗi", "Giá không hợp lệ.");
         }
+    }
+
+    /**
+     * Chuyển đổi tên danh mục từ tiếng Việt sang mã tiếng Anh tương ứng để lưu trữ trong database.
+     *
+     * @param vietnamese Tên danh mục tiếng Việt từ giao diện.
+     * @return Mã danh mục tiếng Anh chuẩn hoặc giá trị gốc nếu không khớp.
+     */
+    private String mapCategoryToEnglish(String vietnamese) {
+        return switch (vietnamese) {
+            case "Nghệ thuật" -> "ART";
+            case "Điện tử" -> "ELECTRONICS";
+            case "Xe cộ" -> "VEHICLE";
+            case "Thời trang" -> "FASHION";
+            case "Sách" -> "BOOKS";
+            case "Thể thao" -> "SPORTS";
+            case "Trang sức" -> "JEWELRY";
+            case "Âm nhạc" -> "MUSIC";
+            case "Nội thất" -> "FURNITURE";
+            default -> vietnamese;
+        };
+    }
+
+    /**
+     * Chuyển đổi mã danh mục tiếng Anh từ database sang tên tiếng Việt tương ứng để hiển thị trên giao diện.
+     *
+     * @param english Mã danh mục tiếng Anh từ database.
+     * @return Tên danh mục tiếng Việt tương ứng hoặc giá trị gốc nếu không khớp.
+     */
+    private String mapCategoryToVietnamese(String english) {
+        return switch (english.toUpperCase()) {
+            case "ART" -> "Nghệ thuật";
+            case "ELECTRONICS" -> "Điện tử";
+            case "VEHICLE" -> "Xe cộ";
+            case "FASHION" -> "Thời trang";
+            case "BOOKS" -> "Sách";
+            case "SPORTS" -> "Thể thao";
+            case "JEWELRY" -> "Trang sức";
+            case "MUSIC" -> "Âm nhạc";
+            case "FURNITURE" -> "Nội thất";
+            default -> english;
+        };
     }
 
     private String saveSelectedImage(String itemId) throws IOException {

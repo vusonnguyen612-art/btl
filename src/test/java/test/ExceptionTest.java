@@ -43,4 +43,15 @@ class ExceptionTest {
         assertEquals("USR001", e.getUserId());
         assertEquals("DELETE_ITEM", e.getAction());
     }
+
+    @Test
+    void testInsufficientBalanceException() {
+        java.math.BigDecimal balance = java.math.BigDecimal.valueOf(150.0);
+        java.math.BigDecimal bidAmount = java.math.BigDecimal.valueOf(200.0);
+        InsufficientBalanceException e = new InsufficientBalanceException("Số dư không đủ", "USR001", balance, bidAmount);
+        assertEquals("Số dư không đủ", e.getMessage());
+        assertEquals("USR001", e.getUserId());
+        assertEquals(balance, e.getBalance());
+        assertEquals(bidAmount, e.getBidAmount());
+    }
 }
