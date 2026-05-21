@@ -59,6 +59,16 @@
                         <Font size="16.0" />
                      </font>
                   </ToggleButton>
+                  <ToggleButton fx:id="WatchlistButton" mnemonicParsing="false" prefHeight="41.0" prefWidth="144.0" style="-fx-background-color: #1E1E1D; -fx-text-fill: #eacd8f;" text="Theo dõi">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </ToggleButton>
+                  <ToggleButton fx:id="ThongkeButton" mnemonicParsing="false" prefHeight="41.0" prefWidth="144.0" style="-fx-background-color: #1E1E1D; -fx-text-fill: #eacd8f;" text="Thống kê">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </ToggleButton>
                   <ToggleButton fx:id="CaidatButton" mnemonicParsing="false" prefHeight="42.0" prefWidth="145.0" style="-fx-background-color: #1E1E1D; -fx-text-fill: #eacd8f;" text="Cài đặt">
                      <font>
                         <Font size="16.0" />
@@ -75,6 +85,8 @@
                     <fx:include fx:id="LichsudaugiaPane" source="panes/lichsudaugia_pane.fxml"/>
                     <fx:include fx:id="NaptienPane" source="panes/naptien_pane.fxml"/>
                     <fx:include fx:id="CaidatPane" source="panes/caidat_pane.fxml"/>
+                    <fx:include fx:id="WatchlistPane" source="panes/watchlist_pane.fxml"/>
+                    <fx:include fx:id="ThongkePane" source="panes/thongke_pane.fxml"/>
                 </children>
              </StackPane>
          </center>

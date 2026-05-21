@@ -1,5 +1,6 @@
 package Controller;
 
+import Model.AuctionSession;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -25,6 +26,7 @@ import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
+import Model.Item;
 import Model.User;
 import Network.Message;
 import Network.NetworkService;
@@ -80,6 +82,24 @@ public class UserController {
     private CaidatPaneController CaidatPaneController;
 
     @FXML
+    private ToggleButton WatchlistButton;
+
+    @FXML
+    private ToggleButton ThongkeButton;
+
+    @FXML
+    private AnchorPane WatchlistPane;
+
+    @FXML
+    private AnchorPane ThongkePane;
+
+    @FXML
+    private WatchlistPaneController WatchlistPaneController;
+
+    @FXML
+    private ThongkePaneController ThongkePaneController;
+
+    @FXML
     private ImageView avatarImageView;
 
     private ToggleGroup menuGroup = new ToggleGroup();
@@ -107,6 +127,8 @@ public class UserController {
         connectChildController(LichsudaugiaPaneController);
         connectChildController(NaptienPaneController);
         connectChildController(CaidatPaneController);
+        connectChildController(WatchlistPaneController);
+        connectChildController(ThongkePaneController);
 
         setupMenuButtons();
         setupDefaultScreen();
@@ -120,6 +142,8 @@ public class UserController {
         bindMenuButton(KhoButton, KhoPane);
         bindMenuButton(NaptienButton, NaptienPane);
         bindMenuButton(BidHistory, LichsudaugiaPane);
+        bindMenuButton(WatchlistButton, WatchlistPane);
+        bindMenuButton(ThongkeButton, ThongkePane);
         bindMenuButton(CaidatButton, CaidatPane);
     }
 
@@ -154,7 +178,9 @@ public class UserController {
                 KhoPane,
                 NaptienPane,
                 LichsudaugiaPane,
-                CaidatPane
+                CaidatPane,
+                WatchlistPane,
+                ThongkePane
         };
 
         for (AnchorPane pane : panes) {
@@ -170,6 +196,12 @@ public class UserController {
             if (paneToShow == LichsudaugiaPane && LichsudaugiaPaneController != null) {
                 LichsudaugiaPaneController.loadBidHistory();
             }
+            if (paneToShow == WatchlistPane && WatchlistPaneController != null) {
+                WatchlistPaneController.loadWatchlist();
+            }
+            if (paneToShow == ThongkePane && ThongkePaneController != null) {
+                ThongkePaneController.loadStatistics();
+            }
         }
     }
 
@@ -179,6 +211,8 @@ public class UserController {
                 KhoButton,
                 NaptienButton,
                 BidHistory,
+                WatchlistButton,
+                ThongkeButton,
                 CaidatButton
         };
 
@@ -205,12 +239,24 @@ public class UserController {
 
     @FXML
     public void openAuctionRoom(ActionEvent event) {
+        openAuctionRoomForAuction(null);
+    }
+
+    /**
+     * Mở màn hình phòng đấu giá cho một phiên đấu giá cụ thể (nếu có).
+     *
+     * @param auctionToSelect Phiên đấu giá cần được chọn tự động khi vào phòng, hoặc {@code null} nếu không chọn sẵn phiên nào.
+     */
+    public void openAuctionRoomForAuction(AuctionSession auctionToSelect) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/auctionRoom.fxml"));
             Parent root = loader.load();
 
             AuctionRoomController auctionRoomController = loader.getController();
             auctionRoomController.setCurrentUser(currentUser);
+            if (auctionToSelect != null) {
+                auctionRoomController.selectAuction(auctionToSelect);
+            }
 
             Stage stage = new Stage();
             stage.setTitle("Phong Dau Gia");
@@ -263,6 +309,39 @@ public class UserController {
         openModalFXML(CREATE_ITEM_FXML, "Tạo sản phẩm");
         if (TrangchuPaneController != null) TrangchuPaneController.loadHomeItems();
         if (KhoPaneController != null) KhoPaneController.loadWarehouseItems();
+    }
+
+    /**
+     * Mở hộp thoại phương thức (Modal Dialog) chỉnh sửa vật phẩm đã chọn.
+     *
+     * @param item Vật phẩm cần chỉnh sửa thông tin.
+     */
+    public void editItem(Item item) {
+        try {
+            URL resourceUrl = getClass().getResource(CREATE_ITEM_FXML);
+            if (resourceUrl == null) {
+                resourceUrl = Thread.currentThread().getContextClassLoader().getResource(
+                        CREATE_ITEM_FXML.startsWith("/") ? CREATE_ITEM_FXML.substring(1) : CREATE_ITEM_FXML
+                );
+            }
+            FXMLLoader loader = new FXMLLoader(resourceUrl);
+            Parent root = loader.load();
+            CreateItemsController createController = loader.getController();
+            connectChildController(createController);
+            createController.setEditMode(item);
+
+            Stage stage = new Stage();
+            stage.setTitle("Chỉnh sửa sản phẩm");
+            stage.setScene(new Scene(root));
+            stage.initOwner(getCurrentStage());
+            stage.initModality(Modality.WINDOW_MODAL);
+            stage.showAndWait();
+
+            if (TrangchuPaneController != null) TrangchuPaneController.loadHomeItems();
+            if (KhoPaneController != null) KhoPaneController.loadWarehouseItems();
+        } catch (Exception e) {
+            showError("Lỗi", "Không thể mở chỉnh sửa: " + e.getMessage());
+        }
     }
 
     public void doitaikhoan(ActionEvent event) {

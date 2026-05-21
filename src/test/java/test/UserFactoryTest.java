@@ -2,6 +2,7 @@ package test;
 
 import Factory.UserFactory;
 import Model.User;
+import Model.Admin;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -82,5 +83,15 @@ class UserFactoryTest {
     void testCreateUser_HasInitialBalance() {
         User user = UserFactory.createUser("testuser", "password123");
         assertEquals(300000, user.getBalance().doubleValue(), 0.001);
+    }
+
+    @Test
+    void testCreateAdmin_GeneratesCorrectId() {
+        Admin admin = UserFactory.createAdmin("testadmin", "password123");
+        assertNotNull(admin);
+        assertEquals("testadmin", admin.getUsername());
+        assertTrue(admin.getId().startsWith("ADM"));
+        assertEquals("ADMIN", admin.getRole());
+        assertTrue(admin.isAdmin());
     }
 }

@@ -1,6 +1,7 @@
 package DAO;
 
 import Model.User;
+import Model.Admin;
 import Exception.AuthenticationException;
 import java.math.BigDecimal;
 import java.sql.*;
@@ -106,11 +107,16 @@ public class UserDAO {
     }
 
     private User mapResultSetToUser(ResultSet rs) throws SQLException {
-        User user = new User(
-                rs.getString("id"),
-                rs.getString("username"),
-                rs.getString("password")
-        );
+        String id = rs.getString("id");
+        String username = rs.getString("username");
+        String password = rs.getString("password");
+        
+        User user;
+        if (id != null && id.startsWith("ADM")) {
+            user = new Admin(id, username, password);
+        } else {
+            user = new User(id, username, password);
+        }
         user.setEmail(rs.getString("email"));
         user.setBalance(rs.getBigDecimal("balance"));
         return user;

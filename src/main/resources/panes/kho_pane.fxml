@@ -17,7 +17,7 @@
       </Button>
       <ScrollPane fx:id="khoScrollPane" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" style="-fx-background-color: transparent; -fx-border-color: transparent;" focusTraversable="true" AnchorPane.bottomAnchor="8.0" AnchorPane.leftAnchor="8.0" AnchorPane.rightAnchor="8.0" AnchorPane.topAnchor="90.0">
          <content>
-            <FlowPane fx:id="Items" hgap="10" vgap="10" prefWrapLength="660" style="-fx-background-color: #1E1E1D;" />
+            <FlowPane fx:id="Items" hgap="10" vgap="10" style="-fx-background-color: #1E1E1D;" />
          </content>
       </ScrollPane>
       <Label alignment="CENTER" prefHeight="66.0" prefWidth="142.0" style="-fx-text-fill: #eacd8f;" text="Sản phẩm" AnchorPane.leftAnchor="25.0" AnchorPane.topAnchor="15.0">

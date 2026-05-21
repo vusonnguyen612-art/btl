@@ -91,7 +91,7 @@ public class TrangchuPaneController implements UserController.LinkedController {
                     Label headerLabel = new Label("Sản phẩm đấu giá");
                     headerLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 20px; -fx-font-weight: bold;");
                     headerLabel.setPadding(new Insets(0, 0, 10, 0));
-                    headerLabel.setPrefWidth(660);
+                    headerLabel.prefWidthProperty().bind(AllItems.widthProperty());
                     AllItems.getChildren().add(headerLabel);
 
                     List<Item> runningItems = new ArrayList<>();
@@ -200,7 +200,7 @@ public class TrangchuPaneController implements UserController.LinkedController {
         Label headerLabel = new Label("Kết quả tìm kiếm (" + results.size() + ")");
         headerLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 20px; -fx-font-weight: bold;");
         headerLabel.setPadding(new Insets(0, 0, 10, 0));
-        headerLabel.setPrefWidth(660);
+        headerLabel.prefWidthProperty().bind(AllItems.widthProperty());
         AllItems.getChildren().add(headerLabel);
 
         for (AuctionSession auction : results) {

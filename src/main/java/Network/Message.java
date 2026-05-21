@@ -39,7 +39,12 @@ public class Message implements Serializable {
         SUCCESS,
         GET_USER_BID_HISTORY,
         UPDATE_AVATAR,
-        GET_AVATAR
+        GET_AVATAR,
+        SEND_CHAT_MESSAGE,
+        GET_CHAT_HISTORY,
+        ADD_WATCHLIST,
+        REMOVE_WATCHLIST,
+        GET_WATCHLIST
     }
 
     private Type type;

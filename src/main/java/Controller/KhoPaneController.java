@@ -79,7 +79,7 @@ public class KhoPaneController implements UserController.LinkedController {
                 Label headerLabel = new Label("Phiên đấu giá của bạn");
                 headerLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 18px; -fx-font-weight: bold;");
                 headerLabel.setPadding(new javafx.geometry.Insets(0, 0, 10, 0));
-                headerLabel.setPrefWidth(660);
+                headerLabel.prefWidthProperty().bind(Items.widthProperty());
                 Items.getChildren().add(headerLabel);
 
                 boolean hasAuctions = false;
@@ -95,7 +95,7 @@ public class KhoPaneController implements UserController.LinkedController {
                     Label noAuctionLabel = new Label("Chưa tạo phiên đấu giá. Nhấn 'Tạo sản phẩm để bắt đầu.");
                     noAuctionLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 14px;");
                     noAuctionLabel.setPadding(new javafx.geometry.Insets(10, 0, 10, 0));
-                    noAuctionLabel.setPrefWidth(660);
+                    noAuctionLabel.prefWidthProperty().bind(Items.widthProperty());
                     Items.getChildren().add(noAuctionLabel);
                 }
             }
@@ -124,6 +124,11 @@ public class KhoPaneController implements UserController.LinkedController {
             boolean canStart = auction.isOpen();
 
             controller.setAuction(auction, isRunning, canStart);
+            controller.setOnSelectAuction(() -> {
+                if (userController != null) {
+                    userController.openAuctionRoomForAuction(auction);
+                }
+            });
             controller.setOnStartAuction(() -> {
                 Message response = networkService.startAuction(auction.getId());
                 if (response.getType() == Message.Type.SUCCESS) {
@@ -132,6 +137,11 @@ public class KhoPaneController implements UserController.LinkedController {
                     if (userController != null) userController.refreshHomeItems();
                 } else {
                     userController.showError("Lỗi", "Không thể bắt đầu phiên đấu giá.");
+                }
+            });
+            controller.setOnEditAuction(() -> {
+                if (userController != null && auction.getItem() != null) {
+                    userController.editItem(auction.getItem());
                 }
             });
 
