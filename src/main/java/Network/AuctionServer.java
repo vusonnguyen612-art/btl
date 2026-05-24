@@ -392,8 +392,9 @@ public class AuctionServer {
                 }
                 Item item = itemOpt.get();
 
+                String auctionId = "AUC" + System.currentTimeMillis() + "_" + String.format("%03d", (int)(Math.random() * 1000));
                 AuctionSession auction = new AuctionSession(
-                    "AUC" + System.currentTimeMillis(),
+                    auctionId,
                     item,
                     currentUser.getId(),
                     item.getStartPrice(),
@@ -530,8 +531,8 @@ public class AuctionServer {
                 List<AutoBid> bids = autoBids.computeIfAbsent(auctionId, k -> new ArrayList<>());
                 bids.removeIf(ab -> ab.getUserId().equals(currentUser.getId()));
                 bids.add(new AutoBid(currentUser.getId(), auctionId, maxAmount, increment));
+                processAutoBids(auctionId);
             }
-            processAutoBids(auctionId);
             Message response = new Message(Message.Type.SUCCESS);
             response.setContent("AutoBid set");
             return response;
@@ -554,95 +555,98 @@ public class AuctionServer {
             return response;
         }
 
-        /** Xử lý AutoBid theo second-price logic: tìm người tự động trả cao nhất và đặt giá phù hợp. */
+        /** Xử lý AutoBid theo second-price logic 1 lần duy nhất (không loop). */
         private void processAutoBids(String auctionId) {
             System.out.println("[AutoBid] processAutoBids called for auction: " + auctionId);
-            int maxIterations = 100;
-            for (int i = 0; i < maxIterations; i++) {
-                Optional<AuctionSession> auctionOpt = auctionDAO.findAuctionById(auctionId);
-                if (!auctionOpt.isPresent()) {
-                    System.out.println("[AutoBid] Auction not found, breaking");
+
+            // 1. Đọc trạng thái hiện tại của phiên
+            Optional<AuctionSession> auctionOpt = auctionDAO.findAuctionById(auctionId);
+            if (!auctionOpt.isPresent() || !auctionOpt.get().isRunning()) {
+                System.out.println("[AutoBid] Auction not found or not running");
+                return;
+            }
+
+            AuctionSession auction = auctionOpt.get();
+            double currentPrice = auction.getCurrentPrice();
+            String highestBidderId = auction.getHighestBidderId();
+
+            // 2. Lấy danh sách AutoBid
+            List<AutoBid> candidates;
+            synchronized (autoBidLock) {
+                List<AutoBid> bids = autoBids.get(auctionId);
+                if (bids == null || bids.isEmpty()) {
+                    System.out.println("[AutoBid] No auto-bids found");
+                    return;
+                }
+                candidates = new ArrayList<>(bids);
+            }
+
+            // 3. Sắp xếp giảm dần theo giá trần (maxAmount)
+            candidates.sort(Comparator.comparingDouble(AutoBid::getMaxAmount).reversed());
+            System.out.println("[AutoBid] Found " + candidates.size() + " auto-bid(s)");
+
+            // 4. Tìm người có maxAmount cao nhất (và không phải người đang thắng)
+            AutoBid best = null;
+            for (AutoBid ab : candidates) {
+                boolean notWinner = !ab.getUserId().equals(highestBidderId);
+                boolean canOutbid = ab.getMaxAmount() > currentPrice;
+                System.out.println("[AutoBid] Candidate userId=" + ab.getUserId()
+                    + " max=" + ab.getMaxAmount() + " notWinner=" + notWinner + " canOutbid=" + canOutbid);
+                if (notWinner && canOutbid) {
+                    best = ab;
                     break;
                 }
-                AuctionSession auction = auctionOpt.get();
-                if (!auction.isRunning()) {
-                    System.out.println("[AutoBid] Auction not running, breaking");
-                    break;
+            }
+            if (best == null) {
+                System.out.println("[AutoBid] No eligible auto-bidder found");
+                return;
+            }
+
+            // 5. Tìm maxAmount cao thứ 2 (second-price)
+            double secondMax = 0;
+            for (AutoBid ab : candidates) {
+                if (!ab.getUserId().equals(best.getUserId())) {
+                    secondMax = Math.max(secondMax, ab.getMaxAmount());
                 }
+            }
+            System.out.println("[AutoBid] Best=" + best.getUserId() + " (max=" + best.getMaxAmount()
+                + ") secondMax=" + secondMax + " currentPrice=" + currentPrice);
 
-                double currentPrice = auction.getCurrentPrice();
-                String highestBidderId = auction.getHighestBidderId();
-                System.out.println("[AutoBid] Iteration " + i + ": currentPrice=" + currentPrice + ", highestBidderId=" + highestBidderId);
+            // 6. Tính giá trong 1 lần duy nhất
+            double increment = best.getIncrement();
+            double bidAmount;
 
-                List<AutoBid> candidates;
-                synchronized (autoBidLock) {
-                    List<AutoBid> bids = autoBids.get(auctionId);
-                    if (bids == null || bids.isEmpty()) {
-                        System.out.println("[AutoBid] No auto-bids found for this auction");
-                        return;
+            if (secondMax > 0) {
+                // Second-Price: chỉ trả = người thứ 2 + increment, nhưng không quá max của mình
+                bidAmount = Math.min(best.getMaxAmount(), secondMax + increment);
+            } else {
+                // Chỉ 1 người dùng AutoBid: trả = currentPrice + increment
+                bidAmount = currentPrice + increment;
+            }
+
+            // Đảm bảo bidAmount > currentPrice và <= max
+            if (bidAmount <= currentPrice) {
+                bidAmount = Math.min(currentPrice + increment, best.getMaxAmount());
+            }
+            if (bidAmount <= currentPrice || bidAmount > best.getMaxAmount()) {
+                System.out.println("[AutoBid] Invalid bidAmount=" + bidAmount + ", returning");
+                return;
+            }
+
+            // 7. Đặt giá 1 lần duy nhất
+            System.out.println("[AutoBid] Placing ONE-SHOT bid: userId=" + best.getUserId()
+                + " amount=" + bidAmount);
+            try {
+                boolean placed = auctionDAO.placeBid(auctionId, best.getUserId(), bidAmount);
+                System.out.println("[AutoBid] placeBid " + (placed ? "SUCCESS" : "FAILED"));
+            } catch (AuctionClosedException | InvalidBidException
+                    | InsufficientBalanceException | UnauthorizedException e) {
+                System.err.println("[AutoBid] Error: " + e.getMessage());
+                if (e instanceof InsufficientBalanceException) {
+                    synchronized (autoBidLock) {
+                        List<AutoBid> bids = autoBids.get(auctionId);
+                        if (bids != null) bids.remove(best);
                     }
-                    candidates = new ArrayList<>(bids);
-                }
-
-                candidates.sort(Comparator.comparingDouble(AutoBid::getMaxAmount).reversed());
-                System.out.println("[AutoBid] Found " + candidates.size() + " auto-bid(s)");
-
-                AutoBid best = null;
-                for (AutoBid ab : candidates) {
-                    boolean notWinner = !ab.getUserId().equals(highestBidderId);
-                    boolean canOutbid = ab.getMaxAmount() > currentPrice;
-                    System.out.println("[AutoBid] Candidate userId=" + ab.getUserId() + " max=" + ab.getMaxAmount() + " inc=" + ab.getIncrement() + " notWinner=" + notWinner + " canOutbid=" + canOutbid);
-                    if (notWinner && canOutbid) {
-                        best = ab;
-                        break;
-                    }
-                }
-                if (best == null) {
-                    System.out.println("[AutoBid] No eligible auto-bidder found");
-                    return;
-                }
-
-                double inc = best.getIncrement();
-                double bidAmount = currentPrice + inc;
-                System.out.println("[AutoBid] Best: userId=" + best.getUserId() + " max=" + best.getMaxAmount() + " inc=" + inc + " bidAmount=" + bidAmount);
-                if (bidAmount > best.getMaxAmount()) {
-                    System.out.println("[AutoBid] bidAmount exceeds max, returning");
-                    return;
-                }
-
-                if (candidates.size() > 1) {
-                    double secondMax = 0;
-                    for (AutoBid ab : candidates) {
-                        if (!ab.getUserId().equals(best.getUserId())) {
-                            secondMax = Math.max(secondMax, ab.getMaxAmount());
-                        }
-                    }
-                    if (secondMax > 0) {
-                        double maxNeeded = Math.min(secondMax + inc, best.getMaxAmount());
-                        System.out.println("[AutoBid] Second-price logic: secondMax=" + secondMax + " maxNeeded=" + maxNeeded);
-                        if (bidAmount > maxNeeded) bidAmount = maxNeeded;
-                    }
-                }
-                System.out.println("[AutoBid] Placing auto-bid: userId=" + best.getUserId() + " amount=" + bidAmount);
-
-                try {
-                    boolean placed = auctionDAO.placeBid(auctionId, best.getUserId(), bidAmount);
-                    if (!placed) {
-                        System.out.println("[AutoBid] placeBid FAILED");
-                        return;
-                    }
-                    System.out.println("[AutoBid] placeBid SUCCESS");
-                } catch (AuctionClosedException | InvalidBidException | InsufficientBalanceException | UnauthorizedException e) {
-                    System.err.println("[AutoBid] Error placing auto-bid: " + e.getMessage());
-                    if (e instanceof InsufficientBalanceException) {
-                        synchronized (autoBidLock) {
-                            List<AutoBid> bids = autoBids.get(auctionId);
-                            if (bids != null) {
-                                bids.remove(best);
-                            }
-                        }
-                    }
-                    return;
                 }
             }
         }
@@ -673,31 +677,34 @@ public class AuctionServer {
                 return createErrorMessage("Not logged in");
             }
             String auctionId = message.getAuctionId();
-            Optional<AuctionSession> auctionOpt = auctionDAO.findAuctionById(auctionId);
-            if (!auctionOpt.isPresent()) {
-                return createErrorMessage("Auction not found");
-            }
-            if (!auctionOpt.get().getSellerId().equals(currentUser.getId())) {
-                return createErrorMessage("Only the seller can stop this auction");
-            }
-            boolean success = auctionDAO.stopAuction(auctionId);
-            if (success) {
-                AuctionSession auction = auctionOpt.get();
-                String itemName = auction.getItem() != null ? auction.getItem().getName() : auctionId;
-                Message notification = new Message(Message.Type.NOTIFICATION);
-                notification.setContent("Phiên đấu giá \"" + itemName + "\" đã được người bán gia hạn thêm 5 phút!");
-                notification.setAuctionId(auctionId);
-                for (Map.Entry<String, ClientHandler> entry : activeClients.entrySet()) {
-                    String uid = entry.getKey();
-                    if (!uid.equals(currentUser.getId())) {
-                        pendingNotifications.computeIfAbsent(uid, k -> new ArrayList<>()).add(notification);
-                    }
+            AuctionSession auction;
+            synchronized (auctionDAO) {
+                Optional<AuctionSession> auctionOpt = auctionDAO.findAuctionById(auctionId);
+                if (!auctionOpt.isPresent()) {
+                    return createErrorMessage("Auction not found");
                 }
-                Message response = new Message(Message.Type.SUCCESS);
-                response.setContent("Auction stopped, 5 minutes remaining");
-                return response;
+                if (!auctionOpt.get().getSellerId().equals(currentUser.getId())) {
+                    return createErrorMessage("Only the seller can stop this auction");
+                }
+                auction = auctionOpt.get();
+                boolean success = auctionDAO.stopAuction(auctionId);
+                if (!success) {
+                    return createErrorMessage("Failed to stop auction");
+                }
             }
-            return createErrorMessage("Failed to stop auction");
+            String itemName = auction.getItem() != null ? auction.getItem().getName() : auctionId;
+            Message notification = new Message(Message.Type.NOTIFICATION);
+            notification.setContent("Phiên đấu giá \"" + itemName + "\" đã được người bán gia hạn thêm 5 phút!");
+            notification.setAuctionId(auctionId);
+            for (Map.Entry<String, ClientHandler> entry : activeClients.entrySet()) {
+                String uid = entry.getKey();
+                if (!uid.equals(currentUser.getId())) {
+                    pendingNotifications.computeIfAbsent(uid, k -> new ArrayList<>()).add(notification);
+                }
+            }
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setContent("Auction stopped, 5 minutes remaining");
+            return response;
         }
 
         /** Xử lý thanh toán (chỉ người thắng mới được phép). */

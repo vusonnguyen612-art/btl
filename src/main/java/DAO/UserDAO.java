@@ -6,18 +6,21 @@ import Exception.AuthenticationException;
 import java.math.BigDecimal;
 import java.sql.*;
 import java.util.Optional;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 /** DAO cho bảng users: đăng ký, đăng nhập, xác thực, quản lý số dư. */
 public class UserDAO {
 
     /** Đăng ký người dùng mới vào bảng users. */
     public boolean register(User user) {
+        String hashedPassword = hashPassword(user.getPassword());
         String sql = "INSERT INTO users (id, username, password, email, is_seller, is_bidder) VALUES (?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, user.getId());
             stmt.setString(2, user.getUsername());
-            stmt.setString(3, user.getPassword());
+            stmt.setString(3, hashedPassword);
             stmt.setString(4, user.getEmail());
             stmt.setBoolean(5, user.isSeller());
             stmt.setBoolean(6, user.isBidder());
@@ -33,11 +36,12 @@ public class UserDAO {
 
     /** Đăng nhập với username/password, trả về Optional<User>. */
     public Optional<User> login(String username, String password) {
+        String hashedPassword = hashPassword(password);
         String sql = "SELECT * FROM users WHERE BINARY username = ? AND BINARY password = ?";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, username);
-            stmt.setString(2, password);
+            stmt.setString(2, hashedPassword);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return Optional.of(mapResultSetToUser(rs));
@@ -92,12 +96,14 @@ public class UserDAO {
 
     /** Đổi mật khẩu (yêu cầu mật khẩu cũ). */
     public boolean changePassword(String username, String oldPassword, String newPassword) {
+        String hashedNew = hashPassword(newPassword);
+        String hashedOld = hashPassword(oldPassword);
         String sql = "UPDATE users SET password = ? WHERE BINARY username = ? AND BINARY password = ?";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, newPassword);
+            stmt.setString(1, hashedNew);
             stmt.setString(2, username);
-            stmt.setString(3, oldPassword);
+            stmt.setString(3, hashedOld);
             int rows = stmt.executeUpdate();
             return rows > 0;
         } catch (SQLException e) {
@@ -212,6 +218,22 @@ public class UserDAO {
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    /** Hash mật khẩu bằng SHA-256 + salt cố định, không lưu plain text. */
+    private String hashPassword(String password) {
+        try {
+            String salted = "AuCtIoNaPpSaLt!#" + password;
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(salted.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("SHA-256 not available", e);
         }
     }
 }

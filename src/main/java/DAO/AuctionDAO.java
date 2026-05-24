@@ -37,7 +37,7 @@ public class AuctionDAO {
      * @throws InsufficientBalanceException Ném ra nếu số dư tài khoản người mua nhỏ hơn số tiền đặt giá.
      * @throws UnauthorizedException        Ném ra nếu người bán tự đặt giá cho sản phẩm của mình.
      */
-    public boolean placeBid(String auctionId, String bidderId, double amount)
+    public synchronized boolean placeBid(String auctionId, String bidderId, double amount)
             throws AuctionClosedException, InvalidBidException, InsufficientBalanceException, UnauthorizedException {
         // 1. Kiểm tra sự tồn tại của phiên đấu giá
         AuctionSession session = findAuctionById(auctionId).orElseThrow(() -> 
@@ -78,37 +78,45 @@ public class AuctionDAO {
             throw new InsufficientBalanceException("Số dư tài khoản không đủ để thực hiện đặt giá.", bidderId, balance, bidAmount);
         }
 
-        String sql = "INSERT INTO bids (id, auction_id, bidder_id, amount, timestamp) VALUES (?, ?, ?, ?, NOW())";
-        try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        // 8. Ghi nhận bid + cập nhật giá trong 1 transaction (atomic)
+        Connection conn = null;
+        try {
+            conn = DatabaseUtil.getConnection();
+            conn.setAutoCommit(false);
+
             String bidId = "BID" + System.currentTimeMillis() + (int)(Math.random() * 1000);
-            stmt.setString(1, bidId);
-            stmt.setString(2, auctionId);
-            stmt.setString(3, bidderId);
-            stmt.setDouble(4, amount);
-            
-            int rows = stmt.executeUpdate();
-            
-            if (rows > 0) {
-                updateAuctionPrice(conn, auctionId, amount, bidderId);
-                
-                // Sniper Protection / Soft Close: tự động gia hạn thêm 2 phút nếu đặt giá trong 2 phút cuối
-                java.time.LocalDateTime endTime = session.getEndTime();
-                if (endTime != null) {
-                    java.time.LocalDateTime now = java.time.LocalDateTime.now();
-                    java.time.Duration duration = java.time.Duration.between(now, endTime);
-                    long secondsRemaining = duration.getSeconds();
-                    if (secondsRemaining > 0 && secondsRemaining <= 120) {
-                        updateAuctionEndTime(conn, auctionId);
-                        System.out.println("[Sniper Protection] Gia hạn phiên đấu giá " + auctionId + " thêm 2 phút.");
-                    }
+            String insertSql = "INSERT INTO bids (id, auction_id, bidder_id, amount, timestamp) VALUES (?, ?, ?, ?, NOW())";
+            try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {
+                stmt.setString(1, bidId);
+                stmt.setString(2, auctionId);
+                stmt.setString(3, bidderId);
+                stmt.setDouble(4, amount);
+                int rows = stmt.executeUpdate();
+                if (rows == 0) { conn.rollback(); return false; }
+            }
+
+            updateAuctionPrice(conn, auctionId, amount, bidderId);
+
+            // Sniper Protection: gia hạn 2 phút nếu bid trong 2 phút cuối
+            java.time.LocalDateTime endTime = session.getEndTime();
+            if (endTime != null) {
+                java.time.LocalDateTime now = java.time.LocalDateTime.now();
+                java.time.Duration duration = java.time.Duration.between(now, endTime);
+                long secondsRemaining = duration.getSeconds();
+                if (secondsRemaining > 0 && secondsRemaining <= 120) {
+                    updateAuctionEndTime(conn, auctionId);
+                    System.out.println("[Sniper Protection] Gia hạn phiên đấu giá " + auctionId + " thêm 2 phút.");
                 }
             }
-            
-            return rows > 0;
+
+            conn.commit();
+            return true;
         } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
             e.printStackTrace();
             return false;
+        } finally {
+            if (conn != null) try { conn.close(); } catch (SQLException e) { e.printStackTrace(); }
         }
     }
     
@@ -159,7 +167,7 @@ public class AuctionDAO {
     }
     
     /** Kết thúc phiên: nếu có highest_bidder -> PAYMENT_PENDING, nếu không -> FINISHED. */
-    public boolean finishAuction(String auctionId) {
+    public synchronized boolean finishAuction(String auctionId) {
         String checkSql = "SELECT highest_bidder_id FROM auction_sessions WHERE id = ? AND status = 'RUNNING'";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
@@ -189,7 +197,7 @@ public class AuctionDAO {
      * Xử lý thanh toán trong transaction: trừ tiền người thắng -> cộng cho người bán -> chuyển PAID.
      * Rollback nếu số dư không đủ hoặc lỗi.
      */
-    public boolean processPayment(String auctionId) {
+    public synchronized boolean processPayment(String auctionId) {
         String sql = "SELECT current_price, highest_bidder_id, seller_id FROM auction_sessions WHERE id = ? AND status = 'PAYMENT_PENDING'";
         try (Connection conn = DatabaseUtil.getConnection()) {
             conn.setAutoCommit(false);
@@ -518,6 +526,10 @@ public class AuctionDAO {
         Timestamp endTime = rs.getTimestamp("end_time");
         
         Item item = itemDAO.findById(itemId).orElse(null);
+        if (item == null) {
+            System.err.println("[WARNING] Item " + itemId + " not found for auction " + id + ". Using placeholder.");
+            item = new Model.Art(id, "[Deleted: " + itemId + "]", "Item has been deleted", startPrice, sellerId);
+        }
         AuctionSession session = new AuctionSession(id, item, sellerId, startPrice, duration);
         session.setMinIncrement(minInc);
         session.setStatus(status);
