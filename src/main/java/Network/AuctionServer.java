@@ -9,6 +9,7 @@ import Factory.UserFactory;
 
 import java.io.*;
 import java.net.*;
+import java.sql.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -21,9 +22,11 @@ public class AuctionServer {
     private static final Object autoBidLock = new Object();
     private static final Map<String, List<Message>> pendingNotifications = new ConcurrentHashMap<>();
     private static final Map<String, ClientHandler> activeClients = new ConcurrentHashMap<>();
+    private static final Set<String> sentWatchlistNotifications = ConcurrentHashMap.newKeySet();
 
     private ServerSocket serverSocket;
     private ScheduledExecutorService penaltyScheduler;
+    private ScheduledExecutorService watchlistScheduler;
     private int port;
     private boolean running;
     private UserDAO userDAO;
@@ -39,8 +42,48 @@ public class AuctionServer {
         System.out.println("Server initialized with DAO pattern (MySQL)");
     }
 
+    /**
+     * Khởi tạo tự động các bảng mới trong cơ sở dữ liệu nếu chúng chưa tồn tại.
+     * Bảng bao gồm: chat_messages và watchlist.
+     */
+    private void initializeDatabaseTables() {
+        System.out.println("Initializing database tables...");
+        String createChatMessagesTable = 
+            "CREATE TABLE IF NOT EXISTS chat_messages (" +
+            "    id VARCHAR(50) PRIMARY KEY," +
+            "    auction_id VARCHAR(50) NOT NULL," +
+            "    sender_id VARCHAR(50) NOT NULL," +
+            "    message TEXT NOT NULL," +
+            "    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+            "    FOREIGN KEY (auction_id) REFERENCES auction_sessions(id) ON DELETE CASCADE," +
+            "    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+
+        String createWatchlistTable = 
+            "CREATE TABLE IF NOT EXISTS watchlist (" +
+            "    id VARCHAR(50) PRIMARY KEY," +
+            "    user_id VARCHAR(50) NOT NULL," +
+            "    auction_id VARCHAR(50) NOT NULL," +
+            "    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP," +
+            "    UNIQUE KEY unique_user_auction (user_id, auction_id)," +
+            "    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE," +
+            "    FOREIGN KEY (auction_id) REFERENCES auction_sessions(id) ON DELETE CASCADE" +
+            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;";
+
+        try (Connection conn = DatabaseUtil.getConnection();
+             Statement stmt = conn.createStatement()) {
+            stmt.execute(createChatMessagesTable);
+            stmt.execute(createWatchlistTable);
+            System.out.println("Database tables checked/initialized successfully.");
+        } catch (SQLException e) {
+            System.err.println("Lỗi khởi tạo bảng cơ sở dữ liệu: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
     /** Khởi động server, lắng nghe kết nối và chạy penalty scheduler 30 giây. */
     public void start() throws IOException {
+        initializeDatabaseTables();
         serverSocket = new ServerSocket(port);
         running = true;
         System.out.println("Server started on port " + port);
@@ -57,6 +100,37 @@ public class AuctionServer {
                 System.err.println("Penalty check error: " + e.getMessage());
             }
         }, 10, 30, TimeUnit.SECONDS);
+
+        watchlistScheduler = Executors.newSingleThreadScheduledExecutor();
+        watchlistScheduler.scheduleAtFixedRate(() -> {
+            try {
+                List<AuctionSession> runningSessions = auctionDAO.findRunningAuctions();
+                java.time.LocalDateTime now = java.time.LocalDateTime.now();
+                WatchlistDAO watchlistDAO = new WatchlistDAO();
+                for (AuctionSession session : runningSessions) {
+                    if (session.getEndTime() == null) continue;
+                    java.time.Duration duration = java.time.Duration.between(now, session.getEndTime());
+                    long secondsLeft = duration.getSeconds();
+                    if (secondsLeft > 0 && secondsLeft <= 300) {
+                        List<String> watchers = watchlistDAO.getWatchers(session.getId());
+                        String itemName = session.getItem() != null ? session.getItem().getName() : session.getId();
+                        for (String watcherId : watchers) {
+                            String key = session.getId() + "_" + watcherId;
+                            if (!sentWatchlistNotifications.contains(key)) {
+                                sentWatchlistNotifications.add(key);
+                                Message notification = new Message(Message.Type.NOTIFICATION);
+                                notification.setContent("Phiên đấu giá sản phẩm \"" + itemName + "\" mà bạn theo dõi sắp kết thúc trong vòng 5 phút!");
+                                notification.setAuctionId(session.getId());
+                                pendingNotifications.computeIfAbsent(watcherId, k -> new ArrayList<>()).add(notification);
+                                System.out.println("[Watchlist Notification] Queued ending warning for user " + watcherId + " on auction " + session.getId());
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Watchlist notify check error: " + e.getMessage());
+            }
+        }, 15, 10, TimeUnit.SECONDS);
 
         while (running) {
             try {
@@ -76,6 +150,9 @@ public class AuctionServer {
         running = false;
         if (penaltyScheduler != null) {
             penaltyScheduler.shutdown();
+        }
+        if (watchlistScheduler != null) {
+            watchlistScheduler.shutdown();
         }
         try {
             if (serverSocket != null) {
@@ -204,6 +281,21 @@ public class AuctionServer {
                     case GET_AVATAR:
                         response = handleGetAvatar();
                         break;
+                    case SEND_CHAT_MESSAGE:
+                        response = handleSendChatMessage(message);
+                        break;
+                    case GET_CHAT_HISTORY:
+                        response = handleGetChatHistory(message);
+                        break;
+                    case ADD_WATCHLIST:
+                        response = handleAddWatchlist(message);
+                        break;
+                    case REMOVE_WATCHLIST:
+                        response = handleRemoveWatchlist(message);
+                        break;
+                    case GET_WATCHLIST:
+                        response = handleGetWatchlist();
+                        break;
                     default:
                         return createErrorMessage("Unknown message type");
                 }
@@ -300,8 +392,9 @@ public class AuctionServer {
                 }
                 Item item = itemOpt.get();
 
+                String auctionId = "AUC" + System.currentTimeMillis() + "_" + String.format("%03d", (int)(Math.random() * 1000));
                 AuctionSession auction = new AuctionSession(
-                    "AUC" + System.currentTimeMillis(),
+                    auctionId,
                     item,
                     currentUser.getId(),
                     item.getStartPrice(),
@@ -328,7 +421,7 @@ public class AuctionServer {
         /** Xử lý đặt giá: kiểm tra quyền, ghi nhận, kích hoạt AutoBid. */
         private Message handlePlaceBid(Message message) {
             if (currentUser == null || !currentUser.isBidder()) {
-                return createErrorMessage("Only bidders can place bids");
+                return createErrorMessage("Chỉ người mua mới có quyền đặt giá.");
             }
 
             try {
@@ -343,14 +436,17 @@ public class AuctionServer {
                     System.out.println("[handlePlaceBid] Manual bid SUCCESS, calling processAutoBids");
                     processAutoBids(message.getAuctionId());
                     Message response = new Message(Message.Type.SUCCESS);
-                    response.setContent("Bid placed successfully");
+                    response.setContent("Đặt giá thành công!");
                     return response;
                 }
                 System.out.println("[handlePlaceBid] Manual bid FAILED");
-                return createErrorMessage("Failed to place bid");
-            } catch (Exception e) {
-                System.out.println("[handlePlaceBid] Exception: " + e.getMessage());
+                return createErrorMessage("Đã xảy ra lỗi không xác định khi đặt giá.");
+            } catch (AuctionClosedException | InvalidBidException | InsufficientBalanceException | UnauthorizedException e) {
+                System.out.println("[handlePlaceBid] Business Exception: " + e.getMessage());
                 return createErrorMessage(e.getMessage());
+            } catch (Exception e) {
+                System.out.println("[handlePlaceBid] System Exception: " + e.getMessage());
+                return createErrorMessage("Lỗi hệ thống: " + e.getMessage());
             }
         }
 
@@ -435,8 +531,8 @@ public class AuctionServer {
                 List<AutoBid> bids = autoBids.computeIfAbsent(auctionId, k -> new ArrayList<>());
                 bids.removeIf(ab -> ab.getUserId().equals(currentUser.getId()));
                 bids.add(new AutoBid(currentUser.getId(), auctionId, maxAmount, increment));
+                processAutoBids(auctionId);
             }
-            processAutoBids(auctionId);
             Message response = new Message(Message.Type.SUCCESS);
             response.setContent("AutoBid set");
             return response;
@@ -459,83 +555,99 @@ public class AuctionServer {
             return response;
         }
 
-        /** Xử lý AutoBid theo second-price logic: tìm người tự động trả cao nhất và đặt giá phù hợp. */
+        /** Xử lý AutoBid theo second-price logic 1 lần duy nhất (không loop). */
         private void processAutoBids(String auctionId) {
             System.out.println("[AutoBid] processAutoBids called for auction: " + auctionId);
-            int maxIterations = 100;
-            for (int i = 0; i < maxIterations; i++) {
-                Optional<AuctionSession> auctionOpt = auctionDAO.findAuctionById(auctionId);
-                if (!auctionOpt.isPresent()) {
-                    System.out.println("[AutoBid] Auction not found, breaking");
-                    break;
-                }
-                AuctionSession auction = auctionOpt.get();
-                if (!auction.isRunning()) {
-                    System.out.println("[AutoBid] Auction not running, breaking");
-                    break;
-                }
 
-                double currentPrice = auction.getCurrentPrice();
-                String highestBidderId = auction.getHighestBidderId();
-                System.out.println("[AutoBid] Iteration " + i + ": currentPrice=" + currentPrice + ", highestBidderId=" + highestBidderId);
+            // 1. Đọc trạng thái hiện tại của phiên
+            Optional<AuctionSession> auctionOpt = auctionDAO.findAuctionById(auctionId);
+            if (!auctionOpt.isPresent() || !auctionOpt.get().isRunning()) {
+                System.out.println("[AutoBid] Auction not found or not running");
+                return;
+            }
 
-                List<AutoBid> candidates;
-                synchronized (autoBidLock) {
-                    List<AutoBid> bids = autoBids.get(auctionId);
-                    if (bids == null || bids.isEmpty()) {
-                        System.out.println("[AutoBid] No auto-bids found for this auction");
-                        return;
-                    }
-                    candidates = new ArrayList<>(bids);
-                }
+            AuctionSession auction = auctionOpt.get();
+            double currentPrice = auction.getCurrentPrice();
+            String highestBidderId = auction.getHighestBidderId();
 
-                candidates.sort(Comparator.comparingDouble(AutoBid::getMaxAmount).reversed());
-                System.out.println("[AutoBid] Found " + candidates.size() + " auto-bid(s)");
-
-                AutoBid best = null;
-                for (AutoBid ab : candidates) {
-                    boolean notWinner = !ab.getUserId().equals(highestBidderId);
-                    boolean canOutbid = ab.getMaxAmount() > currentPrice;
-                    System.out.println("[AutoBid] Candidate userId=" + ab.getUserId() + " max=" + ab.getMaxAmount() + " inc=" + ab.getIncrement() + " notWinner=" + notWinner + " canOutbid=" + canOutbid);
-                    if (notWinner && canOutbid) {
-                        best = ab;
-                        break;
-                    }
-                }
-                if (best == null) {
-                    System.out.println("[AutoBid] No eligible auto-bidder found");
+            // 2. Lấy danh sách AutoBid
+            List<AutoBid> candidates;
+            synchronized (autoBidLock) {
+                List<AutoBid> bids = autoBids.get(auctionId);
+                if (bids == null || bids.isEmpty()) {
+                    System.out.println("[AutoBid] No auto-bids found");
                     return;
                 }
+                candidates = new ArrayList<>(bids);
+            }
 
-                double inc = best.getIncrement();
-                double bidAmount = currentPrice + inc;
-                System.out.println("[AutoBid] Best: userId=" + best.getUserId() + " max=" + best.getMaxAmount() + " inc=" + inc + " bidAmount=" + bidAmount);
-                if (bidAmount > best.getMaxAmount()) {
-                    System.out.println("[AutoBid] bidAmount exceeds max, returning");
-                    return;
+            // 3. Sắp xếp giảm dần theo giá trần (maxAmount)
+            candidates.sort(Comparator.comparingDouble(AutoBid::getMaxAmount).reversed());
+            System.out.println("[AutoBid] Found " + candidates.size() + " auto-bid(s)");
+
+            // 4. Tìm người có maxAmount cao nhất (và không phải người đang thắng)
+            AutoBid best = null;
+            for (AutoBid ab : candidates) {
+                boolean notWinner = !ab.getUserId().equals(highestBidderId);
+                boolean canOutbid = ab.getMaxAmount() > currentPrice;
+                System.out.println("[AutoBid] Candidate userId=" + ab.getUserId()
+                    + " max=" + ab.getMaxAmount() + " notWinner=" + notWinner + " canOutbid=" + canOutbid);
+                if (notWinner && canOutbid) {
+                    best = ab;
+                    break;
                 }
+            }
+            if (best == null) {
+                System.out.println("[AutoBid] No eligible auto-bidder found");
+                return;
+            }
 
-                if (candidates.size() > 1) {
-                    double secondMax = 0;
-                    for (AutoBid ab : candidates) {
-                        if (!ab.getUserId().equals(best.getUserId())) {
-                            secondMax = Math.max(secondMax, ab.getMaxAmount());
-                        }
-                    }
-                    if (secondMax > 0) {
-                        double maxNeeded = Math.min(secondMax + inc, best.getMaxAmount());
-                        System.out.println("[AutoBid] Second-price logic: secondMax=" + secondMax + " maxNeeded=" + maxNeeded);
-                        if (bidAmount > maxNeeded) bidAmount = maxNeeded;
-                    }
+            // 5. Tìm maxAmount cao thứ 2 (second-price)
+            double secondMax = 0;
+            for (AutoBid ab : candidates) {
+                if (!ab.getUserId().equals(best.getUserId())) {
+                    secondMax = Math.max(secondMax, ab.getMaxAmount());
                 }
-                System.out.println("[AutoBid] Placing auto-bid: userId=" + best.getUserId() + " amount=" + bidAmount);
+            }
+            System.out.println("[AutoBid] Best=" + best.getUserId() + " (max=" + best.getMaxAmount()
+                + ") secondMax=" + secondMax + " currentPrice=" + currentPrice);
 
+            // 6. Tính giá trong 1 lần duy nhất
+            double increment = best.getIncrement();
+            double bidAmount;
+
+            if (secondMax > 0) {
+                // Second-Price: chỉ trả = người thứ 2 + increment, nhưng không quá max của mình
+                bidAmount = Math.min(best.getMaxAmount(), secondMax + increment);
+            } else {
+                // Chỉ 1 người dùng AutoBid: trả = currentPrice + increment
+                bidAmount = currentPrice + increment;
+            }
+
+            // Đảm bảo bidAmount > currentPrice và <= max
+            if (bidAmount <= currentPrice) {
+                bidAmount = Math.min(currentPrice + increment, best.getMaxAmount());
+            }
+            if (bidAmount <= currentPrice || bidAmount > best.getMaxAmount()) {
+                System.out.println("[AutoBid] Invalid bidAmount=" + bidAmount + ", returning");
+                return;
+            }
+
+            // 7. Đặt giá 1 lần duy nhất
+            System.out.println("[AutoBid] Placing ONE-SHOT bid: userId=" + best.getUserId()
+                + " amount=" + bidAmount);
+            try {
                 boolean placed = auctionDAO.placeBid(auctionId, best.getUserId(), bidAmount);
-                if (!placed) {
-                    System.out.println("[AutoBid] placeBid FAILED");
-                    return;
+                System.out.println("[AutoBid] placeBid " + (placed ? "SUCCESS" : "FAILED"));
+            } catch (AuctionClosedException | InvalidBidException
+                    | InsufficientBalanceException | UnauthorizedException e) {
+                System.err.println("[AutoBid] Error: " + e.getMessage());
+                if (e instanceof InsufficientBalanceException) {
+                    synchronized (autoBidLock) {
+                        List<AutoBid> bids = autoBids.get(auctionId);
+                        if (bids != null) bids.remove(best);
+                    }
                 }
-                System.out.println("[AutoBid] placeBid SUCCESS");
             }
         }
 
@@ -565,31 +677,34 @@ public class AuctionServer {
                 return createErrorMessage("Not logged in");
             }
             String auctionId = message.getAuctionId();
-            Optional<AuctionSession> auctionOpt = auctionDAO.findAuctionById(auctionId);
-            if (!auctionOpt.isPresent()) {
-                return createErrorMessage("Auction not found");
-            }
-            if (!auctionOpt.get().getSellerId().equals(currentUser.getId())) {
-                return createErrorMessage("Only the seller can stop this auction");
-            }
-            boolean success = auctionDAO.stopAuction(auctionId);
-            if (success) {
-                AuctionSession auction = auctionOpt.get();
-                String itemName = auction.getItem() != null ? auction.getItem().getName() : auctionId;
-                Message notification = new Message(Message.Type.NOTIFICATION);
-                notification.setContent("Phiên đấu giá \"" + itemName + "\" đã được người bán gia hạn thêm 5 phút!");
-                notification.setAuctionId(auctionId);
-                for (Map.Entry<String, ClientHandler> entry : activeClients.entrySet()) {
-                    String uid = entry.getKey();
-                    if (!uid.equals(currentUser.getId())) {
-                        pendingNotifications.computeIfAbsent(uid, k -> new ArrayList<>()).add(notification);
-                    }
+            AuctionSession auction;
+            synchronized (auctionDAO) {
+                Optional<AuctionSession> auctionOpt = auctionDAO.findAuctionById(auctionId);
+                if (!auctionOpt.isPresent()) {
+                    return createErrorMessage("Auction not found");
                 }
-                Message response = new Message(Message.Type.SUCCESS);
-                response.setContent("Auction stopped, 5 minutes remaining");
-                return response;
+                if (!auctionOpt.get().getSellerId().equals(currentUser.getId())) {
+                    return createErrorMessage("Only the seller can stop this auction");
+                }
+                auction = auctionOpt.get();
+                boolean success = auctionDAO.stopAuction(auctionId);
+                if (!success) {
+                    return createErrorMessage("Failed to stop auction");
+                }
             }
-            return createErrorMessage("Failed to stop auction");
+            String itemName = auction.getItem() != null ? auction.getItem().getName() : auctionId;
+            Message notification = new Message(Message.Type.NOTIFICATION);
+            notification.setContent("Phiên đấu giá \"" + itemName + "\" đã được người bán gia hạn thêm 5 phút!");
+            notification.setAuctionId(auctionId);
+            for (Map.Entry<String, ClientHandler> entry : activeClients.entrySet()) {
+                String uid = entry.getKey();
+                if (!uid.equals(currentUser.getId())) {
+                    pendingNotifications.computeIfAbsent(uid, k -> new ArrayList<>()).add(notification);
+                }
+            }
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setContent("Auction stopped, 5 minutes remaining");
+            return response;
         }
 
         /** Xử lý thanh toán (chỉ người thắng mới được phép). */
@@ -690,6 +805,112 @@ public class AuctionServer {
             List<AuctionSession> results = auctionDAO.searchAuctions(criteria);
             Message response = new Message(Message.Type.SUCCESS);
             response.setData(results);
+            return response;
+        }
+
+        /**
+         * Xử lý thông điệp gửi tin nhắn chat của người dùng trong phòng đấu giá.
+         * Xác thực đăng nhập, kiểm tra dữ liệu và lưu vào cơ sở dữ liệu qua ChatDAO.
+         *
+         * @param message Thông điệp chứa ID phòng đấu giá và nội dung tin nhắn.
+         * @return Phản hồi SUCCESS nếu lưu tin nhắn thành công, ngược lại phản hồi ERROR.
+         */
+        private Message handleSendChatMessage(Message message) {
+            if (currentUser == null) {
+                return createErrorMessage("Vui lòng đăng nhập để gửi tin nhắn.");
+            }
+            String auctionId = message.getAuctionId();
+            String content = message.getContent();
+            if (auctionId == null || content == null || content.trim().isEmpty()) {
+                return createErrorMessage("Dữ liệu không hợp lệ.");
+            }
+            ChatDAO chatDAO = new ChatDAO();
+            boolean success = chatDAO.saveChatMessage(auctionId, currentUser.getId(), content);
+            if (success) {
+                return new Message(Message.Type.SUCCESS);
+            }
+            return createErrorMessage("Lưu tin nhắn thất bại.");
+        }
+
+        /**
+         * Xử lý thông điệp yêu cầu lấy lịch sử tin nhắn trò chuyện của một phiên đấu giá.
+         *
+         * @param message Thông điệp chứa ID phiên đấu giá.
+         * @return Phản hồi SUCCESS chứa danh sách các ChatMessage trong phần dữ liệu.
+         */
+        private Message handleGetChatHistory(Message message) {
+            String auctionId = message.getAuctionId();
+            if (auctionId == null) {
+                return createErrorMessage("Dữ liệu không hợp lệ.");
+            }
+            ChatDAO chatDAO = new ChatDAO();
+            List<ChatMessage> history = chatDAO.getChatHistory(auctionId);
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setData(history);
+            return response;
+        }
+
+        /**
+         * Xử lý yêu cầu thêm một phiên đấu giá vào danh sách theo dõi của người dùng.
+         *
+         * @param message Thông điệp chứa ID phiên đấu giá cần theo dõi.
+         * @return Phản hồi SUCCESS kèm thông báo thành công hoặc ERROR nếu thất bại.
+         */
+        private Message handleAddWatchlist(Message message) {
+            if (currentUser == null) {
+                return createErrorMessage("Vui lòng đăng nhập để theo dõi sản phẩm.");
+            }
+            String auctionId = message.getAuctionId();
+            if (auctionId == null) {
+                return createErrorMessage("Dữ liệu không hợp lệ.");
+            }
+            WatchlistDAO watchlistDAO = new WatchlistDAO();
+            boolean success = watchlistDAO.addWatchlist(currentUser.getId(), auctionId);
+            if (success) {
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setContent("Đã thêm vào danh sách theo dõi.");
+                return response;
+            }
+            return createErrorMessage("Thêm vào danh sách theo dõi thất bại.");
+        }
+
+        /**
+         * Xử lý yêu cầu xóa một phiên đấu giá khỏi danh sách theo dõi của người dùng.
+         *
+         * @param message Thông điệp chứa ID phiên đấu giá cần hủy theo dõi.
+         * @return Phản hồi SUCCESS kèm thông báo hoặc ERROR nếu thất bại.
+         */
+        private Message handleRemoveWatchlist(Message message) {
+            if (currentUser == null) {
+                return createErrorMessage("Vui lòng đăng nhập.");
+            }
+            String auctionId = message.getAuctionId();
+            if (auctionId == null) {
+                return createErrorMessage("Dữ liệu không hợp lệ.");
+            }
+            WatchlistDAO watchlistDAO = new WatchlistDAO();
+            boolean success = watchlistDAO.removeWatchlist(currentUser.getId(), auctionId);
+            if (success) {
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setContent("Đã xóa khỏi danh sách theo dõi.");
+                return response;
+            }
+            return createErrorMessage("Xóa khỏi danh sách theo dõi thất bại.");
+        }
+
+        /**
+         * Xử lý yêu cầu lấy danh sách các phiên đấu giá đang được theo dõi của người dùng đang đăng nhập.
+         *
+         * @return Phản hồi SUCCESS chứa danh sách AuctionSession được theo dõi.
+         */
+        private Message handleGetWatchlist() {
+            if (currentUser == null) {
+                return createErrorMessage("Vui lòng đăng nhập.");
+            }
+            WatchlistDAO watchlistDAO = new WatchlistDAO();
+            List<AuctionSession> list = watchlistDAO.getWatchlist(currentUser.getId());
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setData(list);
             return response;
         }
 

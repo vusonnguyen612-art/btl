@@ -5,6 +5,7 @@ import Model.Bid;
 import Model.Item;
 import Model.SearchCriteria;
 import Model.User;
+import Model.ChatMessage;
 import DAO.UserDAO;
 import Network.Message;
 import Network.NetworkService;
@@ -101,6 +102,21 @@ public class AuctionRoomController {
     @FXML
     private TextField autoBidIncrementField;
 
+    @FXML
+    private Button watchlistToggleButton;
+
+    @FXML
+    private TabPane auctionTabs;
+
+    @FXML
+    private ScrollPane chatScrollPane;
+
+    @FXML
+    private VBox chatList;
+
+    @FXML
+    private TextField chatInputField;
+
     // Search fields
     @FXML
     private TextField searchKeywordField;
@@ -116,6 +132,7 @@ public class AuctionRoomController {
     private ComboBox<String> searchSortCombo;
 
     private boolean isSearchActive = false;
+    private int lastChatCount = 0;
     private SearchCriteria currentSearchCriteria;
 
     private User currentUser;
@@ -449,7 +466,7 @@ public class AuctionRoomController {
         }
     }
 
-    private void selectAuction(AuctionSession auction) {
+    public void selectAuction(AuctionSession auction) {
         this.selectedAuction = auction;
 
         removePaymentButton();
@@ -528,6 +545,20 @@ public class AuctionRoomController {
         }
 
         loadBidHistory(auction.getId());
+        loadChatHistory(auction.getId());
+
+        // Cập nhật trạng thái Watchlist của nút bấm
+        boolean isWatched = false;
+        Message watchlistRes = networkService.getWatchlist();
+        if (watchlistRes.getType() == Message.Type.SUCCESS && watchlistRes.getData() instanceof List) {
+            @SuppressWarnings("unchecked")
+            List<AuctionSession> list = (List<AuctionSession>) watchlistRes.getData();
+            isWatched = list.stream().anyMatch(a -> a.getId().equals(auction.getId()));
+        }
+        if (watchlistToggleButton != null) {
+            watchlistToggleButton.setText(isWatched ? "★" : "☆");
+        }
+
         startTimer(auction);
         startSelectedAuctionRefresh(auction);
 
@@ -602,10 +633,11 @@ public class AuctionRoomController {
                         String username = userDAO.getUsernameById(updatedAuction.getHighestBidderId());
                         highestBidderLabel.setText(username);
                     } else {
-                        highestBidderLabel.setText("Chua co");
+                        highestBidderLabel.setText("Chưa có");
                     }
                 }
                 loadBidHistory(updatedAuction.getId());
+                refreshChatHistory(updatedAuction.getId());
             });
         }
     }
@@ -1088,6 +1120,140 @@ public class AuctionRoomController {
             alert.setContentText(message);
             alert.showAndWait();
         });
+    }
+
+    /**
+     * Bật/Tắt trạng thái theo dõi (Watchlist) của phiên đấu giá hiện tại.
+     * Cập nhật ký tự trên nút bấm sau khi thao tác thành công.
+     */
+    @FXML
+    private void toggleWatchlist() {
+        if (selectedAuction == null || watchlistToggleButton == null) return;
+        boolean currentlyWatched = "★".equals(watchlistToggleButton.getText());
+        Message res;
+        if (currentlyWatched) {
+            res = networkService.removeWatchlist(selectedAuction.getId());
+        } else {
+            res = networkService.addWatchlist(selectedAuction.getId());
+        }
+
+        if (res.getType() == Message.Type.SUCCESS) {
+            watchlistToggleButton.setText(currentlyWatched ? "☆" : "★");
+        } else {
+            showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể cập nhật theo dõi: " + res.getContent());
+        }
+    }
+
+    /**
+     * Tải và hiển thị lịch sử tin nhắn chat trực tuyến trong phiên đấu giá.
+     *
+     * @param auctionId ID của phiên đấu giá
+     */
+    private void loadChatHistory(String auctionId) {
+        if (chatList == null) return;
+
+        Message response = networkService.getChatHistory(auctionId);
+        if (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List) {
+            @SuppressWarnings("unchecked")
+            List<ChatMessage> chats = (List<ChatMessage>) response.getData();
+            lastChatCount = chats.size();
+            chatList.getChildren().clear();
+            for (ChatMessage chat : chats) {
+                chatList.getChildren().add(createChatBubble(chat));
+            }
+            scrollChatToBottom();
+        }
+    }
+
+    /**
+     * Refresh tin nhắn chat trực tuyến nếu có tin nhắn mới gửi lên hệ thống.
+     *
+     * @param auctionId ID của phiên đấu giá
+     */
+    private void refreshChatHistory(String auctionId) {
+        if (chatList == null) return;
+
+        Message response = networkService.getChatHistory(auctionId);
+        if (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List) {
+            @SuppressWarnings("unchecked")
+            List<ChatMessage> chats = (List<ChatMessage>) response.getData();
+            if (chats.size() > lastChatCount) {
+                for (int i = lastChatCount; i < chats.size(); i++) {
+                    chatList.getChildren().add(createChatBubble(chats.get(i)));
+                }
+                lastChatCount = chats.size();
+                scrollChatToBottom();
+            }
+        }
+    }
+
+    /**
+     * Tạo giao diện bong bóng tin nhắn hiển thị tên người gửi và nội dung tin nhắn.
+     *
+     * @param chat đối tượng tin nhắn
+     * @return HBox chứa bong bóng chat được định dạng
+     */
+    private HBox createChatBubble(ChatMessage chat) {
+        HBox bubbleContainer = new HBox();
+        bubbleContainer.setPadding(new Insets(3, 5, 3, 5));
+
+        VBox textContainer = new VBox();
+        textContainer.setPadding(new Insets(5, 10, 5, 10));
+        textContainer.setMaxWidth(300);
+
+        Label senderLabel = new Label(chat.getSenderName() != null ? chat.getSenderName() : chat.getSenderId());
+        senderLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 11px;");
+
+        Label messageLabel = new Label(chat.getMessage());
+        messageLabel.setWrapText(true);
+        messageLabel.setStyle("-fx-font-size: 13px;");
+
+        textContainer.getChildren().addAll(senderLabel, messageLabel);
+
+        boolean isMe = currentUser != null && chat.getSenderId().equals(currentUser.getId());
+        if (isMe) {
+            bubbleContainer.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
+            textContainer.setStyle("-fx-background-color: #d9b15f; -fx-background-radius: 10 10 0 10;");
+            senderLabel.setStyle(senderLabel.getStyle() + " -fx-text-fill: #1E1E1D;");
+            messageLabel.setStyle(messageLabel.getStyle() + " -fx-text-fill: #1E1E1D;");
+        } else {
+            bubbleContainer.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+            textContainer.setStyle("-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-border-width: 1; -fx-background-radius: 10 10 10 0; -fx-border-radius: 10 10 10 0;");
+            senderLabel.setStyle(senderLabel.getStyle() + " -fx-text-fill: #eacd8f;");
+            messageLabel.setStyle(messageLabel.getStyle() + " -fx-text-fill: #ffffff;");
+        }
+
+        bubbleContainer.getChildren().add(textContainer);
+        return bubbleContainer;
+    }
+
+    /**
+     * Tự động cuộn khung chat xuống cuối cùng.
+     */
+    private void scrollChatToBottom() {
+        if (chatScrollPane != null) {
+            Platform.runLater(() -> {
+                chatScrollPane.setVvalue(1.0);
+            });
+        }
+    }
+
+    /**
+     * Gửi tin nhắn chat trong phòng đấu giá hiện tại lên server.
+     */
+    @FXML
+    private void sendChatMessage() {
+        if (selectedAuction == null || chatInputField == null) return;
+        String text = chatInputField.getText().trim();
+        if (text.isEmpty()) return;
+
+        Message res = networkService.sendChatMessage(selectedAuction.getId(), text);
+        if (res.getType() == Message.Type.SUCCESS) {
+            chatInputField.clear();
+            refreshChatHistory(selectedAuction.getId());
+        } else {
+            showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể gửi tin nhắn: " + res.getContent());
+        }
     }
 
     /** Dừng tất cả timeline refresh khi đóng phòng. */

@@ -63,3 +63,29 @@ CREATE INDEX idx_auction_session_item ON auction_sessions(item_id);
 CREATE INDEX idx_auction_session_status ON auction_sessions(status);
 CREATE INDEX idx_bid_auction ON bids(auction_id);
 CREATE INDEX idx_item_seller ON items(seller_id);
+
+-- Bảng chat_messages (tin nhắn chat trong phòng đấu giá)
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id VARCHAR(50) PRIMARY KEY,
+    auction_id VARCHAR(50) NOT NULL,
+    sender_id VARCHAR(50) NOT NULL,
+    message TEXT NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (auction_id) REFERENCES auction_sessions(id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Bảng watchlist (danh sách theo dõi sản phẩm)
+CREATE TABLE IF NOT EXISTS watchlist (
+    id VARCHAR(50) PRIMARY KEY,
+    user_id VARCHAR(50) NOT NULL,
+    auction_id VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_auction (user_id, auction_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (auction_id) REFERENCES auction_sessions(id) ON DELETE CASCADE
+);
+
+-- Index cho chat và watchlist để tăng tốc truy vấn
+CREATE INDEX idx_chat_auction ON chat_messages(auction_id);
+CREATE INDEX idx_watchlist_user ON watchlist(user_id);

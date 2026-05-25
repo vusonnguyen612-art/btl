@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.BarChart?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.LineChart?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<AnchorPane fx:id="ThongkePane" prefHeight="523.0" prefWidth="583.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.ThongkePaneController">
+   <children>
+      <ScrollPane fx:id="thongkeScrollPane" style="-fx-background-color: transparent; -fx-background: #1E1E1D; -fx-border-color: transparent;" fitToWidth="true" hbarPolicy="NEVER" vbarPolicy="AS_NEEDED" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <content>
+            <VBox spacing="20.0" style="-fx-background-color: #1E1E1D;">
+               <padding>
+                  <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
+               </padding>
+               <children>
+                  <Label style="-fx-text-fill: #eacd8f;" text="BÁO CÁO THỐNG KÊ DOANH THU">
+                     <font>
+                        <Font name="Arial Bold" size="20.0" />
+                     </font>
+                  </Label>
+                  
+                  <!-- Tóm tắt số liệu -->
+                  <HBox spacing="15.0" alignment="CENTER">
+                     <children>
+                        <!-- Doanh thu -->
+                        <VBox alignment="CENTER" prefHeight="90.0" prefWidth="170.0" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-border-radius: 10; -fx-background-radius: 10;">
+                           <children>
+                              <Label style="-fx-text-fill: #eacd8f;" text="Tổng doanh thu">
+                                 <font>
+                                    <Font name="Arial" size="13.0" />
+                                 </font>
+                              </Label>
+                              <Label fx:id="totalRevenueLabel" style="-fx-text-fill: #ffffff; -fx-font-weight: bold;" text="0 $">
+                                 <font>
+                                    <Font name="Arial Bold" size="20.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </VBox>
+                        <!-- Thành công -->
+                        <VBox alignment="CENTER" prefHeight="90.0" prefWidth="170.0" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-border-radius: 10; -fx-background-radius: 10;">
+                           <children>
+                              <Label style="-fx-text-fill: #eacd8f;" text="Số phiên thắng">
+                                 <font>
+                                    <Font name="Arial" size="13.0" />
+                                 </font>
+                              </Label>
+                              <Label fx:id="successCountLabel" style="-fx-text-fill: #2ecc71; -fx-font-weight: bold;" text="0">
+                                 <font>
+                                    <Font name="Arial Bold" size="22.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </VBox>
+                        <!-- Thất bại -->
+                        <VBox alignment="CENTER" prefHeight="90.0" prefWidth="170.0" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-border-radius: 10; -fx-background-radius: 10;">
+                           <children>
+                              <Label style="-fx-text-fill: #eacd8f;" text="Không thành công">
+                                 <font>
+                                    <Font name="Arial" size="13.0" />
+                                 </font>
+                              </Label>
+                              <Label fx:id="failureCountLabel" style="-fx-text-fill: #e74c3c; -fx-font-weight: bold;" text="0">
+                                 <font>
+                                    <Font name="Arial Bold" size="22.0" />
+                                 </font>
+                              </Label>
+                           </children>
+                        </VBox>
+                     </children>
+                  </HBox>
+                  
+                  <Label style="-fx-text-fill: #eacd8f;" text="Doanh thu theo danh mục">
+                     <font>
+                        <Font name="Arial Bold" size="16.0" />
+                     </font>
+                  </Label>
+                  <BarChart fx:id="categoryBarChart" legendSide="TOP" prefHeight="260.0" style="-fx-text-fill: white; -fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-border-radius: 10; -fx-background-radius: 10;">
+                     <xAxis>
+                        <CategoryAxis fx:id="categoryXAxis" label="Danh mục" tickLabelFill="WHITE" />
+                     </xAxis>
+                     <yAxis>
+                        <NumberAxis fx:id="categoryYAxis" label="Doanh thu ($)" tickLabelFill="WHITE" />
+                     </yAxis>
+                  </BarChart>
+                  
+                  <Label style="-fx-text-fill: #eacd8f;" text="Doanh thu theo ngày">
+                     <font>
+                        <Font name="Arial Bold" size="16.0" />
+                     </font>
+                  </Label>
+                  <LineChart fx:id="dailyLineChart" legendSide="TOP" prefHeight="260.0" style="-fx-text-fill: white; -fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-border-radius: 10; -fx-background-radius: 10;">
+                     <xAxis>
+                        <CategoryAxis fx:id="dailyXAxis" label="Ngày" tickLabelFill="WHITE" />
+                     </xAxis>
+                     <yAxis>
+                        <NumberAxis fx:id="dailyYAxis" label="Doanh thu ($)" tickLabelFill="WHITE" />
+                     </yAxis>
+                  </LineChart>
+               </children>
+            </VBox>
+         </content>
+      </ScrollPane>
+   </children>
+</AnchorPane>

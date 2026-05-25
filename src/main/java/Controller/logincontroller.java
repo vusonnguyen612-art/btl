@@ -68,7 +68,11 @@ public class logincontroller {
 
         NetworkService networkService = NetworkService.getInstance();
         if (!networkService.isConnected()) {
-            networkService.connect();
+            boolean connected = networkService.connect();
+            if (!connected) {
+                showMessage("Không thể kết nối đến máy chủ. Vui lòng kiểm tra xem server đã được bật chưa.");
+                return;
+            }
         }
 
         try {
@@ -78,7 +82,8 @@ public class logincontroller {
                 showMessage("Đăng nhập thành công! Xin chào! " + currentUser.getUsername());
                 navigateToMain(event);
             } else {
-                showMessage("Tài khoản hoặc mật khẩu không đúng.");
+                String errMsg = response.getContent() != null ? response.getContent() : "Tài khoản hoặc mật khẩu không đúng.";
+                showMessage(errMsg);
             }
         } catch (Exception e) {
             showMessage("Lỗi đăng nhập: " + e.getMessage());

@@ -4,6 +4,7 @@ import Model.Bid;
 import Model.AuctionSession;
 import Model.Item;
 import Model.SearchCriteria;
+import Exception.*;
 
 import java.sql.*;
 import java.math.BigDecimal;
@@ -16,36 +17,125 @@ public class AuctionDAO {
     
     private final ItemDAO itemDAO = new ItemDAO();
     
-    /** Ghi nhận lượt đặt giá vào bảng bids và cập nhật current_price / highest_bidder_id. */
-    public boolean placeBid(String auctionId, String bidderId, double amount) {
-        String sql = "INSERT INTO bids (id, auction_id, bidder_id, amount, timestamp) VALUES (?, ?, ?, ?, NOW())";
-        try (Connection conn = DatabaseUtil.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+    /**
+     * Thực hiện việc ghi nhận lượt đặt giá mới của người dùng cho phiên đấu giá.
+     * Phương thức thực hiện các bước kiểm tra nghiệp vụ nghiêm ngặt bao gồm:
+     * - Kiểm tra sự tồn tại của phiên đấu giá.
+     * - Kiểm tra trạng thái hoạt động của phiên (phải là RUNNING).
+     * - Kiểm tra phiên đấu giá đã kết thúc theo thời gian thực chưa.
+     * - Ngăn chặn người bán tự đấu giá sản phẩm của chính mình.
+     * - Kiểm tra giá đặt mới phải lớn hơn giá hiện tại và đáp ứng bước giá tối thiểu.
+     * - Kiểm tra số dư tài khoản của người đặt phải lớn hơn hoặc bằng giá đặt mới.
+     * Nếu tất cả hợp lệ, ghi nhận lượt đặt giá vào DB, cập nhật giá hiện tại và kích hoạt Sniper Protection nếu đặt giá trong 2 phút cuối.
+     *
+     * @param auctionId ID của phiên đấu giá cần đặt giá.
+     * @param bidderId  ID của người dùng thực hiện đặt giá.
+     * @param amount    Số tiền đặt giá mới.
+     * @return {@code true} nếu đặt giá và cập nhật DB thành công, ngược lại {@code false}.
+     * @throws AuctionClosedException       Ném ra nếu phiên đấu giá không tồn tại, chưa bắt đầu hoặc đã kết thúc.
+     * @throws InvalidBidException          Ném ra nếu giá trị đặt không lớn hơn giá hiện tại hoặc không đáp ứng bước giá tối thiểu.
+     * @throws InsufficientBalanceException Ném ra nếu số dư tài khoản người mua nhỏ hơn số tiền đặt giá.
+     * @throws UnauthorizedException        Ném ra nếu người bán tự đặt giá cho sản phẩm của mình.
+     */
+    public synchronized boolean placeBid(String auctionId, String bidderId, double amount)
+            throws AuctionClosedException, InvalidBidException, InsufficientBalanceException, UnauthorizedException {
+        // 1. Kiểm tra sự tồn tại của phiên đấu giá
+        AuctionSession session = findAuctionById(auctionId).orElseThrow(() -> 
+            new AuctionClosedException("Phiên đấu giá không tồn tại.", auctionId)
+        );
+
+        // 2. Kiểm tra trạng thái của phiên (phải là RUNNING)
+        if (session.getStatus() != AuctionSession.Status.RUNNING) {
+            throw new AuctionClosedException("Phiên đấu giá không ở trạng thái hoạt động.", auctionId);
+        }
+
+        // 3. Kiểm tra thời gian kết thúc của phiên (phải sau thời điểm hiện tại)
+        if (session.getEndTime() != null && java.time.LocalDateTime.now().isAfter(session.getEndTime())) {
+            throw new AuctionClosedException("Phiên đấu giá đã kết thúc.", auctionId);
+        }
+
+        // 4. Kiểm tra người đặt giá (không được là người bán sản phẩm đó)
+        if (bidderId.equals(session.getSellerId())) {
+            throw new UnauthorizedException("Người bán không được phép đặt giá cho sản phẩm của chính mình.", bidderId, "placeBid");
+        }
+
+        // 5. Kiểm tra giá đặt mới so với giá hiện tại
+        double currentPrice = session.getCurrentPrice();
+        if (amount <= currentPrice) {
+            throw new InvalidBidException("Giá đặt phải lớn hơn giá hiện tại.", amount, currentPrice);
+        }
+
+        // 6. Kiểm tra bước giá tối thiểu
+        double minInc = session.getMinIncrement();
+        if (amount < currentPrice + minInc) {
+            throw new InvalidBidException("Giá đặt phải tăng tối thiểu " + minInc + " so với giá hiện tại.", amount, currentPrice);
+        }
+
+        // 7. Lấy số dư tài khoản của người đặt và kiểm tra số dư
+        BigDecimal balance = getUserBalance(bidderId);
+        BigDecimal bidAmount = BigDecimal.valueOf(amount);
+        if (balance.compareTo(bidAmount) < 0) {
+            throw new InsufficientBalanceException("Số dư tài khoản không đủ để thực hiện đặt giá.", bidderId, balance, bidAmount);
+        }
+
+        // 8. Ghi nhận bid + cập nhật giá trong 1 transaction (atomic)
+        Connection conn = null;
+        try {
+            conn = DatabaseUtil.getConnection();
+            conn.setAutoCommit(false);
+
             String bidId = "BID" + System.currentTimeMillis() + (int)(Math.random() * 1000);
-            stmt.setString(1, bidId);
-            stmt.setString(2, auctionId);
-            stmt.setString(3, bidderId);
-            stmt.setDouble(4, amount);
-            
-            int rows = stmt.executeUpdate();
-            
-            if (rows > 0) {
-                updateAuctionPrice(conn, auctionId, amount, bidderId);
+            String insertSql = "INSERT INTO bids (id, auction_id, bidder_id, amount, timestamp) VALUES (?, ?, ?, ?, NOW())";
+            try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {
+                stmt.setString(1, bidId);
+                stmt.setString(2, auctionId);
+                stmt.setString(3, bidderId);
+                stmt.setDouble(4, amount);
+                int rows = stmt.executeUpdate();
+                if (rows == 0) { conn.rollback(); return false; }
             }
-            
-            return rows > 0;
+
+            updateAuctionPrice(conn, auctionId, amount, bidderId);
+
+            // Sniper Protection: gia hạn 2 phút nếu bid trong 2 phút cuối
+            java.time.LocalDateTime endTime = session.getEndTime();
+            if (endTime != null) {
+                java.time.LocalDateTime now = java.time.LocalDateTime.now();
+                java.time.Duration duration = java.time.Duration.between(now, endTime);
+                long secondsRemaining = duration.getSeconds();
+                if (secondsRemaining > 0 && secondsRemaining <= 120) {
+                    updateAuctionEndTime(conn, auctionId);
+                    System.out.println("[Sniper Protection] Gia hạn phiên đấu giá " + auctionId + " thêm 2 phút.");
+                }
+            }
+
+            conn.commit();
+            return true;
         } catch (SQLException e) {
+            if (conn != null) try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
             e.printStackTrace();
             return false;
+        } finally {
+            if (conn != null) try { conn.close(); } catch (SQLException e) { e.printStackTrace(); }
         }
     }
     
+    /** Cập nhật giá hiện tại và người đặt giá cao nhất của phiên đấu giá. */
     private void updateAuctionPrice(Connection conn, String auctionId, double amount, String bidderId) throws SQLException {
         String sql = "UPDATE auction_sessions SET current_price = ?, highest_bidder_id = ? WHERE id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setDouble(1, amount);
             stmt.setString(2, bidderId);
             stmt.setString(3, auctionId);
+            stmt.executeUpdate();
+        }
+    }
+
+    /** Gia hạn thời gian kết thúc của phiên đấu giá thêm 2 phút (Sniper Protection). */
+    private void updateAuctionEndTime(Connection conn, String auctionId) throws SQLException {
+        String sql = "UPDATE auction_sessions SET end_time = DATE_ADD(end_time, INTERVAL 2 MINUTE) WHERE id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, auctionId);
             stmt.executeUpdate();
         }
     }
@@ -77,7 +167,7 @@ public class AuctionDAO {
     }
     
     /** Kết thúc phiên: nếu có highest_bidder -> PAYMENT_PENDING, nếu không -> FINISHED. */
-    public boolean finishAuction(String auctionId) {
+    public synchronized boolean finishAuction(String auctionId) {
         String checkSql = "SELECT highest_bidder_id FROM auction_sessions WHERE id = ? AND status = 'RUNNING'";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
@@ -107,7 +197,7 @@ public class AuctionDAO {
      * Xử lý thanh toán trong transaction: trừ tiền người thắng -> cộng cho người bán -> chuyển PAID.
      * Rollback nếu số dư không đủ hoặc lỗi.
      */
-    public boolean processPayment(String auctionId) {
+    public synchronized boolean processPayment(String auctionId) {
         String sql = "SELECT current_price, highest_bidder_id, seller_id FROM auction_sessions WHERE id = ? AND status = 'PAYMENT_PENDING'";
         try (Connection conn = DatabaseUtil.getConnection()) {
             conn.setAutoCommit(false);
@@ -436,6 +526,10 @@ public class AuctionDAO {
         Timestamp endTime = rs.getTimestamp("end_time");
         
         Item item = itemDAO.findById(itemId).orElse(null);
+        if (item == null) {
+            System.err.println("[WARNING] Item " + itemId + " not found for auction " + id + ". Using placeholder.");
+            item = new Model.Art(id, "[Deleted: " + itemId + "]", "Item has been deleted", startPrice, sellerId);
+        }
         AuctionSession session = new AuctionSession(id, item, sellerId, startPrice, duration);
         session.setMinIncrement(minInc);
         session.setStatus(status);

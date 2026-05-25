@@ -1,6 +1,7 @@
 package Factory;
 
 import Model.User;
+import Model.Admin;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** Factory tạo User mới và validate mật khẩu. */
@@ -38,5 +39,17 @@ public class UserFactory {
     public static User createUser(String username, String password) {
         String id = "USR" + String.format("%04d", userCounter.incrementAndGet());
         return new Model.User(id, username, password);
+    }
+
+    /**
+     * Tạo admin mới với ID "ADMxxxx".
+     *
+     * @param username tên đăng nhập
+     * @param password mật khẩu
+     * @return thực thể Admin được khởi tạo
+     */
+    public static Admin createAdmin(String username, String password) {
+        String id = "ADM" + String.format("%04d", userCounter.incrementAndGet());
+        return new Model.Admin(id, username, password);
     }
 }
