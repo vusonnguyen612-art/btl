@@ -118,7 +118,7 @@
                                                     <children>
                                                         <HBox alignment="CENTER_LEFT" spacing="20">
                                                             <children>
-                                                                <Label fx:id="selectedAuctionStatus" style="-fx-text-fill: #eacd8f; -fx-font-size: 14px;" text="Trang thai: RUNNING" />
+                                                                <Label fx:id="selectedAuctionStatus" style="-fx-text-fill: #eacd8f; -fx-font-size: 14px;" text="Trạng thái: RUNNING" />
                                                                 <Label fx:id="durationDisplayLabel" style="-fx-text-fill: #888888; -fx-font-size: 13px;" text="Thời gian: 60 phút" />
                                                             </children>
                                                         </HBox>

@@ -3,7 +3,7 @@ package Model;
 /** Vật phẩm danh mục xe cộ (ô tô, xe máy…). */
 public class Vehicle extends Item {
     private static final long serialVersionUID = 1L;
-private String brand;
+    private String brand;
     private String model;
     private int year;
     private int mileage;
@@ -26,8 +26,8 @@ private String brand;
     }
 
     public Vehicle(String id, String name, String description, double startPrice,
-                      String sellerId, String brand, String model, int year,
-                      int mileage, String fuelType, String transmission, String color, String condition) {
+                   String sellerId, String brand, String model, int year,
+                   int mileage, String fuelType, String transmission, String color, String condition) {
         super(id, name, description, startPrice, sellerId);
         this.category = "VEHICLE";
         this.brand = brand;

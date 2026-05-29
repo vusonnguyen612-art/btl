@@ -1,12 +1,12 @@
 package Controller;
 
+import Controller.utils.ResponseUtils;
+import Controller.utils.UIUtils;
 import Model.AuctionSession;
 import Network.Message;
 import Network.NetworkService;
-import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.FlowPane;
@@ -41,15 +41,8 @@ public class WatchlistPaneController implements UserController.LinkedController 
      */
     @FXML
     private void initialize() {
-        if (watchlistScrollPane != null) {
-            watchlistScrollPane.setOnMouseEntered(e -> watchlistScrollPane.requestFocus());
-            Platform.runLater(() -> {
-                Node viewport = watchlistScrollPane.lookup(".viewport");
-                if (viewport != null) {
-                    viewport.setStyle("-fx-background-color: #1E1E1D;");
-                }
-            });
-        }
+        UIUtils.setupScrollFocus(watchlistScrollPane);
+        UIUtils.fixScrollPaneViewport(watchlistScrollPane);
     }
 
     /**
@@ -61,24 +54,17 @@ public class WatchlistPaneController implements UserController.LinkedController 
 
         try {
             Message response = networkService.getWatchlist();
-            if (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List) {
-                @SuppressWarnings("unchecked")
-                List<AuctionSession> list = (List<AuctionSession>) response.getData();
-                if (list.isEmpty()) {
-                    Label emptyLabel = new Label("Bạn chưa theo dõi phiên đấu giá nào.");
-                    emptyLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 14px; -fx-alignment: center;");
-                    emptyLabel.prefWidthProperty().bind(watchlistFlowPane.widthProperty());
-                    watchlistFlowPane.getChildren().add(emptyLabel);
-                } else {
-                    for (AuctionSession auction : list) {
-                        VBox card = createAuctionCard(auction);
-                        watchlistFlowPane.getChildren().add(card);
-                    }
-                }
+            List<AuctionSession> list = ResponseUtils.extractList(response);
+            if (list.isEmpty()) {
+                Label emptyLabel = new Label("Bạn chưa theo dõi phiên đấu giá nào.");
+                emptyLabel.setStyle("-fx-text-fill: #888888; -fx-font-size: 14px; -fx-alignment: center;");
+                emptyLabel.prefWidthProperty().bind(watchlistFlowPane.widthProperty());
+                watchlistFlowPane.getChildren().add(emptyLabel);
             } else {
-                Label errorLabel = new Label("Không thể tải danh sách theo dõi: " + response.getContent());
-                errorLabel.setStyle("-fx-text-fill: #ff6b6b; -fx-font-size: 14px;");
-                watchlistFlowPane.getChildren().add(errorLabel);
+                for (AuctionSession auction : list) {
+                    VBox card = createAuctionCard(auction);
+                    watchlistFlowPane.getChildren().add(card);
+                }
             }
         } catch (Exception e) {
             e.printStackTrace();

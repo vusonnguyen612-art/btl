@@ -1,12 +1,13 @@
 package Controller;
 
+import Controller.utils.CategoryMapper;
+import Controller.utils.FormatUtils;
+import Controller.utils.UIUtils;
 import Model.AuctionSession;
 import Model.User;
 import Network.Message;
 import Network.NetworkService;
-import javafx.application.Platform;
 import javafx.fxml.FXML;
-import javafx.scene.Node;
 import javafx.scene.chart.BarChart;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.LineChart;
@@ -59,17 +60,9 @@ public class ThongkePaneController implements UserController.LinkedController {
      */
     @FXML
     private void initialize() {
-        if (thongkeScrollPane != null) {
-            thongkeScrollPane.setOnMouseEntered(e -> thongkeScrollPane.requestFocus());
-            Platform.runLater(() -> {
-                Node viewport = thongkeScrollPane.lookup(".viewport");
-                if (viewport != null) {
-                    viewport.setStyle("-fx-background-color: #1E1E1D;");
-                }
-            });
-        }
+        UIUtils.setupScrollFocus(thongkeScrollPane);
+        UIUtils.fixScrollPaneViewport(thongkeScrollPane);
         
-        // Thiết lập biểu đồ cột không hiển thị hiệu ứng rườm rà gây chậm
         if (categoryBarChart != null) {
             categoryBarChart.setAnimated(false);
         }
@@ -168,7 +161,7 @@ public class ThongkePaneController implements UserController.LinkedController {
 
         // Cập nhật các thẻ thông số tóm tắt
         if (userController != null) {
-            totalRevenueLabel.setText(userController.formatMoney(BigDecimal.valueOf(totalRevenue)) + " $");
+            totalRevenueLabel.setText(FormatUtils.formatMoney(BigDecimal.valueOf(totalRevenue)) + " $");
         } else {
             totalRevenueLabel.setText(String.format("%,.0f $", totalRevenue));
         }

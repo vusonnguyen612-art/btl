@@ -1,5 +1,7 @@
 package Controller;
 
+import Controller.utils.AlertUtils;
+
 import java.io.IOException;
 import java.net.URL;
 
@@ -8,7 +10,6 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
@@ -151,10 +152,7 @@ public class logincontroller {
             return;
         }
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AlertUtils.showInfo("Thông báo", message);
     }
 
     /** Chuyển scene JavaFX với kích thước cho trước. */

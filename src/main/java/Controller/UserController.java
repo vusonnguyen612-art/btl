@@ -1,13 +1,15 @@
 package Controller;
 
+import Controller.utils.AlertUtils;
+import Controller.utils.FormatUtils;
+import Controller.utils.ResponseUtils;
+import Controller.utils.UIUtils;
 import Model.AuctionSession;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
@@ -22,9 +24,6 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URL;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.util.Locale;
 
 import Model.Item;
 import Model.User;
@@ -120,48 +119,64 @@ public class UserController {
     private static final String CREATE_ITEM_FXML = "/CreateItems.fxml";
     private static final String LOGIN_FXML = "/login.fxml";
 
+    private record MenuItem(ToggleButton button, AnchorPane pane, Runnable onShow) {
+    }
+
+    private record LoadedView(Parent root, Object controller) {
+    }
+
+    /**
+     * Khởi tạo controller chính của giao diện người dùng.
+     * Phương thức này được gọi tự động sau khi FXML được load.
+     * Nó thiết lập các nút menu, màn hình mặc định và tải danh sách vật phẩm.
+     */
     @FXML
     private void initialize() {
-        connectChildController(TrangchuPaneController);
-        connectChildController(KhoPaneController);
-        connectChildController(LichsudaugiaPaneController);
-        connectChildController(NaptienPaneController);
-        connectChildController(CaidatPaneController);
-        connectChildController(WatchlistPaneController);
-        connectChildController(ThongkePaneController);
+        for (Object controller : childControllers()) {
+            connectChildController(controller);
+        }
 
         setupMenuButtons();
         setupDefaultScreen();
 
-        if (TrangchuPaneController != null) TrangchuPaneController.loadHomeItems();
-        if (KhoPaneController != null) KhoPaneController.loadWarehouseItems();
+        refreshItemLists();
     }
 
+    /**
+     * Thiết lập tất cả các nút menu trong giao diện.
+     * Duyệt qua danh sách menu items và gắn sự kiện cho từng nút.
+     */
     private void setupMenuButtons() {
-        bindMenuButton(TrangchuButton, TrangchuPane);
-        bindMenuButton(KhoButton, KhoPane);
-        bindMenuButton(NaptienButton, NaptienPane);
-        bindMenuButton(BidHistory, LichsudaugiaPane);
-        bindMenuButton(WatchlistButton, WatchlistPane);
-        bindMenuButton(ThongkeButton, ThongkePane);
-        bindMenuButton(CaidatButton, CaidatPane);
+        for (MenuItem item : menuItems()) {
+            bindMenuButton(item);
+        }
     }
 
-    private void bindMenuButton(ToggleButton button, AnchorPane pane) {
-        if (button == null || pane == null) {
+    /**
+     * Gắn sự kiện và kiểu cho một nút menu cụ thể.
+     * Khi nút được nhấn, pane tương ứng sẽ được hiển thị và kiểu nút được cập nhật.
+     *
+     * @param item MenuItem chứa thông tin về nút, pane và hành động khi hiển thị
+     */
+    private void bindMenuButton(MenuItem item) {
+        if (item.button() == null || item.pane() == null) {
             return;
         }
 
-        button.setToggleGroup(menuGroup);
-        button.setStyle(MENU_STYLE);
+        item.button().setToggleGroup(menuGroup);
+        item.button().setStyle(MENU_STYLE);
 
-        button.setOnAction(event -> {
-            showPane(pane);
-            menuGroup.selectToggle(button);
+        item.button().setOnAction(event -> {
+            showPane(item.pane());
+            menuGroup.selectToggle(item.button());
             updateMenuStyle();
         });
     }
 
+    /**
+     * Thiết lập màn hình mặc định khi ứng dụng khởi động.
+     * Hiển thị pane Trang chủ và chọn nút Trang chủ trong menu.
+     */
     private void setupDefaultScreen() {
         showPane(TrangchuPane);
 
@@ -172,18 +187,14 @@ public class UserController {
         updateMenuStyle();
     }
 
+    /**
+     * Hiển thị một pane cụ thể và ẩn tất cả các pane khác.
+     * Khi pane được hiển thị, phương thức onShow() tương ứng sẽ được thực thi.
+     *
+     * @param paneToShow Pane cần hiển thị
+     */
     private void showPane(AnchorPane paneToShow) {
-        AnchorPane[] panes = {
-                TrangchuPane,
-                KhoPane,
-                NaptienPane,
-                LichsudaugiaPane,
-                CaidatPane,
-                WatchlistPane,
-                ThongkePane
-        };
-
-        for (AnchorPane pane : panes) {
+        for (AnchorPane pane : contentPanes()) {
             if (pane != null) {
                 pane.setVisible(false);
                 pane.setManaged(false);
@@ -193,30 +204,21 @@ public class UserController {
         if (paneToShow != null) {
             paneToShow.setVisible(true);
             paneToShow.setManaged(true);
-            if (paneToShow == LichsudaugiaPane && LichsudaugiaPaneController != null) {
-                LichsudaugiaPaneController.loadBidHistory();
-            }
-            if (paneToShow == WatchlistPane && WatchlistPaneController != null) {
-                WatchlistPaneController.loadWatchlist();
-            }
-            if (paneToShow == ThongkePane && ThongkePaneController != null) {
-                ThongkePaneController.loadStatistics();
+            for (MenuItem item : menuItems()) {
+                if (item.pane() == paneToShow && item.onShow() != null) {
+                    item.onShow().run();
+                    break;
+                }
             }
         }
     }
 
+    /**
+     * Cập nhật kiểu hiển thị cho tất cả các nút menu.
+     * Nút được chọn sẽ có kiểu khác với nút chưa được chọn.
+     */
     private void updateMenuStyle() {
-        ToggleButton[] buttons = {
-                TrangchuButton,
-                KhoButton,
-                NaptienButton,
-                BidHistory,
-                WatchlistButton,
-                ThongkeButton,
-                CaidatButton
-        };
-
-        for (ToggleButton button : buttons) {
+        for (ToggleButton button : menuButtons()) {
             if (button == null) {
                 continue;
             }
@@ -229,14 +231,103 @@ public class UserController {
         }
     }
 
-    public String formatMoney(BigDecimal value) {
-        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
-        symbols.setGroupingSeparator(',');
-
-        DecimalFormat format = new DecimalFormat("#,###", symbols);
-        return format.format(value);
+    /**
+     * Trả về danh sách tất cả các menu items trong giao diện.
+     * Mỗi MenuItem chứa thông tin về nút toggle, pane tương ứng và hành động khi hiển thị.
+     *
+     * @return Mảng chứa tất cả các MenuItem
+     */
+    private MenuItem[] menuItems() {
+        return new MenuItem[]{
+                new MenuItem(TrangchuButton, TrangchuPane, null),
+                new MenuItem(KhoButton, KhoPane, null),
+                new MenuItem(NaptienButton, NaptienPane, null),
+                new MenuItem(BidHistory, LichsudaugiaPane, () -> {
+                    if (LichsudaugiaPaneController != null) {
+                        LichsudaugiaPaneController.loadBidHistory();
+                    }
+                }),
+                new MenuItem(WatchlistButton, WatchlistPane, () -> {
+                    if (WatchlistPaneController != null) {
+                        WatchlistPaneController.loadWatchlist();
+                    }
+                }),
+                new MenuItem(ThongkeButton, ThongkePane, () -> {
+                    if (ThongkePaneController != null) {
+                        ThongkePaneController.loadStatistics();
+                    }
+                }),
+                new MenuItem(CaidatButton, CaidatPane, null)
+        };
     }
 
+    /**
+     * Trả về danh sách tất cả các nút toggle menu trong giao diện.
+     *
+     * @return Mảng chứa tất cả các ToggleButton của menu
+     */
+    private ToggleButton[] menuButtons() {
+        return new ToggleButton[]{
+                TrangchuButton,
+                KhoButton,
+                NaptienButton,
+                BidHistory,
+                WatchlistButton,
+                ThongkeButton,
+                CaidatButton
+        };
+    }
+
+    /**
+     * Trả về danh sách tất cả các pane nội dung trong giao diện.
+     *
+     * @return Mảng chứa tất cả các AnchorPane nội dung
+     */
+    private AnchorPane[] contentPanes() {
+        return new AnchorPane[]{
+                TrangchuPane,
+                KhoPane,
+                NaptienPane,
+                LichsudaugiaPane,
+                CaidatPane,
+                WatchlistPane,
+                ThongkePane
+        };
+    }
+
+    /**
+     * Trả về danh sách tất cả các controller con trong giao diện.
+     *
+     * @return Mảng chứa tất cả các controller con
+     */
+    private Object[] childControllers() {
+        return new Object[]{
+                TrangchuPaneController,
+                KhoPaneController,
+                LichsudaugiaPaneController,
+                NaptienPaneController,
+                CaidatPaneController,
+                WatchlistPaneController,
+                ThongkePaneController
+        };
+    }
+
+    /**
+     * Định dạng số tiền thành chuỗi với định dạng tiền tệ Việt Nam.
+     *
+     * @param value Số tiền cần định dạng
+     * @return Chuỗi đã định dạng tiền tệ
+     */
+    public String formatMoney(BigDecimal value) {
+        return FormatUtils.formatMoney(value);
+    }
+
+    /**
+     * Xử lý sự kiện khi nút "Mở phòng đấu giá" được nhấn.
+     * Mở phòng đấu giá mà không chọn phiên đấu giá cụ thể nào.
+     *
+     * @param event Sự kiện click từ nút
+     */
     @FXML
     public void openAuctionRoom(ActionEvent event) {
         openAuctionRoomForAuction(null);
@@ -265,13 +356,8 @@ public class UserController {
             stage.initModality(Modality.WINDOW_MODAL);
             stage.setOnHidden(e -> {
                 auctionRoomController.stopRefresh();
-                Message balanceResponse = networkService.getUserBalance();
-                if (balanceResponse.getType() == Message.Type.SUCCESS && balanceResponse.getData() != null) {
-                    soDuTaiKhoan = (BigDecimal) balanceResponse.getData();
-                    updateAllBalances();
-                }
-                if (TrangchuPaneController != null) TrangchuPaneController.loadHomeItems();
-                if (KhoPaneController != null) KhoPaneController.loadWarehouseItems();
+                refreshBalanceFromServer();
+                refreshItemLists();
             });
             stage.show();
 
@@ -280,6 +366,12 @@ public class UserController {
         }
     }
 
+    /**
+     * Xử lý sự kiện khi người dùng thay đổi ảnh đại diện.
+     * Mở hộp thoại chọn file ảnh, tải ảnh lên server và cập nhật hiển thị.
+     *
+     * @param event Sự kiện click từ nút thay đổi ảnh
+     */
     @FXML
     public void changeAvatar(ActionEvent event) {
         FileChooser fileChooser = new FileChooser();
@@ -305,10 +397,15 @@ public class UserController {
         }
     }
 
+    /**
+     * Mở hộp thoại tạo vật phẩm mới.
+     * Tải giao diện CreateItems và hiển thị dưới dạng modal dialog.
+     *
+     * @param event Sự kiện click từ nút tạo vật phẩm
+     */
     public void createItems(ActionEvent event) {
         openModalFXML(CREATE_ITEM_FXML, "Tạo sản phẩm");
-        if (TrangchuPaneController != null) TrangchuPaneController.loadHomeItems();
-        if (KhoPaneController != null) KhoPaneController.loadWarehouseItems();
+        refreshItemLists();
     }
 
     /**
@@ -318,32 +415,30 @@ public class UserController {
      */
     public void editItem(Item item) {
         try {
-            URL resourceUrl = getClass().getResource(CREATE_ITEM_FXML);
-            if (resourceUrl == null) {
-                resourceUrl = Thread.currentThread().getContextClassLoader().getResource(
-                        CREATE_ITEM_FXML.startsWith("/") ? CREATE_ITEM_FXML.substring(1) : CREATE_ITEM_FXML
-                );
-            }
-            FXMLLoader loader = new FXMLLoader(resourceUrl);
-            Parent root = loader.load();
-            CreateItemsController createController = loader.getController();
+            LoadedView view = loadView(CREATE_ITEM_FXML);
+            CreateItemsController createController = (CreateItemsController) view.controller();
             connectChildController(createController);
             createController.setEditMode(item);
 
             Stage stage = new Stage();
             stage.setTitle("Chỉnh sửa sản phẩm");
-            stage.setScene(new Scene(root));
+            stage.setScene(new Scene(view.root()));
             stage.initOwner(getCurrentStage());
             stage.initModality(Modality.WINDOW_MODAL);
             stage.showAndWait();
 
-            if (TrangchuPaneController != null) TrangchuPaneController.loadHomeItems();
-            if (KhoPaneController != null) KhoPaneController.loadWarehouseItems();
+            refreshItemLists();
         } catch (Exception e) {
             showError("Lỗi", "Không thể mở chỉnh sửa: " + e.getMessage());
         }
     }
 
+    /**
+     * Xử lý sự kiện khi người dùng muốn đổi tài khoản.
+     * Hiển thị xác nhận và chuyển về màn hình đăng nhập nếu đồng ý.
+     *
+     * @param event Sự kiện click từ nút đổi tài khoản
+     */
     public void doitaikhoan(ActionEvent event) {
         boolean confirmed = showConfirm(
                 "Đổi tài khoản",
@@ -357,6 +452,12 @@ public class UserController {
         switchScene(LOGIN_FXML, "Đăng nhập");
     }
 
+    /**
+     * Xử lý sự kiện khi người dùng muốn thoát ứng dụng.
+     * Hiển thị xác nhận và đóng cửa sổ nếu đồng ý.
+     *
+     * @param event Sự kiện click từ nút thoát
+     */
     public void exit(ActionEvent event) {
         boolean confirmed = showConfirm(
                 "Thoát",
@@ -373,6 +474,12 @@ public class UserController {
         }
     }
 
+    /**
+     * Thiết lập dữ liệu người dùng cho controller và các controller con.
+     * Cập nhật tên hiển thị và tải lại số dư từ server.
+     *
+     * @param user Đối tượng User chứa thông tin người dùng
+     */
     public void setUserData(User user) {
         this.currentUser = user;
 
@@ -382,98 +489,86 @@ public class UserController {
             }
         }
 
-        Message response = networkService.getUserBalance();
-        if (response.getType() == Message.Type.SUCCESS && response.getData() != null) {
-            this.soDuTaiKhoan = (BigDecimal) response.getData();
-        }
-
-        updateAllBalances();
+        refreshBalanceFromServer();
         if (TrangchuPaneController != null) TrangchuPaneController.setUserData(user);
         if (KhoPaneController != null) KhoPaneController.setUserData(user);
         if (LichsudaugiaPaneController != null) LichsudaugiaPaneController.setUserData(user);
     }
 
+    /**
+     * Cập nhật số dư tài khoản trên tất cả các giao diện liên quan.
+     * Gửi số dư hiện tại đến controller Trang chủ và Nạp tiền.
+     */
     public void updateAllBalances() {
         if (TrangchuPaneController != null) TrangchuPaneController.updateBalance(soDuTaiKhoan);
         if (NaptienPaneController != null) NaptienPaneController.updateBalance(soDuTaiKhoan);
     }
 
-    public void refreshAllData() {
-        updateAllBalances();
-        if (TrangchuPaneController != null) TrangchuPaneController.loadHomeItems();
-        if (KhoPaneController != null) KhoPaneController.loadWarehouseItems();
-    }
-
+    /**
+     * Làm mới danh sách vật phẩm trên trang chủ.
+     * Gọi phương thức loadHomeItems() của controller Trang chủ.
+     */
     public void refreshHomeItems() {
         if (TrangchuPaneController != null) TrangchuPaneController.loadHomeItems();
     }
 
+    /**
+     * Lấy thông tin người dùng hiện tại.
+     *
+     * @return Đối tượng User hiện tại, hoặc null nếu chưa đăng nhập
+     */
     public User getCurrentUser() {
         return currentUser;
     }
 
-    public BigDecimal getSoDuTaiKhoan() {
-        return soDuTaiKhoan;
-    }
-
+    /**
+     * Thiết lập số dư tài khoản mới.
+     *
+     * @param soDuTaiKhoan Số dư tài khoản mới
+     */
     public void setSoDuTaiKhoan(BigDecimal soDuTaiKhoan) {
         this.soDuTaiKhoan = soDuTaiKhoan;
     }
 
-    public NetworkService getNetworkService() {
-        return networkService;
-    }
-
+    /**
+     * Tạo một Label trống với nội dung văn bản được chỉ định.
+     *
+     * @param text Văn bản hiển thị trên Label
+     * @return Label đã được tạo với nội dung văn bản
+     */
     public Label createEmptyLabel(String text) {
-        Label label = new Label(text);
-        label.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 18px;");
-        return label;
+        return UIUtils.createEmptyLabel(text);
     }
 
+    /**
+     * Lấy Stage (cửa sổ) hiện tại từ một trong các pane nội dung.
+     *
+     * @return Stage hiện tại, hoặc null nếu không tìm thấy
+     */
     public Stage getCurrentStage() {
-        if (TrangchuPane != null && TrangchuPane.getScene() != null) {
-            return (Stage) TrangchuPane.getScene().getWindow();
-        }
-
-        if (KhoPane != null && KhoPane.getScene() != null) {
-            return (Stage) KhoPane.getScene().getWindow();
-        }
-
-        if (NaptienPane != null && NaptienPane.getScene() != null) {
-            return (Stage) NaptienPane.getScene().getWindow();
-        }
-
-        if (CaidatPane != null && CaidatPane.getScene() != null) {
-            return (Stage) CaidatPane.getScene().getWindow();
+        for (AnchorPane pane : contentPanes()) {
+            if (pane != null && pane.getScene() != null) {
+                return (Stage) pane.getScene().getWindow();
+            }
         }
 
         return null;
     }
 
+    /**
+     * Mở giao diện FXML dưới dạng modal dialog.
+     * Tải FXML từ đường dẫn đã cho, kết nối controller con và hiển thị dưới dạng cửa sổ modal.
+     *
+     * @param fxmlPath Đường dẫn đến file FXML
+     * @param title Tiêu đề cửa sổ modal
+     */
     private void openModalFXML(String fxmlPath, String title) {
         try {
-            URL resourceUrl = getClass().getResource(fxmlPath);
-            if (resourceUrl == null) {
-                resourceUrl = Thread.currentThread().getContextClassLoader().getResource(
-                        fxmlPath.startsWith("/") ? fxmlPath.substring(1) : fxmlPath
-                );
-            }
-            System.out.println("Loading FXML from: " + resourceUrl);
-            FXMLLoader loader = new FXMLLoader(resourceUrl);
-            Parent root = loader.load();
-
-            Object childController = loader.getController();
-            connectChildController(childController);
-
-            Stage stage = new Stage();
-            stage.setTitle(title);
-            stage.setScene(new Scene(root));
-            stage.initOwner(getCurrentStage());
-            stage.initModality(Modality.WINDOW_MODAL);
-            stage.showAndWait();
+            LoadedView view = loadView(fxmlPath);
+            connectChildController(view.controller());
+            showModal(view.root(), title);
 
         } catch (Exception e) {
-            e.printStackTrace();
             showError(
                     "Không thể mở giao diện",
                     "Không tìm thấy hoặc không LOAD được file: " + fxmlPath + "\n\nChi tiết: " + e.getMessage()
@@ -481,13 +576,17 @@ public class UserController {
         }
     }
 
+    /**
+     * Chuyển đổi toàn bộ giao diện sang scene FXML mới.
+     * Tải FXML, kết nối controller và thay thế scene hiện tại trong stage.
+     *
+     * @param fxmlPath Đường dẫn đến file FXML
+     * @param title Tiêu đề cửa sổ mới
+     */
     private void switchScene(String fxmlPath, String title) {
         try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
-            Parent root = loader.load();
-
-            Object nextController = loader.getController();
-            connectChildController(nextController);
+            LoadedView view = loadView(fxmlPath);
+            connectChildController(view.controller());
 
             Stage stage = getCurrentStage();
 
@@ -496,7 +595,7 @@ public class UserController {
             }
 
             stage.setTitle(title);
-            stage.setScene(new Scene(root));
+            stage.setScene(new Scene(view.root()));
             stage.centerOnScreen();
             stage.show();
 
@@ -508,45 +607,135 @@ public class UserController {
         }
     }
 
+    /**
+     * Kết nối controller con với UserController chính.
+     * Nếu controller thực thi giao diện LinkedController, sẽ gọi phương thức setUserController().
+     *
+     * @param controller Controller con cần kết nối
+     */
     private void connectChildController(Object controller) {
         if (controller instanceof LinkedController linkedController) {
             linkedController.setUserController(this);
         }
     }
 
+    /**
+     * Tải giao diện FXML từ đường dẫn đã cho và trả về LoadedView chứa root và controller.
+     *
+     * @param fxmlPath Đường dẫn đến file FXML
+     * @return Đối tượng LoadedView chứa root Parent và controller
+     * @throws IOException Nếu không thể tải file FXML
+     */
+    private LoadedView loadView(String fxmlPath) throws IOException {
+        URL resourceUrl = resolveResource(fxmlPath);
+        FXMLLoader loader = new FXMLLoader(resourceUrl);
+        Parent root = loader.load();
+        return new LoadedView(root, loader.getController());
+    }
+
+    /**
+     * Tìm và trả về URL tài nguyên từ đường dẫn FXML.
+     * Thử tìm theo class loader trước, sau đó theo context class loader.
+     *
+     * @param fxmlPath Đường dẫn đến file FXML
+     * @return URL của tài nguyên FXML
+     * @throws IOException Nếu không tìm thấy file FXML
+     */
+    private URL resolveResource(String fxmlPath) throws IOException {
+        URL resourceUrl = getClass().getResource(fxmlPath);
+        if (resourceUrl != null) {
+            return resourceUrl;
+        }
+
+        String normalizedPath = fxmlPath.startsWith("/") ? fxmlPath.substring(1) : fxmlPath;
+        resourceUrl = Thread.currentThread().getContextClassLoader().getResource(normalizedPath);
+        if (resourceUrl == null) {
+            throw new IOException("FXML not found: " + fxmlPath);
+        }
+
+        return resourceUrl;
+    }
+
+    /**
+     * Hiển thị giao diện dưới dạng modal dialog.
+     * Tạo Stage mới với tiêu đề đã cho và hiển thị dưới dạng cửa sổ modal.
+     *
+     * @param root Root parent của giao diện
+     * @param title Tiêu đề cửa sổ modal
+     */
+    private void showModal(Parent root, String title) {
+        Stage stage = new Stage();
+        stage.setTitle(title);
+        stage.setScene(new Scene(root));
+        stage.initOwner(getCurrentStage());
+        stage.initModality(Modality.WINDOW_MODAL);
+        stage.showAndWait();
+    }
+
+    /**
+     * Làm mới số dư tài khoản từ server.
+     * Gọi API lấy số dư và cập nhật giá trị cục bộ cũng như hiển thị trên giao diện.
+     */
+    private void refreshBalanceFromServer() {
+        BigDecimal balance = ResponseUtils.extractBalance(networkService.getUserBalance());
+        if (balance != null) {
+            this.soDuTaiKhoan = balance;
+            updateAllBalances();
+        }
+    }
+
+    /**
+     * Làm mới danh sách vật phẩm trên trang chủ và kho hàng.
+     * Gọi phương thức load tương ứng cho từng controller.
+     */
+    private void refreshItemLists() {
+        if (TrangchuPaneController != null) {
+            TrangchuPaneController.loadHomeItems();
+        }
+        if (KhoPaneController != null) {
+            KhoPaneController.loadWarehouseItems();
+        }
+    }
+
+    /**
+     * Hiển thị thông báo thông tin cho người dùng.
+     *
+     * @param title Tiêu đề thông báo
+     * @param message Nội dung thông báo
+     */
     public void showInfo(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AlertUtils.showInfo(title, message);
     }
 
+    /**
+     * Hiển thị cảnh báo cho người dùng.
+     *
+     * @param title Tiêu đề cảnh báo
+     * @param message Nội dung cảnh báo
+     */
     public void showWarning(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AlertUtils.showWarning(title, message);
     }
 
+    /**
+     * Hiển thị thông báo lỗi cho người dùng.
+     *
+     * @param title Tiêu đề lỗi
+     * @param message Nội dung lỗi
+     */
     public void showError(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AlertUtils.showError(title, message);
     }
 
+    /**
+     * Hiển thị hộp thoại xác nhận cho người dùng.
+     *
+     * @param title Tiêu đề hộp thoại
+     * @param message Nội dung yêu cầu xác nhận
+     * @return true nếu người dùng chọn "Đồng ý", false nếu chọn "Hủy"
+     */
     public boolean showConfirm(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-
-        return alert.showAndWait()
-                .filter(buttonType -> buttonType == ButtonType.OK)
-                .isPresent();
+        return AlertUtils.showConfirm(title, message);
     }
 
     public interface LinkedController {

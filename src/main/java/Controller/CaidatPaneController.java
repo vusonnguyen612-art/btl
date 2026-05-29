@@ -12,11 +12,13 @@ public class CaidatPaneController implements UserController.LinkedController {
 
     private UserController userController;
 
+    /** Gán UserController liên kết để truy cập thông tin người dùng và các phương thức hỗ trợ giao diện. */
     @Override
     public void setUserController(UserController uc) {
         this.userController = uc;
     }
 
+    /** Xử lý sự kiện đổi mật khẩu: kiểm tra dữ liệu đầu vào (đầy đủ, khớp, tối thiểu 6 ký tự) và gửi yêu cầu lên server. */
     @FXML
     private void doimatkhau(ActionEvent event) {
         if (userController == null || userController.getCurrentUser() == null) {
@@ -50,6 +52,7 @@ public class CaidatPaneController implements UserController.LinkedController {
         Nhaplaimatkhaumoi.clear();
     }
 
+    /** Xử lý sự kiện đăng xuất: gọi phương thức exit của UserController để thoát khỏi tài khoản. */
     @FXML
     private void onExit(ActionEvent event) {
         if (userController != null) {
@@ -57,6 +60,7 @@ public class CaidatPaneController implements UserController.LinkedController {
         }
     }
 
+    /** Xử lý sự kiện chuyển đổi tài khoản: gọi phương thức doitaikhoan của UserController. */
     @FXML
     private void onDoitaikhoan(ActionEvent event) {
         if (userController != null) {
