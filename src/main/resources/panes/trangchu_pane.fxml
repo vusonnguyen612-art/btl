@@ -19,7 +19,7 @@
             <Font name="Arial Bold" size="20.0" />
          </font>
       </Label>
-      <Label fx:id="Sodutaikhoan1" alignment="CENTER" layoutX="96.0" layoutY="20.0" prefHeight="29.0" prefWidth="271.0" style="-fx-text-fill: white; -fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-font-weight: bold;" text=" 300000" AnchorPane.leftAnchor="96.0">
+      <Label fx:id="Sodutaikhoan1" alignment="CENTER" layoutX="96.0" layoutY="20.0" prefHeight="29.0" prefWidth="271.0" style="-fx-text-fill: white; -fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-font-weight: bold;" text=" 0" AnchorPane.leftAnchor="96.0">
          <font>
             <Font size="23.0" />
          </font>

@@ -112,7 +112,11 @@ public class logincontroller {
 
         NetworkService networkService = NetworkService.getInstance();
         if (!networkService.isConnected()) {
-            networkService.connect();
+            boolean connected = networkService.connect();
+            if (!connected) {
+                showMessage("Không thể kết nối đến máy chủ. Vui lòng kiểm tra xem server đã được bật chưa.");
+                return;
+            }
         }
 
         try {

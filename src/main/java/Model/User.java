@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 
 /**
  * Lớp đại diện cho người dùng trong hệ thống.
- * Mặc định vừa là seller vừa là bidder, số dư ban đầu 300,000.
+ * Mặc định vừa là seller vừa là bidder, số dư ban đầu 0.
  */
 public class User implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -27,7 +27,7 @@ public class User implements Serializable {
         this.password = password;
         this.isSeller = true;
         this.isBidder = true;
-        this.balance = new BigDecimal("300000");
+        this.balance = BigDecimal.ZERO;
     }
 
     public BigDecimal getBalance() {

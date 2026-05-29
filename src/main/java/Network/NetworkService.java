@@ -83,9 +83,9 @@ public class NetworkService {
         }
     }
 
-    /** Gửi message và nhận response. Tự động xử lý notification nếu có. */
+    /** Gửi message và nhận response. Tự động reconnect nếu mất kết nối. */
     public Message sendMessage(Message message) {
-        if (!isConnected() && message.getType() != Message.Type.LOGIN && message.getType() != Message.Type.REGISTER) {
+        if (!isConnected()) {
             Message reconnectResult = attemptReconnect();
             if (reconnectResult != null) return reconnectResult;
         }
@@ -184,11 +184,8 @@ public class NetworkService {
         this.onNotifications = listener;
     }
 
-    /** Gửi yêu cầu đăng nhập, tự động reconnect nếu mất kết nối. */
+    /** Gửi yêu cầu đăng nhập. */
     public Message login(String username, String password) {
-        if (!isConnected()) {
-            connect();
-        }
         Message message = new Message(Message.Type.LOGIN);
         message.setData(username);
         message.setContent(password);
@@ -201,11 +198,8 @@ public class NetworkService {
         return response;
     }
 
-    /** Gửi yêu cầu đăng ký tài khoản mới, tự động reconnect nếu mất kết nối. */
+    /** Gửi yêu cầu đăng ký tài khoản mới. */
     public Message register(String username, String password, String email, String phone) {
-        if (!isConnected()) {
-            connect();
-        }
         User user = new User(null, username, password);
         user.setEmail(email);
         Message message = new Message(Message.Type.REGISTER);

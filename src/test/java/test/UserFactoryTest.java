@@ -82,7 +82,7 @@ class UserFactoryTest {
     @Test
     void testCreateUser_HasInitialBalance() {
         User user = UserFactory.createUser("testuser", "password123");
-        assertEquals(300000, user.getBalance().doubleValue(), 0.001);
+        assertEquals(0, user.getBalance().doubleValue(), 0.001);
     }
 
     @Test

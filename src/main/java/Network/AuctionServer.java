@@ -241,10 +241,6 @@ public class AuctionServer {
                     Message response = processMessage(message);
                     output.writeObject(response);
                     output.flush();
-
-                    if (response.getType() == Message.Type.ERROR) {
-                        break;
-                    }
                 }
             } catch (IOException | ClassNotFoundException e) {
                 System.err.println("Client handler error: " + e.getMessage());

@@ -104,7 +104,7 @@ public class UserController {
     private ToggleGroup menuGroup = new ToggleGroup();
     private User currentUser;
     private NetworkService networkService = NetworkService.getInstance();
-    private BigDecimal soDuTaiKhoan = new BigDecimal("300000");
+    private BigDecimal soDuTaiKhoan = BigDecimal.ZERO;
 
     private static final String MENU_STYLE =
             "-fx-background-color: #1E1E1D;"
