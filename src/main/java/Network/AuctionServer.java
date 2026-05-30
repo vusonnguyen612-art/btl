@@ -17,7 +17,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /** Server TCP đa luồng xử lý các yêu cầu đấu giá. Quản lý AutoBid, penalty, notification. */
-public class AuctionServer {
+ public class AuctionServer {
     private static final Map<String, List<AutoBid>> autoBids = new ConcurrentHashMap<>();
     private static final Object autoBidLock = new Object();
     private static final Map<String, List<Message>> pendingNotifications = new ConcurrentHashMap<>();
@@ -78,6 +78,13 @@ public class AuctionServer {
             try {
                 stmt.execute("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'BIDDER_SELLER'");
                 System.out.println("Database migration: added 'role' column to users table.");
+            } catch (SQLException e) {
+                // Column already exists — bỏ qua
+            }
+            // Migration: thêm cột banned nếu chưa có
+            try {
+                stmt.execute("ALTER TABLE users ADD COLUMN banned BOOLEAN DEFAULT FALSE");
+                System.out.println("Database migration: added 'banned' column to users table.");
             } catch (SQLException e) {
                 // Column already exists — bỏ qua
             }

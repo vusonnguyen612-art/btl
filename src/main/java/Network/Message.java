@@ -62,6 +62,10 @@ public class Message implements Serializable {
         GET_WATCHLIST,
         DELETE_USER,
         CHANGE_PASSWORD,
+        BAN_USER,
+        UNBAN_USER,
+        GET_ALL_ITEMS,
+        SUSPEND_AUCTION,
     }
 
     private Type type;

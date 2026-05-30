@@ -24,6 +24,7 @@ public abstract class User extends Entity {
     private String email;
     private BigDecimal balance;
     private String avatarPath;
+    private boolean banned;
 
     /**
      * @param id       mã người dùng
@@ -35,6 +36,7 @@ public abstract class User extends Entity {
         this.username = username;
         this.password = password;
         this.balance = BigDecimal.ZERO;
+        this.banned = false;
     }
 
     // ── Abstract methods ────────────────────────────────────
@@ -86,6 +88,12 @@ public abstract class User extends Entity {
 
     /** @param avatarPath đường dẫn ảnh đại diện mới */
     public void setAvatarPath(String avatarPath) { this.avatarPath = avatarPath; }
+
+    /** @return true nếu tài khoản bị khóa */
+    public boolean isBanned() { return banned; }
+
+    /** @param banned trạng thái khóa tài khoản */
+    public void setBanned(boolean banned) { this.banned = banned; }
 
     @Override
     public String toString() {

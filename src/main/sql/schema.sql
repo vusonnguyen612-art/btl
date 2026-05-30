@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
     is_bidder BOOLEAN DEFAULT TRUE,
     balance DECIMAL(15,2) DEFAULT 0,
     avatar_path VARCHAR(255),
+    banned BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

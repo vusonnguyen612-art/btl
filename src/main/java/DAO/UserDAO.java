@@ -151,6 +151,64 @@ public class UserDAO {
     }
 
     /**
+     * Khóa tài khoản người dùng (dành cho admin).
+     *
+     * @param userId ID của người dùng cần khóa.
+     * @return {@code true} nếu khóa thành công.
+     */
+    public boolean banUser(String userId) {
+        String sql = "UPDATE users SET banned = TRUE WHERE id = ? AND id NOT LIKE 'ADM%'";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, userId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Mở khóa tài khoản người dùng (dành cho admin).
+     *
+     * @param userId ID của người dùng cần mở khóa.
+     * @return {@code true} nếu mở khóa thành công.
+     */
+    public boolean unbanUser(String userId) {
+        String sql = "UPDATE users SET banned = FALSE WHERE id = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, userId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Kiểm tra tài khoản có bị khóa không.
+     *
+     * @param userId ID của người dùng cần kiểm tra.
+     * @return {@code true} nếu tài khoản bị khóa.
+     */
+    public boolean isBanned(String userId) {
+        String sql = "SELECT banned FROM users WHERE id = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, userId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getBoolean("banned");
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
      * Xóa người dùng theo ID (dành cho admin).
      *
      * @param userId ID của người dùng cần xóa.
@@ -288,6 +346,11 @@ public class UserDAO {
         }
         user.setEmail(rs.getString("email"));
         user.setBalance(rs.getBigDecimal("balance"));
+        try {
+            user.setBanned(rs.getBoolean("banned"));
+        } catch (SQLException e) {
+            // Column chưa tồn tại — bỏ qua
+        }
         return user;
     }
 
@@ -481,6 +544,15 @@ public class UserDAO {
                     String storedHash = rs.getString("password");
                     if (storedHash == null) {
                         throw new AuthenticationException("Invalid username or password", username);
+                    }
+
+                    // Kiểm tra tài khoản bị khóa
+                    try {
+                        if (rs.getBoolean("banned")) {
+                            throw new AuthenticationException("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin.", username);
+                        }
+                    } catch (SQLException e) {
+                        // Column chưa tồn tại — bỏ qua
                     }
 
                     // Thử PBKDF2 mới trước
