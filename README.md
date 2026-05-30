@@ -4,7 +4,11 @@
 [![Qodana](https://github.com/vusonnguyen612-art/btl/actions/workflows/qodana_code_quality.yml/badge.svg)](https://github.com/vusonnguyen612-art/btl/actions/workflows/qodana_code_quality.yml)
 
 **Môn học:** Lập Trình Nâng Cao  
-**Sinh viên:** Đỗ Hải Đăng — MSSV: 25020113
+**Sinh viên thực hiện:**
+- Đỗ Hải Đăng — MSSV: 25020113
+- Nguyễn Vũ Sơn — MSSV: 25020352
+- Lê Quang Nghĩa — MSSV: 25020292
+- Nguyễn Duy Quang — MSSV: 25020330
 
 ---
 
