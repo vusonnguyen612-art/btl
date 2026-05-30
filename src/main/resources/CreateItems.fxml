@@ -11,7 +11,7 @@
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="720.0" prefWidth="672.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" stylesheets="@style.css" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.CreateItemsController">
+<AnchorPane minHeight="0.0" minWidth="0.0" prefHeight="720.0" prefWidth="672.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" stylesheets="@style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.CreateItemsController">
    <children>
       <TextField fx:id="tenSanPham" alignment="CENTER" layoutX="134.0" layoutY="200.0" prefHeight="60.0" prefWidth="398.0" promptText="Tên sản phẩm" style="-fx-background-color: #111111; -fx-background-radius: 30; -fx-border-color: #d4af5a; -fx-border-radius: 30; -fx-text-fill: white;">
          <font>

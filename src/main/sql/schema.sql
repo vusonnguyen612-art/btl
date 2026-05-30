@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(100),
     is_seller BOOLEAN DEFAULT TRUE,
     is_bidder BOOLEAN DEFAULT TRUE,
-    balance DECIMAL(15,2) DEFAULT 300000,
+    balance DECIMAL(15,2) DEFAULT 0,
     avatar_path VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -88,4 +88,4 @@ CREATE TABLE IF NOT EXISTS watchlist (
 
 -- Index cho chat và watchlist để tăng tốc truy vấn
 CREATE INDEX idx_chat_auction ON chat_messages(auction_id);
-CREATE INDEX idx_watchlist_user ON watchlist(user_id);
+CREATE INDEX idx_watchlist_user ON watchlist(user_id);

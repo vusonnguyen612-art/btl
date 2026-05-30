@@ -6,7 +6,7 @@
 <?import javafx.scene.paint.*?>
 <?import javafx.scene.text.*?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.logincontroller">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/17.0.12" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.LoginController">
    <children>
       <SplitPane dividerPositions="0.48" prefHeight="400.0" prefWidth="600.0">
          <items>
@@ -48,14 +48,14 @@
                   </Label>
                   <TextField fx:id="loginUsernameField" layoutX="14.0" layoutY="131.0" prefHeight="38.0" prefWidth="262.0" promptText="Tên đăng nhập" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-text-fill: white; -fx-prompt-text-fill: #a6a6a6;" />
                   <PasswordField fx:id="loginPasswordField" layoutX="14.0" layoutY="188.0" prefHeight="38.0" prefWidth="262.0" promptText="Mật khẩu" style="-fx-background-color: #111111; -fx-border-color: #d4af5a; -fx-background-radius: 30; -fx-border-radius: 30; -fx-text-fill: white; -fx-prompt-text-fill: #a6a6a6;" />
-                  <Button layoutX="14.0" layoutY="252.0" mnemonicParsing="false" onAction="#Login" prefHeight="38.0" prefWidth="262.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Đăng nhập">
+                  <Button fx:id="loginButton" layoutX="14.0" layoutY="252.0" mnemonicParsing="false" prefHeight="38.0" prefWidth="262.0" style="-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;" text="Đăng nhập">
                      <font>
                         <Font size="17.0" />
                      </font>
                   </Button>
                   <Label fx:id="messageLabel" alignment="CENTER" layoutX="14.0" layoutY="301.0" prefHeight="41.0" prefWidth="262.0" textFill="#eacd8f" wrapText="true" />
                   <Label layoutX="43.0" layoutY="349.0" text="Nếu chưa có tài khoản?" textFill="#eacd8f" />
-                  <Button layoutX="170.0" layoutY="345.0" mnemonicParsing="false" onAction="#ComeSignup" prefHeight="26.0" prefWidth="88.0" style="-fx-background-color: #d9b15f; -fx-background-radius: 30;" text="Đăng ký" textFill="WHITE">
+                  <Button layoutX="170.0" layoutY="345.0" mnemonicParsing="false" onAction="#comeSignup" prefHeight="26.0" prefWidth="88.0" style="-fx-background-color: #d9b15f; -fx-background-radius: 30;" text="Đăng ký" textFill="WHITE">
                      <font>
                         <Font name="System Bold" size="12.0" />
                      </font>

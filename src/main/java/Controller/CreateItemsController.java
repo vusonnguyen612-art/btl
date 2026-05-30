@@ -15,12 +15,11 @@ import javafx.stage.Stage;
 
 import Model.Item;
 import Model.AuctionSession;
-import DAO.ItemDAO;
-import DAO.AuctionSessionDAO;
 import Factory.ItemFactory;
 import Model.User;
 import Network.NetworkService;
 import Network.Message;
+import Util.AlertUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -93,8 +92,6 @@ public class CreateItemsController implements UserController.LinkedController {
     private final String BUTTON_STYLE_SELECTED =
             "-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 15;";
 
-    private final ItemDAO itemDAO = new ItemDAO();
-    private final AuctionSessionDAO sessionDAO = new AuctionSessionDAO();
     private final NetworkService networkService = NetworkService.getInstance();
 
     /** Đặt chế độ chỉnh sửa với dữ liệu sản phẩm và phiên hiện tại. */
@@ -125,8 +122,10 @@ public class CreateItemsController implements UserController.LinkedController {
         }
     }
 
+    /**
+     * Khởi tạo ComboBox danh mục với giá trị mặc định "Nghệ thuật" và thời gian 60 phút.
+     */
     @FXML
-    /** Khởi tạo ComboBox danh mục và giá trị mặc định. */
     private void initialize() {
         thoiGianDauGia.setText("60");
         categoryComboBox.getItems().addAll("Nghệ thuật", "Điện tử", "Xe cộ", "Thời trang", "Sách", "Thể thao", "Trang sức", "Âm nhạc", "Nội thất");
@@ -308,25 +307,24 @@ public class CreateItemsController implements UserController.LinkedController {
                 }
             }
 
-            if (itemDAO.save(item)) {
-                String sessionId = UUID.randomUUID().toString();
-                AuctionSession session = new AuctionSession(
-                    sessionId,
-                    item,
-                    currentUser.getId(),
-                    gia.doubleValue(),
-                    duration
-                );
-                sessionDAO.save(session);
+            Message itemResponse = networkService.createItem(item);
+            if (itemResponse.getType() == Message.Type.SUCCESS && itemResponse.getData() instanceof Item createdItem) {
+                Message auctionResponse = networkService.createAuction(createdItem.getId(), duration);
+                if (auctionResponse.getType() == Message.Type.SUCCESS) {
+                    String durationText = duration >= 60
+                            ? (duration / 60) + " giờ" + (duration % 60 > 0 ? " " + (duration % 60) + " phút" : "")
+                            : duration + " phút";
 
-                String durationText = duration >= 60
-                        ? (duration / 60) + " giờ" + (duration % 60 > 0 ? " " + (duration % 60) + " phút" : "")
-                        : duration + " phút";
-
-                showInfo("Thành công", "Tạo sản phẩm thành công!\nThời gian đấu giá: " + durationText);
-                closeWindow();
+                    showInfo("Thành công", "Tạo sản phẩm thành công!\nThời gian đấu giá: " + durationText);
+                    closeWindow();
+                } else {
+                    String errMsg = auctionResponse.getContent() != null ? auctionResponse.getContent() : "Không thể tạo phiên đấu giá.";
+                    showWarning("Lỗi", errMsg);
+                }
             } else {
-                showWarning("Lỗi", "Không thể tạo sản phẩm.");
+                String errMsg = itemResponse.getType() == Message.Type.ERROR && itemResponse.getContent() != null
+                        ? itemResponse.getContent() : "Không thể tạo sản phẩm.";
+                showWarning("Lỗi", errMsg);
             }
 
         } catch (NumberFormatException e) {
@@ -399,18 +397,10 @@ public class CreateItemsController implements UserController.LinkedController {
     }
 
     private void showInfo(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AlertUtils.showInfo(title, message);
     }
 
     private void showWarning(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AlertUtils.showWarning(title, message);
     }
 }

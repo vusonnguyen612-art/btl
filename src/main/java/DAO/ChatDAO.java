@@ -19,6 +19,10 @@ public class ChatDAO {
      * @return {@code true} nếu lưu thành công vào DB, ngược lại {@code false}.
      */
     public boolean saveChatMessage(String auctionId, String senderId, String message) {
+        // Validate: không cho phép tin nhắn rỗng hoặc null
+        if (message == null || message.trim().isEmpty()) {
+            return false;
+        }
         String sql = "INSERT INTO chat_messages (id, auction_id, sender_id, message, timestamp) VALUES (?, ?, ?, ?, NOW())";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {

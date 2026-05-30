@@ -23,6 +23,18 @@ public class AuctionManager implements Serializable {
     private int auctionCounter;
     private static final String DATA_FILE = "auction_data.ser";
 
+    /**
+     * Khởi tạo đối tượng {@code AuctionManager} với các cấu trúc dữ liệu rỗng.
+     * <p>Được gọi từ {@link #getInstance()} lần đầu tiên hoặc {@link #resetInstance()}.</p>
+     * <ul>
+     *   <li>{@code users} — ConcurrentHashMap lưu trữ người dùng theo ID.</li>
+     *   <li>{@code items} — ConcurrentHashMap lưu trữ vật phẩm theo ID.</li>
+     *   <li>{@code auctions} — ConcurrentHashMap lưu trữ phiên đấu giá theo ID.</li>
+     *   <li>{@code globalObservers} — danh sách observer toàn cục (CopyOnWriteArrayList).</li>
+     *   <li>{@code lock} — ReadWriteLock đảm bảo đồng bộ đọc-ghi.</li>
+     *   <li>{@code auctionCounter} — bộ đếm tạo mã phiên tự động tăng.</li>
+     * </ul>
+     */
     private AuctionManager() {
         this.users = new ConcurrentHashMap<>();
         this.items = new ConcurrentHashMap<>();
@@ -160,6 +172,9 @@ public class AuctionManager implements Serializable {
 
     /** Lấy vật phẩm theo ID. */
     public Item getItem(String itemId) {
+        if (itemId == null) {
+            throw new IllegalArgumentException("itemId must not be null");
+        }
         lock.readLock().lock();
         try {
             return items.get(itemId);
@@ -252,6 +267,9 @@ public class AuctionManager implements Serializable {
 
     /** Lấy người dùng theo ID. */
     public User getUser(String userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("userId must not be null");
+        }
         lock.readLock().lock();
         try {
             return users.get(userId);
@@ -311,6 +329,16 @@ public class AuctionManager implements Serializable {
         }
     }
 
+    /**
+     * Khôi phục đối tượng sau khi deserialize từ file {@code auction_data.ser}.
+     * <p>Đảm bảo trường transient {@code globalObservers} được khởi tạo lại
+     * (dùng {@link java.util.concurrent.CopyOnWriteArrayList}) nếu đang là {@code null},
+     * vì observer không được serialize.</p>
+     *
+     * @param in luồng ObjectInputStream chứa dữ liệu đã serialize.
+     * @throws IOException            nếu có lỗi đọc luồng.
+     * @throws ClassNotFoundException nếu class của đối tượng không tìm thấy.
+     */
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
         in.defaultReadObject();
         if (globalObservers == null) {

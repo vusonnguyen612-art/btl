@@ -15,6 +15,9 @@ import Model.ChatMessage;
 import Model.Item;
 import Model.User;
 import Model.Admin;
+import Model.RegularUser;
+import Model.Bidder;
+import Model.Seller;
 import Factory.UserFactory;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -32,15 +35,28 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Lớp kiểm thử (Unit Test) cho các tính năng mới được phát triển:
- * 1. Sniper Protection (Tự động gia hạn đấu giá khi đặt giá trong 2 phút cuối).
- * 2. Live Chat (Lưu và truy vấn lịch sử trò chuyện trực tuyến).
- * 3. Watchlist (Thêm, xóa và truy vấn các phiên đấu giá theo dõi).
+ * Bộ kiểm thử tích hợp (Integration Test) cho các tính năng mới của hệ thống đấu giá.
+ * <p>
+ * Các tính năng được kiểm thử:
+ * <ol>
+ *   <li><b>Sniper Protection (Soft Close)</b> — Tự động gia hạn thời gian đấu giá thêm
+ *       2 phút khi có bid được đặt trong 2 phút cuối, ngăn chặn chiến thuật "sniping".</li>
+ *   <li><b>Live Chat</b> — Lưu tin nhắn chat và truy vấn lịch sử trò chuyện theo phiên đấu giá.</li>
+ *   <li><b>Watchlist</b> — Thêm/xóa phiên đấu giá vào danh sách theo dõi của người dùng,
+ *       truy vấn danh sách watchers.</li>
+ *   <li><b>Admin Mapping</b> — Tạo và xác thực tài khoản Admin qua DB,
+ *       đảm bảo ánh xạ đúng kiểu {@link Admin} với role và quyền isAdmin().</li>
+ * </ol>
+ * <p>
+ * <strong>Lưu ý:</strong> Các kiểm thử này tương tác trực tiếp với cơ sở dữ liệu MySQL
+ * thông qua các lớp DAO. Dữ liệu test được tạo trong {@link #setUp()} và dọn dẹp trong
+ * {@link #tearDown()} để đảm bảo cô lập giữa các lần chạy.
  */
 class NewFeaturesTest {
 
     /**
-     * Khởi tạo bảng cơ sở dữ liệu nếu chưa tồn tại trước khi bắt đầu toàn bộ kiểm thử.
+     * Khởi tạo các bảng cơ sở dữ liệu cần thiết (chat_messages, watchlist) nếu chưa tồn tại
+     * trước khi bắt đầu toàn bộ bộ kiểm thử.
      */
     @BeforeAll
     static void setUpAll() throws SQLException {
@@ -70,6 +86,12 @@ class NewFeaturesTest {
              java.sql.Statement stmt = conn.createStatement()) {
             stmt.execute(createChatMessagesTable);
             stmt.execute(createWatchlistTable);
+            // Migration: thêm cột role nếu chưa có
+            try {
+                stmt.execute("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'BIDDER_SELLER'");
+            } catch (SQLException e) {
+                // Column already exists
+            }
         }
     }
 
@@ -86,16 +108,18 @@ class NewFeaturesTest {
 
     /**
      * Thiết lập môi trường trước mỗi bài kiểm thử:
-     * - Tạo tài khoản người bán và người mua thử nghiệm trong DB.
-     * - Cấp số dư cho người mua để đủ điều kiện đặt giá.
-     * - Tạo sản phẩm thử nghiệm trong DB.
-     * - Tạo phiên đấu giá thử nghiệm ở trạng thái RUNNING.
+     * <ul>
+     *   <li>Tạo tài khoản người bán và người mua trong DB</li>
+     *   <li>Nạp số dư cho người mua (10,000) đủ để đặt giá</li>
+     *   <li>Tạo vật phẩm thử nghiệm (Art) trong DB</li>
+     *   <li>Tạo phiên đấu giá RUNNING với thời gian còn 5 phút, min increment = 10</li>
+     * </ul>
      */
     @BeforeEach
     void setUp() throws SQLException {
         // Tạo người dùng thử nghiệm
-        User seller = new User(sellerId, sellerId, "password");
-        User bidder = new User(bidderId, bidderId, "password");
+        User seller = new RegularUser(sellerId, sellerId, "password");
+        User bidder = new RegularUser(bidderId, bidderId, "password");
         userDAO.register(seller);
         userDAO.register(bidder);
 
@@ -116,7 +140,8 @@ class NewFeaturesTest {
     }
 
     /**
-     * Dọn dẹp cơ sở dữ liệu sau mỗi bài kiểm thử để tránh ảnh hưởng đến các lần chạy sau.
+     * Dọn dẹp dữ liệu thử nghiệm trong DB sau mỗi bài kiểm thử.
+     * Xóa theo thứ tự bảng con trước bảng cha để tránh lỗi ràng buộc khóa ngoại (Foreign Key).
      */
     @AfterEach
     void tearDown() {
@@ -124,7 +149,8 @@ class NewFeaturesTest {
     }
 
     /**
-     * Thực hiện xóa dữ liệu thử nghiệm trong DB theo thứ tự để tránh lỗi ràng buộc khóa ngoại (Foreign Key).
+     * Thực hiện xóa toàn bộ dữ liệu thử nghiệm trong DB theo thứ tự:
+     * watchlist → chat_messages → bids → auction_sessions → items → users.
      */
     private void deleteTestData() {
         String[] sqlQueries = {
@@ -160,9 +186,22 @@ class NewFeaturesTest {
         }
     }
 
+    // ── Sniper Protection ───────────────────────────────────
+
     /**
      * Kiểm thử tính năng Sniper Protection (Soft Close):
-     * - Khi đặt giá trong vòng 2 phút cuối của phiên đấu giá, thời gian kết thúc (end_time) phải tự động gia hạn thêm 2 phút.
+     * <p>
+     * Khi đặt giá trong vòng 2 phút cuối của phiên đấu giá, thời gian kết thúc (end_time)
+     * phải tự động gia hạn thêm 2 phút để ngăn chặn chiến thuật đặt giá giây cuối (sniping).
+     * <p>
+     * Quy trình:
+     * <ol>
+     *   <li>Đặt end_time của phiên còn 1 phút (trong cửa sổ 2 phút)</li>
+     *   <li>Thực hiện đặt giá hợp lệ (600.0)</li>
+     *   <li>Lấy lại phiên từ DB — end_time mới phải ≈ end_time cũ + 2 phút</li>
+     * </ol>
+     *
+     * @throws Exception nếu đặt giá thất bại
      */
     @Test
     void testSniperProtection() throws Exception {
@@ -189,6 +228,11 @@ class NewFeaturesTest {
 
     /**
      * Cập nhật thời gian kết thúc của phiên đấu giá trong DB.
+     * <p>
+     * Phương thức helper dùng để mô phỏng kịch bản "2 phút cuối" cho kiểm thử Sniper Protection.
+     *
+     * @param endTime thời gian kết thúc mới
+     * @throws SQLException nếu truy vấn thất bại
      */
     private void setAuctionEndTimeInDB(LocalDateTime endTime) throws SQLException {
         String sql = "UPDATE auction_sessions SET end_time = ? WHERE id = ?";
@@ -200,10 +244,15 @@ class NewFeaturesTest {
         }
     }
 
+    // ── Live Chat ───────────────────────────────────────────
+
     /**
      * Kiểm thử tính năng Live Chat:
-     * - Lưu tin nhắn chat thành công.
-     * - Lấy lịch sử chat chứa tin nhắn đã gửi và thông tin người gửi chính xác.
+     * <ul>
+     *   <li>Lưu tin nhắn chat thành công qua {@link ChatDAO#saveChatMessage}</li>
+     *   <li>Truy vấn lịch sử chat qua {@link ChatDAO#getChatHistory} — không rỗng</li>
+     *   <li>Tin nhắn cuối cùng khớp nội dung đã gửi, đúng senderId, có senderName</li>
+     * </ul>
      */
     @Test
     void testLiveChat() {
@@ -225,12 +274,17 @@ class NewFeaturesTest {
         assertNotNull(lastMessage.getSenderName(), "Tên hiển thị người gửi không được null.");
     }
 
+    // ── Watchlist ───────────────────────────────────────────
+
     /**
-     * Kiểm thử tính năng Watchlist:
-     * - Thêm phiên đấu giá vào danh sách theo dõi.
-     * - Kiểm tra danh sách theo dõi chứa phiên đấu giá đó.
-     * - Kiểm tra danh sách watchers chứa người theo dõi.
-     * - Xóa phiên đấu giá khỏi danh sách theo dõi và xác nhận đã xóa.
+     * Kiểm thử tính năng Watchlist (danh sách theo dõi):
+     * <ol>
+     *   <li>Thêm phiên đấu giá vào danh sách theo dõi — thành công</li>
+     *   <li>Truy vấn danh sách theo dõi của người dùng — chứa phiên vừa thêm</li>
+     *   <li>Truy vấn danh sách watchers của phiên — chứa ID người dùng</li>
+     *   <li>Xóa phiên khỏi danh sách theo dõi — thành công</li>
+     *   <li>Xác nhận danh sách không còn chứa phiên đã xóa</li>
+     * </ol>
      */
     @Test
     void testWatchlist() {
@@ -259,13 +313,20 @@ class NewFeaturesTest {
         assertFalse(containsAuctionAfter, "Danh sách theo dõi không được chứa phiên đấu giá sau khi xóa.");
     }
 
+    // ── Admin Mapping ───────────────────────────────────────
+
     /**
      * Kiểm thử tính năng nhận diện tài khoản Admin từ DB:
-     * - Tạo Admin với ID có tiền tố "ADM" bằng UserFactory.
-     * - Đăng ký Admin vào DB.
-     * - Lấy Admin ra từ DB bằng findById và authenticate.
-     * - Xác nhận đối tượng nhận được là kiểu Admin và isAdmin() trả về true.
-     * - Dọn dẹp tài khoản sau khi test xong.
+     * <ol>
+     *   <li>Tạo Admin với ID tiền tố "ADM" bằng {@link UserFactory#createAdmin}</li>
+     *   <li>Đăng ký Admin vào DB qua {@link UserDAO#register}</li>
+     *   <li>Truy vấn Admin từ DB bằng {@link UserDAO#findById} — trả về đúng kiểu Admin</li>
+     *   <li>Xác thực đăng nhập bằng {@link UserDAO#authenticate} — trả về đúng kiểu Admin</li>
+     *   <li>{@code isAdmin()} trả về true, role là "ADMIN"</li>
+     *   <li>Dọn dẹp tài khoản admin sau khi test</li>
+     * </ol>
+     *
+     * @throws Exception nếu đăng ký hoặc xác thực thất bại
      */
     @Test
     void testAdminMapping() throws Exception {
@@ -299,5 +360,96 @@ class NewFeaturesTest {
                 stmt.executeUpdate();
             }
         }
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // 🔴 / 🟡 NEGATIVE TESTS
+    // ═══════════════════════════════════════════════════════════════
+
+    /**
+     * Kiểm thử Sniper Protection tại boundary 2 phút:
+     * Khi end_time còn hơn 2 phút, bid không được gia hạn thêm.
+     * Dùng buffer +5 giây để tránh flaky test do timing (giữa lúc ghi DB
+     * và lúc placeBid kiểm tra, thời gian thực tế đã trôi).
+     *
+     * @throws Exception nếu đặt giá thất bại
+     */
+    @Test
+    void testSniperProtection_Boundary_Exactly2Minutes() throws Exception {
+        // Đặt end_time cách hiện tại 2 phút + 5 giây buffer
+        // để sau khi xử lý DB, remaining time vẫn > 120 giây
+        LocalDateTime boundaryEndTime = LocalDateTime.now().plusMinutes(2).plusSeconds(5);
+        setAuctionEndTimeInDB(boundaryEndTime);
+
+        double bidAmount = 600.0;
+        boolean success = auctionDAO.placeBid(auctionId, bidderId, bidAmount);
+        assertTrue(success, "Đặt giá phải thành công.");
+
+        Optional<AuctionSession> sessionOpt = auctionDAO.findAuctionById(auctionId);
+        assertTrue(sessionOpt.isPresent());
+        AuctionSession updatedSession = sessionOpt.get();
+
+        assertNotNull(updatedSession.getEndTime());
+        // End_time không thay đổi (chênh lệch < 5 giây so với gốc)
+        java.time.Duration diff = java.time.Duration.between(updatedSession.getEndTime(), boundaryEndTime);
+        assertTrue(Math.abs(diff.getSeconds()) < 5,
+                "Khi còn hơn 2 phút, bid không được kích hoạt sniper protection.");
+    }
+
+    /**
+     * Kiểm thử Live Chat với tin nhắn rỗng — phải trả về {@code false} hoặc ném exception.
+     */
+    @Test
+    void testLiveChat_EmptyMessage_Fails() {
+        assertFalse(chatDAO.saveChatMessage(auctionId, bidderId, ""),
+                "Tin nhắn rỗng không được lưu.");
+    }
+
+    /**
+     * Kiểm thử Live Chat với tin nhắn null — phải trả về {@code false} hoặc ném exception.
+     */
+    @Test
+    void testLiveChat_NullMessage_Fails() {
+        assertFalse(chatDAO.saveChatMessage(auctionId, bidderId, null),
+                "Tin nhắn null không được lưu.");
+    }
+
+    /**
+     * Kiểm thử Live Chat với auction không tồn tại — lịch sử chat phải rỗng.
+     */
+    @Test
+    void testLiveChat_NonExistentAuction_ReturnsEmpty() {
+        List<ChatMessage> history = chatDAO.getChatHistory("NONEXISTENT_AUCTION");
+        assertNotNull(history);
+        assertTrue(history.isEmpty(), "Auction không tồn tại phải trả về danh sách rỗng.");
+    }
+
+    /**
+     * Kiểm thử Watchlist thêm trùng lặp — lần thứ hai phải trả về {@code false}
+     * do ràng buộc UNIQUE (user_id, auction_id).
+     */
+    @Test
+    void testWatchlist_DuplicateEntry_Fails() {
+        assertTrue(watchlistDAO.addWatchlist(bidderId, auctionId), "Lần thêm đầu phải thành công.");
+        assertFalse(watchlistDAO.addWatchlist(bidderId, auctionId), "Lần thêm trùng phải thất bại.");
+    }
+
+    /**
+     * Kiểm thử Watchlist xóa entry không tồn tại — trả về {@code false}.
+     */
+    @Test
+    void testWatchlist_RemoveNonExistent_Fails() {
+        assertFalse(watchlistDAO.removeWatchlist(bidderId, auctionId),
+                "Xóa watchlist chưa tồn tại phải trả về false.");
+    }
+
+    /**
+     * Kiểm thử Watchlist với user không tồn tại — danh sách theo dõi phải rỗng.
+     */
+    @Test
+    void testWatchlist_NonExistentUser_ReturnsEmpty() {
+        List<AuctionSession> watchlist = watchlistDAO.getWatchlist("NONEXISTENT_USER");
+        assertNotNull(watchlist);
+        assertTrue(watchlist.isEmpty(), "User không tồn tại phải trả về danh sách rỗng.");
     }
 }

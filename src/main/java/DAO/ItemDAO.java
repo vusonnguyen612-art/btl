@@ -6,10 +6,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/** DAO cho bảng items: thêm, sửa, xóa, tìm kiếm vật phẩm. */
+/**
+ * DAO cho bảng items: thêm, sửa, xóa, tìm kiếm vật phẩm.
+ * <p>Tự động ánh xạ danh mục (category) vào các subclass tương ứng (Art, Electronics, Vehicle, ...)
+ * thông qua {@link #mapResultSetToItem(ResultSet)}.</p>
+ */
 public class ItemDAO {
     
-    /** Lưu vật phẩm mới vào database. */
+    /**
+     * Lưu vật phẩm mới vào database.
+     *
+     * @param item Đối tượng {@link Item} cần lưu.
+     * @return {@code true} nếu lưu thành công, ngược lại {@code false}.
+     */
     public boolean save(Item item) {
         String sql = "INSERT INTO items (id, name, description, start_price, seller_id, category, image_path) VALUES (?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -28,7 +37,12 @@ public class ItemDAO {
         }
     }
     
-    /** Cập nhật thông tin vật phẩm (name, description, startPrice, imagePath). */
+    /**
+     * Cập nhật thông tin vật phẩm (name, description, startPrice, imagePath).
+     *
+     * @param item Đối tượng {@link Item} chứa dữ liệu cập nhật.
+     * @return {@code true} nếu cập nhật thành công, ngược lại {@code false}.
+     */
     public boolean update(Item item) {
         String sql = "UPDATE items SET name = ?, description = ?, start_price = ?, image_path = ? WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -45,7 +59,12 @@ public class ItemDAO {
         }
     }
     
-    /** Tìm vật phẩm theo ID. */
+    /**
+     * Tìm vật phẩm theo ID.
+     *
+     * @param id ID của vật phẩm cần tìm.
+     * @return {@link Optional} chứa {@link Item} nếu tìm thấy, ngược lại {@link Optional#empty()}.
+     */
     public Optional<Item> findById(String id) {
         String sql = "SELECT * FROM items WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -62,7 +81,12 @@ public class ItemDAO {
         return Optional.empty();
     }
     
-    /** Tìm tất cả vật phẩm của một người bán. */
+    /**
+     * Tìm tất cả vật phẩm của một người bán.
+     *
+     * @param sellerId ID của người bán.
+     * @return Danh sách các vật phẩm thuộc về người bán đó.
+     */
     public List<Item> findBySellerId(String sellerId) {
         String sql = "SELECT * FROM items WHERE seller_id = ?";
         List<Item> items = new ArrayList<>();
@@ -80,7 +104,11 @@ public class ItemDAO {
         return items;
     }
     
-    /** Lấy tất cả vật phẩm. */
+    /**
+     * Lấy tất cả vật phẩm trong hệ thống.
+     *
+     * @return Danh sách toàn bộ vật phẩm.
+     */
     public List<Item> findAll() {
         String sql = "SELECT * FROM items";
         List<Item> items = new ArrayList<>();
@@ -96,7 +124,12 @@ public class ItemDAO {
         return items;
     }
     
-    /** Xóa vật phẩm theo ID. */
+    /**
+     * Xóa vật phẩm theo ID.
+     *
+     * @param id ID của vật phẩm cần xóa.
+     * @return {@code true} nếu xóa thành công, ngược lại {@code false}.
+     */
     public boolean delete(String id) {
         String sql = "DELETE FROM items WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -109,6 +142,14 @@ public class ItemDAO {
         }
     }
     
+    /**
+     * Ánh xạ một dòng dữ liệu từ ResultSet thành đối tượng {@link Item} phù hợp với danh mục.
+     * Hỗ trợ 9 danh mục: ART, ELECTRONICS, VEHICLE, FASHION, BOOKS, SPORTS, JEWELRY, MUSIC, FURNITURE.
+     *
+     * @param rs ResultSet đang trỏ tới dòng dữ liệu.
+     * @return Đối tượng {@link Item} thuộc subclass tương ứng.
+     * @throws SQLException Nếu có lỗi đọc dữ liệu.
+     */
     private Item mapResultSetToItem(ResultSet rs) throws SQLException {
         String category = rs.getString("category");
         String id = rs.getString("id");

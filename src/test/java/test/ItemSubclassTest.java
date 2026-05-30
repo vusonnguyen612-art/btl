@@ -5,8 +5,22 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Bộ kiểm thử đơn vị cho các lớp con (subclass) của {@link Item}.
+ * <p>
+ * Kiểm thử:
+ * <ul>
+ *   <li>9 subclass gán đúng category (ELECTRONICS, ART, VEHICLE, …)</li>
+ *   <li>Định dạng {@link Item#toString()} chứa các trường cơ bản (ID, tên, giá)</li>
+ *   <li>{@link Item#getSpecificInfo()} trả về thông tin đặc thù không rỗng</li>
+ *   <li>Tất cả subclass đều có specific info không null</li>
+ * </ul>
+ */
 class ItemSubclassTest {
 
+    /**
+     * Kiểm thử cả 9 subclass gán đúng hằng số category khi khởi tạo với constructor tối thiểu.
+     */
     @Test
     void testAllCategories_SetCorrectCategory() {
         assertEquals("ELECTRONICS", new Electronics("id", "n", "d", 1, "s").getCategory());
@@ -20,6 +34,9 @@ class ItemSubclassTest {
         assertEquals("FURNITURE", new Furniture("id", "n", "d", 1, "s").getCategory());
     }
 
+    /**
+     * Kiểm thử {@link Item#toString()} chứa các thông tin cơ bản: ID, tên và giá.
+     */
     @Test
     void testItemToString_Format() {
         Item item = new Electronics("ELC001", "Laptop", "Gaming laptop", 999.99, "seller1");
@@ -29,6 +46,10 @@ class ItemSubclassTest {
         assertTrue(str.contains("999.99"));
     }
 
+    /**
+     * Kiểm thử {@link Item#getSpecificInfo()} trả về thông tin đặc thù không rỗng
+     * khi khởi tạo với constructor đầy đủ (có các tham số riêng của subclass).
+     */
     @Test
     void testGetSpecificInfo_NotEmpty() {
         Item item = new Electronics("ELC001", "Laptop", "Gaming laptop", 999.99, "seller1",
@@ -41,6 +62,10 @@ class ItemSubclassTest {
         assertTrue(info.contains("New"));
     }
 
+    /**
+     * Kiểm thử tất cả 9 subclass đều có {@code getSpecificInfo()} trả về không null
+     * (ngay cả với constructor tối thiểu).
+     */
     @Test
     void testAllSubclasses_HaveSpecificInfo() {
         assertNotNull(new Electronics("id", "n", "d", 1, "s").getSpecificInfo());

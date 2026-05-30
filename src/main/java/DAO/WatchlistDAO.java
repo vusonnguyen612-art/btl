@@ -30,9 +30,8 @@ public class WatchlistDAO {
             stmt.setString(2, userId);
             stmt.setString(3, auctionId);
             
-            // Execute update: có thể trả về 0 nếu bản ghi đã tồn tại (do IGNORE)
-            stmt.executeUpdate();
-            return true;
+            // Execute update: trả về 0 nếu bản ghi đã tồn tại (do INSERT IGNORE)
+            return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Lỗi thêm vào watchlist: " + e.getMessage());
             e.printStackTrace();

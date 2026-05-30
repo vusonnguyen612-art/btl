@@ -24,6 +24,14 @@ import Model.User;
 import Network.Message;
 import Network.NetworkService;
 
+/**
+ * Controller cho pane Lịch sử đấu giá (FXML: Indivisual.fxml -> LichsudaugiaPane).
+ * Hiển thị danh sách các phiên đấu giá đã kết thúc của người dùng hiện tại,
+ * cho phép xem biểu đồ giá chi tiết từng phiên.
+ *
+ * <p>Implement {@link UserController.LinkedController} để nhận tham chiếu
+ * đến {@link UserController} cha.</p>
+ */
 public class LichsudaugiaPaneController implements UserController.LinkedController {
 
     @FXML private ScrollPane bidHistoryScrollPane;
@@ -37,10 +45,19 @@ public class LichsudaugiaPaneController implements UserController.LinkedControll
         this.userController = uc;
     }
 
+    /**
+     * Gán thông tin người dùng và tải lịch sử đấu giá.
+     *
+     * @param user Đối tượng User hiện tại.
+     */
     public void setUserData(User user) {
         loadBidHistory();
     }
 
+    /**
+     * Tải danh sách phiên đấu giá của người dùng hiện tại từ server và hiển thị
+     * dưới dạng các card HBox trong VBox bidHistoryList.
+     */
     public void loadBidHistory() {
         if (bidHistoryList == null) return;
         bidHistoryList.getChildren().clear();
@@ -64,6 +81,14 @@ public class LichsudaugiaPaneController implements UserController.LinkedControll
         }
     }
 
+    /**
+     * Tạo một card HBox hiển thị thông tin phiên đấu giá đã kết thúc,
+     * bao gồm tên sản phẩm, trạng thái, giá cuối, thời gian kết thúc.
+     * Khi click vào card sẽ mở popup biểu đồ giá.
+     *
+     * @param auction Phiên đấu giá cần hiển thị.
+     * @return HBox chứa thông tin phiên.
+     */
     private HBox createFinishedAuctionCard(AuctionSession auction) {
         HBox card = new HBox(15);
         card.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
@@ -105,6 +130,11 @@ public class LichsudaugiaPaneController implements UserController.LinkedControll
         return card;
     }
 
+    /**
+     * Mở cửa sổ popup hiển thị biểu đồ giá và lịch sử đặt giá cho một phiên đấu giá.
+     *
+     * @param auction Phiên đấu giá cần xem chi tiết.
+     */
     private void openBidChartPopup(AuctionSession auction) {
         try {
             URL resourceUrl = getClass().getResource("/bid_chart_view.fxml");

@@ -47,50 +47,62 @@ public class ChatMessage implements Serializable {
         this.timestamp = timestamp;
     }
 
+    /** @return ID duy nhất của tin nhắn */
     public String getId() {
         return id;
     }
 
+    /** @param id ID duy nhất mới */
     public void setId(String id) {
         this.id = id;
     }
 
+    /** @return ID của phiên đấu giá */
     public String getAuctionId() {
         return auctionId;
     }
 
+    /** @param auctionId ID phiên đấu giá mới */
     public void setAuctionId(String auctionId) {
         this.auctionId = auctionId;
     }
 
+    /** @return ID của người gửi */
     public String getSenderId() {
         return senderId;
     }
 
+    /** @param senderId ID người gửi mới */
     public void setSenderId(String senderId) {
         this.senderId = senderId;
     }
 
+    /** @return tên hiển thị người gửi */
     public String getSenderName() {
         return senderName;
     }
 
+    /** @param senderName tên hiển thị người gửi mới */
     public void setSenderName(String senderName) {
         this.senderName = senderName;
     }
 
+    /** @return nội dung tin nhắn */
     public String getMessage() {
         return message;
     }
 
+    /** @param message nội dung tin nhắn mới */
     public void setMessage(String message) {
         this.message = message;
     }
 
+    /** @return thời gian gửi tin nhắn */
     public Timestamp getTimestamp() {
         return timestamp;
     }
 
+    /** @param timestamp thời gian gửi mới */
     public void setTimestamp(Timestamp timestamp) {
         this.timestamp = timestamp;
     }

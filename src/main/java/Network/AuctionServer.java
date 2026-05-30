@@ -74,6 +74,13 @@ public class AuctionServer {
              Statement stmt = conn.createStatement()) {
             stmt.execute(createChatMessagesTable);
             stmt.execute(createWatchlistTable);
+            // Migration: thêm cột role nếu chưa có
+            try {
+                stmt.execute("ALTER TABLE users ADD COLUMN role VARCHAR(20) DEFAULT 'BIDDER_SELLER'");
+                System.out.println("Database migration: added 'role' column to users table.");
+            } catch (SQLException e) {
+                // Column already exists — bỏ qua
+            }
             System.out.println("Database tables checked/initialized successfully.");
         } catch (SQLException e) {
             System.err.println("Lỗi khởi tạo bảng cơ sở dữ liệu: " + e.getMessage());
@@ -84,6 +91,8 @@ public class AuctionServer {
     /** Khởi động server, lắng nghe kết nối và chạy penalty scheduler 30 giây. */
     public void start() throws IOException {
         initializeDatabaseTables();
+        UserFactory.initializeCounter();
+        seedDefaultAdmin();
         serverSocket = new ServerSocket(port);
         running = true;
         System.out.println("Server started on port " + port);
@@ -164,6 +173,29 @@ public class AuctionServer {
     }
 
     /** Xử lý kết nối từ một client riêng biệt. */
+    /** Tạo tài khoản admin mặc định nếu chưa có. */
+    private void seedDefaultAdmin() {
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                 "UPDATE users SET role = 'ADMIN' WHERE BINARY username = ? AND (role IS NULL OR role != 'ADMIN')")) {
+            stmt.setString(1, "admin");
+            int rows = stmt.executeUpdate();
+            if (rows > 0) {
+                System.out.println("[Admin] Upgraded account 'admin' to Admin role.");
+            } else {
+                if (!userDAO.existsByUsername("admin")) {
+                    User admin = UserFactory.createUserWithRole("admin", "admin123", "ADMIN");
+                    admin.setEmail("admin@auction.local");
+                    if (userDAO.register(admin)) {
+                        System.out.println("[Admin] Created default admin account: admin / admin123");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("[Admin] Could not seed admin: " + e.getMessage());
+        }
+    }
+
     private class ClientHandler extends Thread {
         private Socket socket;
         private ObjectInputStream input;
@@ -187,9 +219,8 @@ public class AuctionServer {
                     output.writeObject(response);
                     output.flush();
 
-                    if (response.getType() == Message.Type.ERROR) {
-                        break;
-                    }
+                    // Không ngắt kết nối khi có lỗi — client có thể thử lại
+                    // (Xem java-server-break-on-error.md)
                 }
             } catch (IOException | ClassNotFoundException e) {
                 System.err.println("Client handler error: " + e.getMessage());
@@ -296,6 +327,24 @@ public class AuctionServer {
                     case GET_WATCHLIST:
                         response = handleGetWatchlist();
                         break;
+                    case CHANGE_PASSWORD:
+                        response = handleChangePassword(message);
+                        break;
+                    case GET_USERS:
+                        response = handleGetUsers();
+                        break;
+                    case DELETE_USER:
+                        response = handleDeleteUser(message);
+                        break;
+                    case GET_USER_BID_HISTORY:
+                        response = handleGetUserBidHistory(message);
+                        break;
+                    case GET_ITEM:
+                        response = handleGetItem(message);
+                        break;
+                    case DELETE_ITEM:
+                        response = handleDeleteItem(message);
+                        break;
                     default:
                         return createErrorMessage("Unknown message type");
                 }
@@ -332,7 +381,21 @@ public class AuctionServer {
 
         /** Xử lý đăng ký: validate password, kiểm tra trùng username, tạo user, lưu DB. */
         private Message handleRegister(Message message) {
-            String passwordError = UserFactory.getPasswordError(message.getContent());
+            String content = message.getContent();
+            // content = "password|role"
+            String password;
+            String role = "BIDDER_SELLER";
+            if (content != null && content.contains("|")) {
+                String[] parts = content.split("\\|", 2);
+                password = parts[0];
+                if (parts.length > 1 && !parts[1].isBlank()) {
+                    role = parts[1].toUpperCase();
+                }
+            } else {
+                password = content;
+            }
+
+            String passwordError = UserFactory.getPasswordError(password);
             if (passwordError != null) {
                 return createErrorMessage(passwordError);
             }
@@ -340,13 +403,18 @@ public class AuctionServer {
             User userData = (User) message.getData();
             String username = userData.getUsername();
             String email = userData.getEmail();
-            String password = message.getContent();
 
             if (userDAO.existsByUsername(username)) {
                 return createErrorMessage("Tên đăng nhập đã tồn tại.");
             }
 
-            User newUser = UserFactory.createUser(username, password);
+            // 🔒 Chặn leo thang quyền: không cho phép đăng ký ADMIN qua REGISTER message
+            if ("ADMIN".equals(role)) {
+                System.err.println("[Security] Blocked ADMIN role registration attempt for user: " + username);
+                return createErrorMessage("Không thể đăng ký tài khoản quản trị viên.");
+            }
+
+            User newUser = UserFactory.createUserWithRole(username, password, role);
             newUser.setEmail(email);
 
             boolean registered = userDAO.register(newUser);
@@ -513,7 +581,11 @@ public class AuctionServer {
                 return createErrorMessage("Not logged in");
             }
             String auctionId = message.getAuctionId();
-            double maxAmount = (Double) message.getData();
+            Double dataObj = (Double) message.getData();
+            if (dataObj == null) {
+                return createErrorMessage("Dữ liệu đặt giá không hợp lệ.");
+            }
+            double maxAmount = dataObj;
             if (maxAmount <= 0) {
                 return createErrorMessage("Invalid max amount");
             }
@@ -912,6 +984,119 @@ public class AuctionServer {
             Message response = new Message(Message.Type.SUCCESS);
             response.setData(list);
             return response;
+        }
+
+        /** Xử lý đổi mật khẩu: content = "oldPassword|newPassword" */
+        private Message handleChangePassword(Message message) {
+            if (currentUser == null) {
+                return createErrorMessage("Vui lòng đăng nhập.");
+            }
+            String content = message.getContent();
+            if (content == null || !content.contains("|")) {
+                return createErrorMessage("Dữ liệu không hợp lệ.");
+            }
+            String[] parts = content.split("\\|", 2);
+            String oldPassword = parts[0];
+            String newPassword = parts[1];
+
+            if (newPassword.length() < 6) {
+                return createErrorMessage("Mật khẩu mới phải có ít nhất 6 ký tự.");
+            }
+
+            boolean success = userDAO.changePassword(
+                currentUser.getUsername(), oldPassword, newPassword);
+            if (success) {
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setContent("Đổi mật khẩu thành công.");
+                return response;
+            }
+            return createErrorMessage("Mật khẩu cũ không đúng.");
+        }
+
+        /** Lấy danh sách tất cả người dùng (yêu cầu quyền Admin). */
+        private Message handleGetUsers() {
+            if (currentUser == null || !currentUser.isAdmin()) {
+                return createErrorMessage("Từ chối truy cập: chỉ Admin mới có quyền.");
+            }
+            List<User> users = userDAO.findAllUsers();
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setData(users);
+            return response;
+        }
+
+        /** Xóa người dùng theo ID (yêu cầu quyền Admin). */
+        private Message handleDeleteUser(Message message) {
+            if (currentUser == null || !currentUser.isAdmin()) {
+                return createErrorMessage("Từ chối truy cập: chỉ Admin mới có quyền.");
+            }
+            String userId = message.getContent();
+            if (userId == null || userId.isBlank()) {
+                return createErrorMessage("ID người dùng không hợp lệ.");
+            }
+            boolean success = userDAO.deleteUser(userId);
+            if (success) {
+                System.out.println("[Admin] Deleted user: " + userId);
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setContent("Đã xóa người dùng.");
+                return response;
+            }
+            return createErrorMessage("Xóa người dùng thất bại.");
+        }
+
+        /** Lấy lịch sử đấu giá của một người dùng. */
+        private Message handleGetUserBidHistory(Message message) {
+            if (currentUser == null) {
+                return createErrorMessage("Vui lòng đăng nhập.");
+            }
+            String userId = message.getSenderId();
+            if (userId == null) {
+                userId = currentUser.getId();
+            }
+            List<Bid> bids = auctionDAO.getUserBidHistory(userId);
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setData(bids);
+            return response;
+        }
+
+        /** Lấy thông tin chi tiết một vật phẩm. */
+        private Message handleGetItem(Message message) {
+            String itemId = message.getItemId();
+            if (itemId == null) {
+                return createErrorMessage("ID vật phẩm không hợp lệ.");
+            }
+            Optional<Item> itemOpt = itemDAO.findById(itemId);
+            if (itemOpt.isPresent()) {
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setData(itemOpt.get());
+                return response;
+            }
+            return createErrorMessage("Vật phẩm không tồn tại.");
+        }
+
+        /** Xóa vật phẩm theo ID (chỉ người bán sở hữu hoặc Admin). */
+        private Message handleDeleteItem(Message message) {
+            if (currentUser == null) {
+                return createErrorMessage("Vui lòng đăng nhập.");
+            }
+            String itemId = message.getItemId();
+            if (itemId == null) {
+                return createErrorMessage("ID vật phẩm không hợp lệ.");
+            }
+            Optional<Item> itemOpt = itemDAO.findById(itemId);
+            if (itemOpt.isEmpty()) {
+                return createErrorMessage("Vật phẩm không tồn tại.");
+            }
+            Item item = itemOpt.get();
+            if (!item.getSellerId().equals(currentUser.getId()) && !currentUser.isAdmin()) {
+                return createErrorMessage("Bạn không có quyền xóa vật phẩm này.");
+            }
+            boolean success = itemDAO.delete(itemId);
+            if (success) {
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setContent("Đã xóa vật phẩm.");
+                return response;
+            }
+            return createErrorMessage("Xóa vật phẩm thất bại.");
         }
 
         private Message createErrorMessage(String error) {

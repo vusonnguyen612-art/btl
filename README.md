@@ -1,7 +1,14 @@
 # 🏆 Hệ Thống Đấu Giá Trực Tuyến
 
-**Môn học:** Nhập môn Công nghệ số và Ứng dụng Trí tuệ Nhân tạo  
-**Sinh viên:** Đỗ Hải Đăng — MSSV: 25020113
+[![Java CI](https://github.com/vusonnguyen612-art/btl/actions/workflows/ci.yml/badge.svg)](https://github.com/vusonnguyen612-art/btl/actions/workflows/ci.yml)
+[![Qodana](https://github.com/vusonnguyen612-art/btl/actions/workflows/qodana_code_quality.yml/badge.svg)](https://github.com/vusonnguyen612-art/btl/actions/workflows/qodana_code_quality.yml)
+
+**Môn học:** Lập Trình Nâng Cao  
+**Sinh viên thực hiện:**
+- Đỗ Hải Đăng — MSSV: 25020113
+- Nguyễn Vũ Sơn — MSSV: 25020352
+- Lê Quang Nghĩa — MSSV: 25020292
+- Nguyễn Duy Quang — MSSV: 25020330
 
 ---
 
@@ -102,57 +109,126 @@ Hệ thống sử dụng mô hình **Client — Server** qua giao thức TCP Soc
 
 ### Yêu cầu
 
-- **Java JDK 21+**
-- **Apache Maven 3.9+**
-- **MySQL 8+** (chạy trên `localhost:3306`)
-- **JavaFX SDK 21** (Maven tự tải)
+| Thành phần | Phiên bản tối thiểu | Ghi chú |
+|------------|---------------------|---------|
+| **Java JDK** | 21+ | Tải từ [Adoptium](https://adoptium.net/) hoặc [Oracle](https://www.oracle.com/java/) |
+| **MySQL** | 8.0+ | Chạy local trên cổng 3306 |
+| **Maven** | 3.9+ | Hoặc dùng `mvnw` (Maven Wrapper) đã kèm trong project |
+| **JavaFX SDK** | 21 | Maven tự tải qua plugin `javafx-maven-plugin` |
+
+> **Lưu ý:** Tất cả lệnh dưới đây đều chạy được trên **Windows** (cmd/PowerShell/Git Bash), **Linux** và **macOS**. Chỉ cần Java 21+ và Maven 3.9+ (hoặc `./mvnw`).
+
+---
 
 ### 1. Tạo database
 
-```sql
-CREATE DATABASE IF NOT EXISTS auction_db;
+Đăng nhập MySQL và tạo database:
+
+```bash
+# Trên mọi OS (MySQL CLI)
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS auction_db"
 ```
 
-> **Lưu ý:** Các bảng được tự động tạo khi Server khởi động lần đầu.
+Hoặc dùng MySQL Workbench / phpMyAdmin.
+
+---
 
 ### 2. Cấu hình kết nối DB
 
-Sửa file `src/main/java/DAO/DatabaseUtil.java` nếu cần:
+Sửa file `src/main/java/DAO/DatabaseUtil.java` nếu thông tin đăng nhập MySQL khác:
+
 ```java
 config.setJdbcUrl("jdbc:mysql://localhost:3306/auction_db");
 config.setUsername("root");
 config.setPassword("123456789");
 ```
 
+---
+
 ### 3. Build project
 
 ```bash
+# Linux / macOS
+./mvnw clean package -DskipTests
+
+# Windows
+mvnw.cmd clean package -DskipTests
+
+# Hoặc nếu đã cài Maven toàn cục (mọi OS)
 mvn clean package -DskipTests
 ```
 
+Kết quả: file `target/auction-system-1.0-SNAPSHOT.jar` (fat-JAR ~17MB, chứa tất cả dependencies).
+
+---
+
 ### 4. Chạy Server
 
-Server TCP chạy trên port **8989**:
+Server TCP lắng nghe trên cổng **8989**:
 
 ```bash
-# Run trực tiếp từ Maven
-mvn exec:java -Dexec.mainClass="Network.AuctionServer"
+# Cách 1 — Dùng fat-JAR (khuyên dùng)
+java -cp target/auction-system-1.0-SNAPSHOT.jar Network.AuctionServer
 
-# Hoặc chạy file jar
-java -cp target/demotempt-1.0-SNAPSHOT.jar Network.AuctionServer
+# Cách 2 — Dùng Maven
+./mvnw exec:java -Dexec.mainClass="Network.AuctionServer"
+
+# Cách 3 — Windows (script batch)
+run-server.bat
 ```
+
+Khi Server chạy thành công, bạn sẽ thấy:
+```
+Server started on port 8989
+```
+
+---
 
 ### 5. Chạy Client (JavaFX)
 
-```bash
-# Launch class (khởi động LoginApp qua reflection)
-mvn javafx:run
+Mở một terminal **khác** và chạy:
 
-# Hoặc trực tiếp
-java -cp target/demotempt-1.0-SNAPSHOT.jar LoginApp
+```bash
+# Cách 1 — Dùng Maven (khuyên dùng)
+./mvnw javafx:run
+
+# Cách 2 — Windows (script batch)
+run-client.bat
+
+# Cách 3 — Fat-JAR (chạy giao diện JavaFX)
+java -jar target/auction-system-1.0-SNAPSHOT.jar
 ```
 
-> **Lưu ý:** Client mặc định kết nối tới `localhost:8989`. Có thể dùng Ngrok để expose server ra internet nếu cần.
+Client mặc định kết nối tới `localhost:8989`.
+
+---
+
+### 6. (Tùy chọn) Expose Server qua Internet
+
+Dùng Ngrok để server có thể truy cập từ máy khác:
+
+```bash
+ngrok tcp 8989
+```
+
+Sao chép địa chỉ Ngrok (vd `0.tcp.ap.ngrok.io:12345`) và cập nhật trong `NetworkService.java`:
+
+```java
+// Server address
+private static final String SERVER_HOST = "0.tcp.ap.ngrok.io";
+private static final int SERVER_PORT = 12345;
+```
+
+---
+
+### Tóm tắt thứ tự chạy
+
+```
+1. MySQL    → chạy sẵn trên localhost:3306
+2. Build    → mvn clean package -DskipTests
+3. Server   → java -cp target/auction-system-1.0-SNAPSHOT.jar Network.AuctionServer
+4. Client   → ./mvnw javafx:run         (mở terminal mới)
+```
 
 ---
 
@@ -171,7 +247,7 @@ btl/
 │   │   │   ├── LoginApp.java               # JavaFX Application starter
 │   │   │   │
 │   │   │   ├── Controller/                 # JavaFX Controllers
-│   │   │   │   ├── logincontroller.java
+│   │   │   │   ├── LoginController.java    # Đăng nhập & Đăng ký (đã refactor đặt tên chuẩn)
 │   │   │   │   ├── UserController.java
 │   │   │   │   ├── AuctionRoomController.java
 │   │   │   │   ├── AuctionCardController.java
@@ -198,8 +274,9 @@ btl/
 │   │   │   │   ├── ChatDAO.java               # chat_messages
 │   │   │   │   └── WatchlistDAO.java          # watchlist
 │   │   │   │
-│   │   │   ├── Model/                        # Domain models
-│   │   │   │   ├── User.java                  # Người dùng (balance 300k)
+│   │   │   ├── Model/                        # Domain models (thêm equals & hashCode)
+│   │   │   │   ├── Entity.java (abstract)     # Lớp cơ sở chứa id, createdAt
+│   │   │   │   ├── User.java                  # Người dùng (số dư mặc định 0)
 │   │   │   │   ├── Admin.java                 # Quản trị viên
 │   │   │   │   ├── Bidder.java                # Người mua
 │   │   │   │   ├── Seller.java                # Người bán
@@ -223,7 +300,7 @@ btl/
 │   │   │   │   ├── AuctionServer.java         # Server TCP (đa luồng)
 │   │   │   │   ├── AuctionClient.java         # Client CLI (test)
 │   │   │   │   ├── NetworkService.java        # Client singleton (JavaFX)
-│   │   │   │   ├── Message.java               # Giao thức message
+ guide   │   │   │   ├── Message.java               # Giao thức message
 │   │   │   │   └── NgrokTunnel.java           # Ngrok tunnel
 │   │   │   │
 │   │   │   ├── Service/
@@ -241,8 +318,11 @@ btl/
 │   │   │   │   ├── AuthenticationException.java
 │   │   │   │   └── ItemNotFoundException.java
 │   │   │   │
-│   │   │   └── Observer/
-│   │   │       └── AuctionObserver.java       # Observer pattern
+│   │   │   ├── Observer/
+│   │   │   │   └── AuctionObserver.java       # Observer pattern
+│   │   │   │
+│   │   │   └── Util/
+│   │   │       └── AlertUtils.java            # Tiện ích hiển thị Alert dialog dùng chung
 │   │   │
 │   │   └── resources/                        # FXML & assets
 │   │       ├── login.fxml
@@ -284,7 +364,7 @@ Mỗi lớp model implements `Serializable` để truyền qua socket.
 
 | Lớp | Vai trò |
 |-----|---------|
-| `User` | Người dùng: ID, username, password (hashed), email, balance (300k mặc định), roles |
+| `User` | Người dùng: ID, username, password (hashed), email, balance (mặc định khởi tạo bằng 0$), roles |
 | `Admin` | Kế thừa User, có quyền quản trị |
 | `Bidder` | Người mua |
 | `Seller` | Người bán |
@@ -420,7 +500,7 @@ processPayment()  [synchronized + transaction]
 ### ✅ Đăng ký / Đăng nhập
 - Mật khẩu mã hóa SHA-256 + salt
 - Phân quyền Seller/Bidder
-- Số dư ban đầu: 300,000đ
+- Số dư mặc định ban đầu: 0$
 
 ### ✅ Quản lý vật phẩm (Item)
 - 9 danh mục: Art, Books, Electronics, Fashion, Furniture, Jewelry, Music, Sports, Vehicle
@@ -524,7 +604,7 @@ users (
     username VARCHAR(100) UNIQUE,
     password VARCHAR(64),         -- SHA-256 hash
     email VARCHAR(255),
-    balance DECIMAL(15,2) DEFAULT 300000,
+    balance DECIMAL(15,2) DEFAULT 0,
     is_seller BOOLEAN DEFAULT TRUE,
     is_bidder BOOLEAN DEFAULT TRUE,
     avatar_path VARCHAR(500),
@@ -629,21 +709,34 @@ watchlist (
 
 ## Testing
 
-Dự án có **85 tests** (JUnit 5), chia làm 7 test class:
+Dự án có **115 tests** (JUnit 5), chia làm 7 test class:
 
 | Test class | Mô tả | Số test |
 |-----------|-------|---------|
-| `AuctionManagerTest` | Quản lý đấu giá in-memory | 23 |
-| `AuctionSessionTest` | Vòng đời phiên đấu giá | 20 |
-| `ItemFactoryTest` | Factory tạo vật phẩm | 15 |
-| `UserFactoryTest` | Factory tạo user + password validation | 13 |
+| `AuctionManagerTest` | Quản lý đấu giá in-memory | 34 |
+| `AuctionSessionTest` | Vòng đời phiên đấu giá (state machine) | 26 |
+| `ItemFactoryTest` | Factory tạo vật phẩm + subclass | 19 |
+| `UserFactoryTest` | Factory tạo user + password validation | 15 |
+| `NewFeaturesTest` | Tính năng mới (DB integration) | 11 |
 | `ExceptionTest` | Exception nghiệp vụ | 6 |
 | `ItemSubclassTest` | Kế thừa Item | 4 |
-| `NewFeaturesTest` | Tính năng mới (DB integration) | 4 |
 
-Chạy test:
+Trong đó ~30 test là **negative tests** (kiểm thử biên, ngoại lệ, trạng thái không hợp lệ).
+
+Toàn bộ test chạy được qua Maven (không cần DB cho unit test, cần MySQL cho integration test):
+
 ```bash
+# Chỉ chạy unit test (không cần DB)
+mvn test -Dtest='!NewFeaturesTest'
+
+# Chạy tất cả (cần MySQL)
 mvn test
+```
+
+Với code coverage (JaCoCo):
+```bash
+mvn verify
+# Báo cáo HTML tại target/site/jacoco/index.html
 ```
 
 ---

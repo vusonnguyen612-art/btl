@@ -9,6 +9,7 @@ import Model.ChatMessage;
 import DAO.UserDAO;
 import Network.Message;
 import Network.NetworkService;
+import Util.AlertUtils;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -1113,13 +1114,7 @@ public class AuctionRoomController {
     }
 
     private void showAlert(Alert.AlertType type, String title, String message) {
-        Platform.runLater(() -> {
-            Alert alert = new Alert(type);
-            alert.setTitle(title);
-            alert.setHeaderText(null);
-            alert.setContentText(message);
-            alert.showAndWait();
-        });
+        AlertUtils.showAlert(type, title, message);
     }
 
     /**
