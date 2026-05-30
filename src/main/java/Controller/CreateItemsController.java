@@ -15,8 +15,6 @@ import javafx.stage.Stage;
 
 import Model.Item;
 import Model.AuctionSession;
-import DAO.ItemDAO;
-import DAO.AuctionSessionDAO;
 import Factory.ItemFactory;
 import Model.User;
 import Network.NetworkService;
@@ -94,8 +92,6 @@ public class CreateItemsController implements UserController.LinkedController {
     private final String BUTTON_STYLE_SELECTED =
             "-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 15;";
 
-    private final ItemDAO itemDAO = new ItemDAO();
-    private final AuctionSessionDAO sessionDAO = new AuctionSessionDAO();
     private final NetworkService networkService = NetworkService.getInstance();
 
     /** Đặt chế độ chỉnh sửa với dữ liệu sản phẩm và phiên hiện tại. */
@@ -311,25 +307,24 @@ public class CreateItemsController implements UserController.LinkedController {
                 }
             }
 
-            if (itemDAO.save(item)) {
-                String sessionId = UUID.randomUUID().toString();
-                AuctionSession session = new AuctionSession(
-                    sessionId,
-                    item,
-                    currentUser.getId(),
-                    gia.doubleValue(),
-                    duration
-                );
-                sessionDAO.save(session);
+            Message itemResponse = networkService.createItem(item);
+            if (itemResponse.getType() == Message.Type.SUCCESS && itemResponse.getData() instanceof Item createdItem) {
+                Message auctionResponse = networkService.createAuction(createdItem.getId(), duration);
+                if (auctionResponse.getType() == Message.Type.SUCCESS) {
+                    String durationText = duration >= 60
+                            ? (duration / 60) + " giờ" + (duration % 60 > 0 ? " " + (duration % 60) + " phút" : "")
+                            : duration + " phút";
 
-                String durationText = duration >= 60
-                        ? (duration / 60) + " giờ" + (duration % 60 > 0 ? " " + (duration % 60) + " phút" : "")
-                        : duration + " phút";
-
-                showInfo("Thành công", "Tạo sản phẩm thành công!\nThời gian đấu giá: " + durationText);
-                closeWindow();
+                    showInfo("Thành công", "Tạo sản phẩm thành công!\nThời gian đấu giá: " + durationText);
+                    closeWindow();
+                } else {
+                    String errMsg = auctionResponse.getContent() != null ? auctionResponse.getContent() : "Không thể tạo phiên đấu giá.";
+                    showWarning("Lỗi", errMsg);
+                }
             } else {
-                showWarning("Lỗi", "Không thể tạo sản phẩm.");
+                String errMsg = itemResponse.getType() == Message.Type.ERROR && itemResponse.getContent() != null
+                        ? itemResponse.getContent() : "Không thể tạo sản phẩm.";
+                showWarning("Lỗi", errMsg);
             }
 
         } catch (NumberFormatException e) {
