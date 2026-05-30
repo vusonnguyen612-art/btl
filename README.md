@@ -127,8 +127,6 @@ mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS auction_db"
 
 Hoặc dùng MySQL Workbench / phpMyAdmin.
 
-> Các bảng được tự động tạo khi Server khởi động lần đầu, không cần import schema thủ công.
-
 ---
 
 ### 2. Cấu hình kết nối DB
@@ -245,7 +243,7 @@ btl/
 │   │   │   ├── LoginApp.java               # JavaFX Application starter
 │   │   │   │
 │   │   │   ├── Controller/                 # JavaFX Controllers
-│   │   │   │   ├── logincontroller.java
+│   │   │   │   ├── LoginController.java    # Đăng nhập & Đăng ký (đã refactor đặt tên chuẩn)
 │   │   │   │   ├── UserController.java
 │   │   │   │   ├── AuctionRoomController.java
 │   │   │   │   ├── AuctionCardController.java
@@ -272,8 +270,9 @@ btl/
 │   │   │   │   ├── ChatDAO.java               # chat_messages
 │   │   │   │   └── WatchlistDAO.java          # watchlist
 │   │   │   │
-│   │   │   ├── Model/                        # Domain models
-│   │   │   │   ├── User.java                  # Người dùng (balance 300k)
+│   │   │   ├── Model/                        # Domain models (thêm equals & hashCode)
+│   │   │   │   ├── Entity.java (abstract)     # Lớp cơ sở chứa id, createdAt
+│   │   │   │   ├── User.java                  # Người dùng (số dư mặc định 0)
 │   │   │   │   ├── Admin.java                 # Quản trị viên
 │   │   │   │   ├── Bidder.java                # Người mua
 │   │   │   │   ├── Seller.java                # Người bán
@@ -297,7 +296,7 @@ btl/
 │   │   │   │   ├── AuctionServer.java         # Server TCP (đa luồng)
 │   │   │   │   ├── AuctionClient.java         # Client CLI (test)
 │   │   │   │   ├── NetworkService.java        # Client singleton (JavaFX)
-│   │   │   │   ├── Message.java               # Giao thức message
+ guide   │   │   │   ├── Message.java               # Giao thức message
 │   │   │   │   └── NgrokTunnel.java           # Ngrok tunnel
 │   │   │   │
 │   │   │   ├── Service/
@@ -315,8 +314,11 @@ btl/
 │   │   │   │   ├── AuthenticationException.java
 │   │   │   │   └── ItemNotFoundException.java
 │   │   │   │
-│   │   │   └── Observer/
-│   │   │       └── AuctionObserver.java       # Observer pattern
+│   │   │   ├── Observer/
+│   │   │   │   └── AuctionObserver.java       # Observer pattern
+│   │   │   │
+│   │   │   └── Util/
+│   │   │       └── AlertUtils.java            # Tiện ích hiển thị Alert dialog dùng chung
 │   │   │
 │   │   └── resources/                        # FXML & assets
 │   │       ├── login.fxml
@@ -358,7 +360,7 @@ Mỗi lớp model implements `Serializable` để truyền qua socket.
 
 | Lớp | Vai trò |
 |-----|---------|
-| `User` | Người dùng: ID, username, password (hashed), email, balance (300k mặc định), roles |
+| `User` | Người dùng: ID, username, password (hashed), email, balance (mặc định khởi tạo bằng 0$), roles |
 | `Admin` | Kế thừa User, có quyền quản trị |
 | `Bidder` | Người mua |
 | `Seller` | Người bán |
@@ -494,7 +496,7 @@ processPayment()  [synchronized + transaction]
 ### ✅ Đăng ký / Đăng nhập
 - Mật khẩu mã hóa SHA-256 + salt
 - Phân quyền Seller/Bidder
-- Số dư ban đầu: 300,000đ
+- Số dư mặc định ban đầu: 0$
 
 ### ✅ Quản lý vật phẩm (Item)
 - 9 danh mục: Art, Books, Electronics, Fashion, Furniture, Jewelry, Music, Sports, Vehicle
@@ -598,7 +600,7 @@ users (
     username VARCHAR(100) UNIQUE,
     password VARCHAR(64),         -- SHA-256 hash
     email VARCHAR(255),
-    balance DECIMAL(15,2) DEFAULT 300000,
+    balance DECIMAL(15,2) DEFAULT 0,
     is_seller BOOLEAN DEFAULT TRUE,
     is_bidder BOOLEAN DEFAULT TRUE,
     avatar_path VARCHAR(500),
