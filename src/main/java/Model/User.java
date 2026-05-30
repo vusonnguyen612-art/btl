@@ -34,7 +34,7 @@ public abstract class User extends Entity {
         super(id);
         this.username = username;
         this.password = password;
-        this.balance = new BigDecimal("300000");
+        this.balance = BigDecimal.ZERO;
     }
 
     // ── Abstract methods ────────────────────────────────────

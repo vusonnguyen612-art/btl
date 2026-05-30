@@ -131,12 +131,12 @@ class UserFactoryTest {
     }
 
     /**
-     * Kiểm thử số dư ban đầu của User: 300,000.
+     * Kiểm thử số dư ban đầu của User: 0.
      */
     @Test
     void testCreateUser_HasInitialBalance() {
         User user = UserFactory.createUser("testuser", "password123");
-        assertEquals(300000, user.getBalance().doubleValue(), 0.001);
+        assertEquals(0, user.getBalance().doubleValue(), 0.001);
     }
 
     // ── Kiểm thử createAdmin ────────────────────────────────
