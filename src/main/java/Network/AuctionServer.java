@@ -352,6 +352,18 @@ import java.util.concurrent.TimeUnit;
                     case DELETE_ITEM:
                         response = handleDeleteItem(message);
                         break;
+                    case BAN_USER:
+                        response = handleBanUser(message);
+                        break;
+                    case UNBAN_USER:
+                        response = handleUnbanUser(message);
+                        break;
+                    case GET_ALL_ITEMS:
+                        response = handleGetAllItems();
+                        break;
+                    case SUSPEND_AUCTION:
+                        response = handleSuspendAuction(message);
+                        break;
                     default:
                         return createErrorMessage("Unknown message type");
                 }
@@ -1078,6 +1090,74 @@ import java.util.concurrent.TimeUnit;
                 return response;
             }
             return createErrorMessage("Vật phẩm không tồn tại.");
+        }
+
+        /** Khóa tài khoản người dùng (yêu cầu quyền Admin). */
+        private Message handleBanUser(Message message) {
+            if (currentUser == null || !currentUser.isAdmin()) {
+                return createErrorMessage("Từ chối truy cập: chỉ Admin mới có quyền.");
+            }
+            String userId = message.getContent();
+            if (userId == null || userId.isBlank()) {
+                return createErrorMessage("ID người dùng không hợp lệ.");
+            }
+            boolean success = userDAO.banUser(userId);
+            if (success) {
+                System.out.println("[Admin] Banned user: " + userId);
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setContent("Đã khóa tài khoản.");
+                return response;
+            }
+            return createErrorMessage("Không thể khóa tài khoản Admin.");
+        }
+
+        /** Mở khóa tài khoản người dùng (yêu cầu quyền Admin). */
+        private Message handleUnbanUser(Message message) {
+            if (currentUser == null || !currentUser.isAdmin()) {
+                return createErrorMessage("Từ chối truy cập: chỉ Admin mới có quyền.");
+            }
+            String userId = message.getContent();
+            if (userId == null || userId.isBlank()) {
+                return createErrorMessage("ID người dùng không hợp lệ.");
+            }
+            boolean success = userDAO.unbanUser(userId);
+            if (success) {
+                System.out.println("[Admin] Unbanned user: " + userId);
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setContent("Đã mở khóa tài khoản.");
+                return response;
+            }
+            return createErrorMessage("Mở khóa thất bại.");
+        }
+
+        /** Lấy danh sách tất cả vật phẩm (yêu cầu quyền Admin). */
+        private Message handleGetAllItems() {
+            if (currentUser == null || !currentUser.isAdmin()) {
+                return createErrorMessage("Từ chối truy cập: chỉ Admin mới có quyền.");
+            }
+            List<Item> items = itemDAO.findAll();
+            Message response = new Message(Message.Type.SUCCESS);
+            response.setData(items);
+            return response;
+        }
+
+        /** Tạm ngưng/hủy phiên đấu giá (yêu cầu quyền Admin). */
+        private Message handleSuspendAuction(Message message) {
+            if (currentUser == null || !currentUser.isAdmin()) {
+                return createErrorMessage("Từ chối truy cập: chỉ Admin mới có quyền.");
+            }
+            String auctionId = message.getAuctionId();
+            if (auctionId == null || auctionId.isBlank()) {
+                return createErrorMessage("ID phiên đấu giá không hợp lệ.");
+            }
+            boolean success = auctionDAO.cancelAuction(auctionId, "Admin suspended");
+            if (success) {
+                System.out.println("[Admin] Suspended auction: " + auctionId);
+                Message response = new Message(Message.Type.SUCCESS);
+                response.setContent("Đã tạm ngưng phiên đấu giá.");
+                return response;
+            }
+            return createErrorMessage("Ngưng phiên thất bại.");
         }
 
         /** Xóa vật phẩm theo ID (chỉ người bán sở hữu hoặc Admin). */
