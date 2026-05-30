@@ -37,7 +37,7 @@ import Model.User;
  *
  * <p>Sử dụng {@link Network.NetworkService} để gọi API login/register.</p>
  */
-public class logincontroller {
+public class LoginController {
     @FXML
     private TextField loginUsernameField;
 
@@ -96,7 +96,7 @@ public class logincontroller {
         }
         // Gán action cho nút login (chỉ tồn tại trong login.fxml)
         if (loginButton != null) {
-            loginButton.setOnAction(this::Login);
+            loginButton.setOnAction(this::login);
         }
     }
 
@@ -118,7 +118,7 @@ public class logincontroller {
 
     @FXML
     /** Xử lý đăng nhập: kiểm tra đầu vào, gọi NetworkService.login(), chuyển sang màn hình chính. */
-    private void Login(ActionEvent event) {
+    private void login(ActionEvent event) {
         String username = read(loginUsernameField);
         String password = read(loginPasswordField);
 
@@ -153,7 +153,7 @@ public class logincontroller {
 
     @FXML
     /** Xử lý đăng ký: kiểm tra đầu vào, gọi NetworkService.register(). */
-    private void Signup(ActionEvent event) {
+    private void signup(ActionEvent event) {
         String fullName = read(signupNameField);
         String username = read(signupUsernameField);
         String email = read(signupEmailField);
@@ -203,7 +203,7 @@ public class logincontroller {
             var response = networkService.register(username, password, email, phone, role);
             if (response.getType() == Network.Message.Type.SUCCESS) {
                 showMessage("Đăng ký thành công! Vui lòng đăng nhập.");
-                ComeLogin(event);
+                comeLogin(event);
             } else {
                 showMessage("Đăng ký thất bại: " + response.getContent());
             }
@@ -214,13 +214,13 @@ public class logincontroller {
 
     @FXML
     /** Chuyển sang form đăng ký. */
-    private void ComeSignup(ActionEvent event) {
+    private void comeSignup(ActionEvent event) {
         switchScene(event, "/signin.fxml", 450, 660);
     }
 
     @FXML
     /** Chuyển về form đăng nhập. */
-    private void ComeLogin(ActionEvent event) {
+    private void comeLogin(ActionEvent event) {
         switchScene(event, "/login.fxml", 600, 400);
     }
 

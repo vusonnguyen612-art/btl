@@ -12,7 +12,7 @@
 <?import javafx.scene.paint.Stop?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="660.0" prefWidth="450.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.logincontroller">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="660.0" prefWidth="450.0" style="-fx-background-color: #1E1E1D; -fx-border-color: #d4af5a;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.LoginController">
    <children>
       <Label alignment="CENTER" layoutX="114.0" layoutY="29.0" prefHeight="66.0" prefWidth="222.0" text="ĐĂNG KÝ">
          <font>
@@ -56,7 +56,7 @@
       <RadioButton layoutX="80.0" layoutY="475.0" mnemonicParsing="false" text="Cả hai (Bidder + Seller)" textFill="white" toggleGroup="$roleToggleGroup" userData="bothRadio">
          <font><Font size="13.0" /></font>
       </RadioButton>
-      <Button layoutX="70.0" layoutY="510.0" mnemonicParsing="false" onAction="#Signup" prefHeight="46.0" prefWidth="310.0" style="-fx-background-color: #d9b15f; -fx-background-radius: 30; -fx-text-fill: white; -fx-font-weight: bold;" text="ĐĂNG KÝ">
+      <Button layoutX="70.0" layoutY="510.0" mnemonicParsing="false" onAction="#signup" prefHeight="46.0" prefWidth="310.0" style="-fx-background-color: #d9b15f; -fx-background-radius: 30; -fx-text-fill: white; -fx-font-weight: bold;" text="ĐĂNG KÝ">
          <font>
             <Font name="Arial" size="20.0" />
          </font>
@@ -67,6 +67,6 @@
             <Font size="13.0" />
          </font>
       </Label>
-      <Button layoutX="258.0" layoutY="615.0" mnemonicParsing="false" onAction="#ComeLogin" prefHeight="26.0" prefWidth="96.0" style="-fx-background-color: #d9b15f; -fx-background-radius: 30; -fx-text-fill: white; -fx-font-weight: bold;" text="ĐĂNG NHẬP" />
+      <Button layoutX="258.0" layoutY="615.0" mnemonicParsing="false" onAction="#comeLogin" prefHeight="26.0" prefWidth="96.0" style="-fx-background-color: #d9b15f; -fx-background-radius: 30; -fx-text-fill: white; -fx-font-weight: bold;" text="ĐĂNG NHẬP" />
    </children>
 </AnchorPane>

@@ -21,6 +21,7 @@ import Factory.ItemFactory;
 import Model.User;
 import Network.NetworkService;
 import Network.Message;
+import Util.AlertUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -401,18 +402,10 @@ public class CreateItemsController implements UserController.LinkedController {
     }
 
     private void showInfo(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AlertUtils.showInfo(title, message);
     }
 
     private void showWarning(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AlertUtils.showWarning(title, message);
     }
 }

@@ -28,6 +28,7 @@ import java.util.Locale;
 
 import Model.Item;
 import Model.User;
+import Util.AlertUtils;
 import Network.Message;
 import Network.NetworkService;
 
@@ -663,11 +664,7 @@ public class UserController {
      * @param message Nội dung thông báo.
      */
     public void showInfo(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AlertUtils.showInfo(title, message);
     }
 
     /**
@@ -677,11 +674,7 @@ public class UserController {
      * @param message Nội dung cảnh báo.
      */
     public void showWarning(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AlertUtils.showWarning(title, message);
     }
 
     /**
@@ -691,11 +684,7 @@ public class UserController {
      * @param message Nội dung lỗi.
      */
     public void showError(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AlertUtils.showError(title, message);
     }
 
     /**
@@ -706,14 +695,7 @@ public class UserController {
      * @return {@code true} nếu người dùng nhấn OK, {@code false} nếu nhấn Cancel.
      */
     public boolean showConfirm(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-
-        return alert.showAndWait()
-                .filter(buttonType -> buttonType == ButtonType.OK)
-                .isPresent();
+        return AlertUtils.showConfirm(title, message);
     }
 
     /**
