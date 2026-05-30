@@ -25,6 +25,15 @@ import Model.User;
 import Network.Message;
 import Network.NetworkService;
 
+/**
+ * Controller cho pane Trang chủ (FXML: Indivisual.fxml -> TrangchuPane).
+ * Hiển thị danh sách tất cả sản phẩm đấu giá dưới dạng các item card,
+ * hỗ trợ tìm kiếm, lọc theo danh mục, trạng thái, khoảng giá, và sắp xếp.
+ * Cho phép mở phòng đấu giá từ trang chủ.
+ *
+ * <p>Implement {@link UserController.LinkedController} để nhận tham chiếu
+ * đến {@link UserController} cha.</p>
+ */
 public class TrangchuPaneController implements UserController.LinkedController {
 
     @FXML private AnchorPane TrangchuPane;
@@ -46,6 +55,9 @@ public class TrangchuPaneController implements UserController.LinkedController {
         this.userController = uc;
     }
 
+    /**
+     * Khởi tạo: thiết lập các ComboBox tìm kiếm, focus cho ScrollPane, và màu nền viewport.
+     */
     @FXML
     private void initialize() {
         initHomeSearchCombos();
@@ -53,6 +65,9 @@ public class TrangchuPaneController implements UserController.LinkedController {
         fixScrollPaneViewport();
     }
 
+    /**
+     * Thiết lập màu nền cho viewport của ScrollPane để đồng bộ với theme tối.
+     */
     private void fixScrollPaneViewport() {
         Platform.runLater(() -> {
             Node viewport = homeScrollPane.lookup(".viewport");
@@ -62,16 +77,30 @@ public class TrangchuPaneController implements UserController.LinkedController {
         });
     }
 
+    /**
+     * Gán thông tin người dùng và tải lại danh sách sản phẩm trang chủ.
+     *
+     * @param user Đối tượng User hiện tại.
+     */
     public void setUserData(User user) {
         loadHomeItems();
     }
 
+    /**
+     * Cập nhật số dư hiển thị trên Label Sodutaikhoan1.
+     *
+     * @param balance Số dư mới của người dùng.
+     */
     public void updateBalance(BigDecimal balance) {
         if (Sodutaikhoan1 != null) {
             Sodutaikhoan1.setText(userController.formatMoney(balance));
         }
     }
 
+    /**
+     * Tải danh sách sản phẩm đấu giá từ server và hiển thị dưới dạng các item card
+     * trong FlowPane AllItems. Các sản phẩm đang diễn ra được ưu tiên hiển thị trước.
+     */
     public void loadHomeItems() {
         if (AllItems == null) return;
         AllItems.getChildren().clear();
@@ -123,6 +152,10 @@ public class TrangchuPaneController implements UserController.LinkedController {
         }
     }
 
+    /**
+     * Xử lý tìm kiếm nâng cao trên trang chủ: lọc theo từ khóa, danh mục, trạng thái,
+     * khoảng giá, và sắp xếp. Kết quả hiển thị trong FlowPane AllItems.
+     */
     @FXML
     private void searchHomeAuctions() {
         if (AllItems == null) return;
@@ -211,6 +244,9 @@ public class TrangchuPaneController implements UserController.LinkedController {
         }
     }
 
+    /**
+     * Đặt lại tất cả các trường tìm kiếm về giá trị mặc định và tải lại toàn bộ danh sách.
+     */
     @FXML
     private void resetHomeSearch() {
         if (homeSearchKeyword != null) homeSearchKeyword.clear();
@@ -222,6 +258,11 @@ public class TrangchuPaneController implements UserController.LinkedController {
         loadHomeItems();
     }
 
+    /**
+     * Mở phòng đấu giá thông qua UserController cha.
+     *
+     * @param event ActionEvent kích hoạt.
+     */
     @FXML
     private void openAuctionRoom(ActionEvent event) {
         if (userController != null) {

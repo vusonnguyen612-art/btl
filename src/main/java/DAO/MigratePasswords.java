@@ -16,6 +16,13 @@ import java.security.NoSuchAlgorithmException;
 public class MigratePasswords {
     private static final String SALT = "AuCtIoNaPpSaLt!#";
 
+    /**
+     * Điểm vào chương trình: quét tất cả user có password dạng plain text
+     * (độ dài &lt; 64 ký tự hex), hash bằng SHA-256 (có salt), và cập nhật vào DB.
+     * <p>Chạy DUY NHẤT 1 lần. Các password đã hash sẵn (64 ký tự hex) được bỏ qua.</p>
+     *
+     * @param args tham số dòng lệnh (không dùng).
+     */
     public static void main(String[] args) {
         System.out.println("=== Migrate Passwords: Hash toàn bộ mật khẩu plain text ===");
         try (Connection conn = DatabaseUtil.getConnection()) {
@@ -69,6 +76,13 @@ public class MigratePasswords {
         }
     }
 
+    /**
+     * Băm mật khẩu bằng thuật toán SHA-256 kết hợp với salt cố định.
+     * <p>Salt được định nghĩa trong {@link #SALT}.</p>
+     *
+     * @param password mật khẩu dạng plain text cần băm.
+     * @return chuỗi hex 64 ký tự đại diện cho hash SHA-256(salt + password).
+     */
     private static String hashPassword(String password) {
         try {
             String salted = SALT + password;

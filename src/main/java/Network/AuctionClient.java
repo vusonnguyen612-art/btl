@@ -7,7 +7,15 @@ import java.util.Scanner;
 import Model.*;
 import Factory.*;
 
-/** CLI client console tương tác với AuctionServer qua menu text. */
+/**
+ * CLI client console tương tác với {@link AuctionServer} qua menu text.
+ * <p>
+ * Quản lý kết nối TCP socket, gửi/nhận {@link Message} dạng Object serialization.
+ * Cung cấp các phương thức tiện ích cho từng loại request (login, register,
+ * getAuctions, placeBid, ...) và một {@link #main(String[])} entry point
+ * hiển thị menu CLI cho người dùng thao tác trực tiếp.
+ * </p>
+ */
 public class AuctionClient {
     private Socket socket;
     private ObjectOutputStream output;
@@ -22,7 +30,11 @@ public class AuctionClient {
         this.port = port;
     }
 
-    /** Kết nối tới server. */
+    /**
+     * Kết nối tới server qua TCP socket.
+     *
+     * @return true nếu kết nối thành công, false nếu thất bại.
+     */
     public boolean connect() {
         try {
             socket = new Socket(serverAddress, port);
@@ -37,7 +49,9 @@ public class AuctionClient {
         }
     }
 
-    /** Ngắt kết nối. */
+    /**
+     * Ngắt kết nối khỏi server và đóng socket.
+     */
     public void disconnect() {
         try {
             if (socket != null) socket.close();
@@ -47,7 +61,12 @@ public class AuctionClient {
         }
     }
 
-    /** Gửi message và nhận response. */
+    /**
+     * Gửi message đến server và nhận response.
+     *
+     * @param message Đối tượng Message cần gửi.
+     * @return Message phản hồi từ server, hoặc Error message nếu lỗi kết nối.
+     */
     public Message sendMessage(Message message) {
         try {
             output.writeObject(message);
@@ -59,7 +78,13 @@ public class AuctionClient {
         }
     }
 
-    /** Gửi yêu cầu đăng nhập. */
+    /**
+     * Gửi yêu cầu đăng nhập đến server.
+     *
+     * @param username Tên đăng nhập.
+     * @param password Mật khẩu.
+     * @return Message phản hồi từ server.
+     */
     public Message login(String username, String password) {
         Message message = new Message(Message.Type.LOGIN);
         message.setData(username);
@@ -67,7 +92,13 @@ public class AuctionClient {
         return sendMessage(message);
     }
 
-    /** Gửi yêu cầu đăng ký. */
+    /**
+     * Gửi yêu cầu đăng ký tài khoản mới.
+     *
+     * @param username Tên đăng nhập.
+     * @param password Mật khẩu.
+     * @return Message phản hồi từ server.
+     */
     public Message register(String username, String password) {
         Message message = new Message(Message.Type.REGISTER);
         message.setData(username);
@@ -75,19 +106,34 @@ public class AuctionClient {
         return sendMessage(message);
     }
 
-    /** Lấy danh sách phiên đấu giá. */
+    /**
+     * Gửi yêu cầu lấy danh sách tất cả phiên đấu giá.
+     *
+     * @return Message phản hồi chứa danh sách AuctionSession trong data.
+     */
     public Message getAuctions() {
         return sendMessage(new Message(Message.Type.GET_AUCTIONS));
     }
 
-    /** Lấy thông tin một phiên. */
+    /**
+     * Gửi yêu cầu lấy thông tin chi tiết một phiên đấu giá.
+     *
+     * @param auctionId ID của phiên đấu giá cần xem.
+     * @return Message phản hồi chứa AuctionSession trong data.
+     */
     public Message getAuction(String auctionId) {
         Message message = new Message(Message.Type.GET_AUCTION);
         message.setAuctionId(auctionId);
         return sendMessage(message);
     }
 
-    /** Tạo phiên đấu giá mới. */
+    /**
+     * Gửi yêu cầu tạo phiên đấu giá mới (yêu cầu quyền seller).
+     *
+     * @param itemId          ID vật phẩm đem đấu giá.
+     * @param durationMinutes Thời lượng đấu giá (phút).
+     * @return Message phản hồi từ server.
+     */
     public Message createAuction(String itemId, long durationMinutes) {
         Message message = new Message(Message.Type.CREATE_AUCTION);
         message.setItemId(itemId);
@@ -95,14 +141,25 @@ public class AuctionClient {
         return sendMessage(message);
     }
 
-    /** Bắt đầu phiên đấu giá. */
+    /**
+     * Gửi yêu cầu bắt đầu phiên đấu giá.
+     *
+     * @param auctionId ID phiên cần bắt đầu.
+     * @return Message phản hồi từ server.
+     */
     public Message startAuction(String auctionId) {
         Message message = new Message(Message.Type.START_AUCTION);
         message.setAuctionId(auctionId);
         return sendMessage(message);
     }
 
-    /** Đặt giá. */
+    /**
+     * Gửi yêu cầu đặt giá cho một phiên đấu giá.
+     *
+     * @param auctionId ID phiên đấu giá.
+     * @param amount    Số tiền muốn đặt.
+     * @return Message phản hồi từ server.
+     */
     public Message placeBid(String auctionId, double amount) {
         Message message = new Message(Message.Type.PLACE_BID);
         message.setAuctionId(auctionId);
@@ -110,14 +167,25 @@ public class AuctionClient {
         return sendMessage(message);
     }
 
-    /** Kết thúc phiên. */
+    /**
+     * Gửi yêu cầu kết thúc phiên đấu giá.
+     *
+     * @param auctionId ID phiên cần kết thúc.
+     * @return Message phản hồi từ server.
+     */
     public Message finishAuction(String auctionId) {
         Message message = new Message(Message.Type.FINISH_AUCTION);
         message.setAuctionId(auctionId);
         return sendMessage(message);
     }
 
-    /** Hủy phiên với lý do. */
+    /**
+     * Gửi yêu cầu hủy phiên đấu giá kèm lý do.
+     *
+     * @param auctionId ID phiên cần hủy.
+     * @param reason    Lý do hủy phiên.
+     * @return Message phản hồi từ server.
+     */
     public Message cancelAuction(String auctionId, String reason) {
         Message message = new Message(Message.Type.CANCEL_AUCTION);
         message.setAuctionId(auctionId);
@@ -125,24 +193,44 @@ public class AuctionClient {
         return sendMessage(message);
     }
 
-    /** Lấy danh sách vật phẩm. */
+    /**
+     * Gửi yêu cầu lấy danh sách tất cả vật phẩm.
+     *
+     * @return Message phản hồi chứa danh sách Item trong data.
+     */
     public Message getItems() {
         return sendMessage(new Message(Message.Type.GET_ITEMS));
     }
 
-    /** Tạo vật phẩm mới. */
+    /**
+     * Gửi yêu cầu tạo vật phẩm mới.
+     *
+     * @param item Đối tượng Item chứa thông tin vật phẩm.
+     * @return Message phản hồi từ server.
+     */
     public Message createItem(Model.Item item) {
         Message message = new Message(Message.Type.CREATE_ITEM);
         message.setData(item);
         return sendMessage(message);
     }
 
+    /**
+     * Tạo message lỗi nội bộ khi kết nối thất bại.
+     *
+     * @param error Nội dung lỗi.
+     * @return Message loại ERROR.
+     */
     private Message createErrorMessage(String error) {
         Message message = new Message(Message.Type.ERROR);
         message.setContent(error);
         return message;
     }
 
+    /**
+     * Entry point CLI. Hiển thị menu text, cho phép đăng nhập/đăng ký/xem danh sách/tạo item/tạo phiên/đặt giá.
+     *
+     * @param args Tham số dòng lệnh (không dùng).
+     */
     public static void main(String[] args) {
         AuctionClient client = new AuctionClient("0.tcp.ap.ngrok.io", 19274);
         Scanner scanner = new Scanner(System.in);
@@ -198,6 +286,9 @@ public class AuctionClient {
     
     private static User currentUser;
     
+    /**
+     * In menu lựa chọn CLI ra console.
+     */
     private static void printMenu() {
         System.out.println("\n--- Menu ---");
         System.out.println("1. Register");
@@ -211,6 +302,12 @@ public class AuctionClient {
         System.out.println("0. Exit");
     }
     
+    /**
+     * Xử lý đăng ký từ CLI: nhập username, kiểm tra password, gửi lên server.
+     *
+     * @param client  Đối tượng AuctionClient để gửi request.
+     * @param scanner Scanner để đọc input từ bàn phím.
+     */
     private static void handleRegister(AuctionClient client, Scanner scanner) {
         System.out.print("Enter username: ");
         String username = scanner.nextLine().trim();
@@ -231,6 +328,12 @@ public class AuctionClient {
         System.out.println(response.getType() + ": " + response.getContent());
     }
     
+    /**
+     * Xử lý đăng nhập từ CLI: nhập username/password, gửi lên server, lưu currentUser.
+     *
+     * @param client  Đối tượng AuctionClient để gửi request.
+     * @param scanner Scanner để đọc input từ bàn phím.
+     */
     private static void handleLogin(AuctionClient client, Scanner scanner) {
         System.out.print("Enter username: ");
         String username = scanner.nextLine().trim();
@@ -245,11 +348,21 @@ public class AuctionClient {
         }
     }
     
+    /**
+     * Đăng xuất: xóa currentUser.
+     *
+     * @param client Đối tượng AuctionClient.
+     */
     private static void handleLogout(AuctionClient client) {
         currentUser = null;
         System.out.println("Logged out.");
     }
-    
+
+    /**
+     * Xem danh sách tất cả vật phẩm từ server.
+     *
+     * @param client Đối tượng AuctionClient để gửi request.
+     */
     private static void handleViewItems(AuctionClient client) {
         Message response = client.getItems();
         System.out.println(response.getType() + ": " + response.getContent());
@@ -258,6 +371,12 @@ public class AuctionClient {
         }
     }
     
+    /**
+     * Tạo vật phẩm mới từ CLI (yêu cầu đăng nhập với quyền seller).
+     *
+     * @param client  Đối tượng AuctionClient để gửi request.
+     * @param scanner Scanner để đọc input từ bàn phím.
+     */
     private static void handleCreateItem(AuctionClient client, Scanner scanner) {
         if (currentUser == null || !currentUser.isSeller()) {
             System.out.println("Only sellers can create items. Please login as seller.");
@@ -278,6 +397,11 @@ public class AuctionClient {
         System.out.println(response.getType() + ": " + response.getContent());
     }
     
+    /**
+     * Xem danh sách phiên đấu giá từ server.
+     *
+     * @param client Đối tượng AuctionClient để gửi request.
+     */
     private static void handleViewAuctions(AuctionClient client) {
         Message response = client.getAuctions();
         System.out.println(response.getType() + ": " + response.getContent());
@@ -285,7 +409,13 @@ public class AuctionClient {
             System.out.println(response.getData());
         }
     }
-    
+
+    /**
+     * Tạo phiên đấu giá mới từ CLI (yêu cầu đăng nhập với quyền seller).
+     *
+     * @param client  Đối tượng AuctionClient để gửi request.
+     * @param scanner Scanner để đọc input từ bàn phím.
+     */
     private static void handleCreateAuction(AuctionClient client, Scanner scanner) {
         if (currentUser == null || !currentUser.isSeller()) {
             System.out.println("Only sellers can create auctions. Please login as seller.");
@@ -301,6 +431,12 @@ public class AuctionClient {
         System.out.println(response.getType() + ": " + response.getContent());
     }
     
+    /**
+     * Xử lý đặt giá từ CLI (yêu cầu đăng nhập với quyền bidder).
+     *
+     * @param client  Đối tượng AuctionClient để gửi request.
+     * @param scanner Scanner để đọc input từ bàn phím.
+     */
     private static void handlePlaceBid(AuctionClient client, Scanner scanner) {
         if (currentUser == null || !currentUser.isBidder()) {
             System.out.println("Only bidders can place bids. Please login as bidder.");

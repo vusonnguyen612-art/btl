@@ -4,6 +4,14 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.TextField;
 
+/**
+ * Controller cho pane Cài đặt (FXML: Indivisual.fxml -> CaidatPane).
+ * Cung cấp chức năng đổi mật khẩu, đăng xuất (đổi tài khoản), và thoát chương trình.
+ *
+ * <p>Implement {@link UserController.LinkedController} để nhận tham chiếu
+ * đến {@link UserController} cha và sử dụng các phương thức tiện ích
+ * (showWarning, exit, doitaikhoan).</p>
+ */
 public class CaidatPaneController implements UserController.LinkedController {
 
     @FXML private TextField Matkhauhientai;
@@ -17,6 +25,12 @@ public class CaidatPaneController implements UserController.LinkedController {
         this.userController = uc;
     }
 
+    /**
+     * Xử lý đổi mật khẩu: kiểm tra đầu vào (không trống, khớp mật khẩu mới,
+     * độ dài tối thiểu 6 ký tự), sau đó gửi yêu cầu lên server.
+     *
+     * @param event ActionEvent kích hoạt.
+     */
     @FXML
     private void doimatkhau(ActionEvent event) {
         if (userController == null || userController.getCurrentUser() == null) {
@@ -43,13 +57,25 @@ public class CaidatPaneController implements UserController.LinkedController {
             return;
         }
 
-        userController.showWarning("Chưa hỗ trợ", "Tính năng đổi mật khẩu qua Server chưa được cài đặt.");
+        // Gửi yêu cầu đổi mật khẩu lên server
+        Network.NetworkService ns = Network.NetworkService.getInstance();
+        Network.Message response = ns.changePassword(matKhauHienTai, matKhauMoi);
+        if (response.getType() == Network.Message.Type.SUCCESS) {
+            userController.showWarning("Thành công", "Đổi mật khẩu thành công.");
+        } else {
+            userController.showWarning("Lỗi", response.getContent());
+        }
 
         Matkhauhientai.clear();
         Matkhaumoi.clear();
         Nhaplaimatkhaumoi.clear();
     }
 
+    /**
+     * Thoát chương trình thông qua UserController cha.
+     *
+     * @param event ActionEvent kích hoạt.
+     */
     @FXML
     private void onExit(ActionEvent event) {
         if (userController != null) {
@@ -57,6 +83,11 @@ public class CaidatPaneController implements UserController.LinkedController {
         }
     }
 
+    /**
+     * Đăng xuất và chuyển về màn hình đăng nhập thông qua UserController cha.
+     *
+     * @param event ActionEvent kích hoạt.
+     */
     @FXML
     private void onDoitaikhoan(ActionEvent event) {
         if (userController != null) {

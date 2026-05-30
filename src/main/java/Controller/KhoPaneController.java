@@ -20,6 +20,15 @@ import Model.User;
 import Network.Message;
 import Network.NetworkService;
 
+/**
+ * Controller cho pane Kho (FXML: Indivisual.fxml -> KhoPane).
+ * Hiển thị danh sách các phiên đấu giá thuộc sở hữu của người dùng hiện tại
+ * dưới dạng các auction card. Cho phép bắt đầu phiên, chỉnh sửa sản phẩm,
+ * và mở phòng đấu giá.
+ *
+ * <p>Implement {@link UserController.LinkedController} để nhận tham chiếu
+ * đến {@link UserController} cha.</p>
+ */
 public class KhoPaneController implements UserController.LinkedController {
 
     @FXML private FlowPane Items;
@@ -28,11 +37,17 @@ public class KhoPaneController implements UserController.LinkedController {
     private UserController userController;
     private NetworkService networkService = NetworkService.getInstance();
 
+    /**
+     * Khởi tạo: thiết lập màu nền viewport cho ScrollPane.
+     */
     @FXML
     private void initialize() {
         fixScrollPaneViewport();
     }
 
+    /**
+     * Thiết lập màu nền cho viewport của ScrollPane để đồng bộ với theme tối.
+     */
     private void fixScrollPaneViewport() {
         Platform.runLater(() -> {
             Node viewport = khoScrollPane.lookup(".viewport");
@@ -47,10 +62,19 @@ public class KhoPaneController implements UserController.LinkedController {
         this.userController = uc;
     }
 
+    /**
+     * Gán thông tin người dùng và tải lại danh sách vật phẩm trong kho.
+     *
+     * @param user Đối tượng User hiện tại.
+     */
     public void setUserData(User user) {
         loadWarehouseItems();
     }
 
+    /**
+     * Tải danh sách phiên đấu giá của người dùng hiện tại từ server và hiển thị
+     * dưới dạng các auction card trong FlowPane Items.
+     */
     public void loadWarehouseItems() {
         if (Items == null) return;
         Items.getChildren().clear();
@@ -106,6 +130,11 @@ public class KhoPaneController implements UserController.LinkedController {
         }
     }
 
+    /**
+     * Xử lý sự kiện tạo sản phẩm mới, ủy quyền cho UserController cha.
+     *
+     * @param event ActionEvent kích hoạt.
+     */
     @FXML
     private void onCreateItems(ActionEvent event) {
         if (userController != null) {

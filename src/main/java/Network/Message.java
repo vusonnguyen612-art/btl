@@ -3,11 +3,26 @@ package Network;
 import java.io.Serializable;
 import java.util.List;
 
-/** Giao thức message trao đổi giữa client và server qua TCP socket. */
+/**
+ * Định dạng message trao đổi giữa client và server qua TCP socket sử dụng Java Object Serialization.
+ * <p>
+ * Mỗi message chứa một {@link Type} xác định hành động, kèm theo các trường dữ liệu
+ * như {@code senderId}, {@code auctionId}, {@code content}, {@code data} (Object đa năng),
+ * và danh sách {@code notifications} đính kèm. Timestamp được tự động gán khi khởi tạo.
+ * </p>
+ */
 public class Message implements Serializable {
     private static final long serialVersionUID = 1L;
     
-    /** Các loại message hỗ trợ. */
+    /**
+     * Các loại message hỗ trợ trong giao thức client-server.
+     * <p>Bao gồm các nhóm: xác thực (LOGIN, REGISTER, LOGOUT),
+     * thao tác phiên đấu giá (CREATE_AUCTION, START_AUCTION, PLACE_BID, ...),
+     * quản lý vật phẩm (CREATE_ITEM, UPDATE_ITEM, ...),
+     * theo dõi (ADD_WATCHLIST, REMOVE_WATCHLIST, ...),
+     * trò chuyện (SEND_CHAT_MESSAGE, GET_CHAT_HISTORY),
+     * và các message hệ thống (NOTIFICATION, ERROR, SUCCESS).</p>
+     */
     public enum Type {
         LOGIN,
         LOGOUT,
@@ -44,7 +59,9 @@ public class Message implements Serializable {
         GET_CHAT_HISTORY,
         ADD_WATCHLIST,
         REMOVE_WATCHLIST,
-        GET_WATCHLIST
+        GET_WATCHLIST,
+        DELETE_USER,
+        CHANGE_PASSWORD,
     }
 
     private Type type;
@@ -56,14 +73,22 @@ public class Message implements Serializable {
     private List<Message> notifications;
     private long timestamp;
 
-    /** @param type loại message */
+    /**
+     * Khởi tạo message chỉ với loại, timestamp được gán tự động.
+     *
+     * @param type loại message xác định hành động giao tiếp.
+     */
     public Message(Type type) {
         this.type = type;
         this.timestamp = System.currentTimeMillis();
     }
 
-    /** @param type     loại message
-     *  @param senderId ID người gửi */
+    /**
+     * Khởi tạo message với loại và ID người gửi, timestamp được gán tự động.
+     *
+     * @param type     loại message xác định hành động giao tiếp.
+     * @param senderId ID định danh người gửi message.
+     */
     public Message(Type type, String senderId) {
         this.type = type;
         this.senderId = senderId;

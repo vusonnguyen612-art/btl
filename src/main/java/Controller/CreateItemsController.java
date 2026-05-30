@@ -125,8 +125,10 @@ public class CreateItemsController implements UserController.LinkedController {
         }
     }
 
+    /**
+     * Khởi tạo ComboBox danh mục với giá trị mặc định "Nghệ thuật" và thời gian 60 phút.
+     */
     @FXML
-    /** Khởi tạo ComboBox danh mục và giá trị mặc định. */
     private void initialize() {
         thoiGianDauGia.setText("60");
         categoryComboBox.getItems().addAll("Nghệ thuật", "Điện tử", "Xe cộ", "Thời trang", "Sách", "Thể thao", "Trang sức", "Âm nhạc", "Nội thất");

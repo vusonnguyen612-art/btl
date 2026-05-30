@@ -24,6 +24,12 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Controller cho cửa sổ xem biểu đồ giá đấu giá chi tiết (FXML: bid_chart_view.fxml).
+ * Hiển thị thông tin phiên (tên, trạng thái, giá cuối, thời gian kết thúc),
+ * biểu đồ đường (LineChart) biểu diễn sự thay đổi giá theo thời gian,
+ * và danh sách chi tiết các lượt đặt giá.
+ */
 public class BidChartViewController {
 
     @FXML private Label auctionNameLabel;
@@ -44,11 +50,19 @@ public class BidChartViewController {
         moneyFormat = new DecimalFormat("#,###", symbols);
     }
 
+    /**
+     * Gán phiên đấu giá và tải dữ liệu biểu đồ + lịch sử đặt giá.
+     *
+     * @param auction Phiên đấu giá cần hiển thị.
+     */
     public void setAuction(AuctionSession auction) {
         this.auction = auction;
         loadData();
     }
 
+    /**
+     * Tải dữ liệu phiên và lịch sử đặt giá từ server, sau đó vẽ biểu đồ và danh sách bid.
+     */
     private void loadData() {
         if (auction == null) return;
 
@@ -69,6 +83,11 @@ public class BidChartViewController {
         buildBidList(bids);
     }
 
+    /**
+     * Xây dựng LineChart biểu diễn giá đấu theo thời gian (tính bằng giây từ lúc bắt đầu).
+     *
+     * @param bids Danh sách các lượt đặt giá để vẽ lên biểu đồ.
+     */
     private void buildChart(List<Bid> bids) {
         NumberAxis xAxis = new NumberAxis();
         xAxis.setLabel("Thời gian (giây)");
@@ -129,6 +148,12 @@ public class BidChartViewController {
         }
     }
 
+    /**
+     * Xây dựng danh sách các lượt đặt giá dạng Label trong VBox bidList,
+     * hiển thị thời gian, số tiền, và tên người đặt.
+     *
+     * @param bids Danh sách các lượt đặt giá.
+     */
     private void buildBidList(List<Bid> bids) {
         bidList.getChildren().clear();
 
@@ -153,6 +178,12 @@ public class BidChartViewController {
         }
     }
 
+    /**
+     * Chuyển đổi mã trạng thái tiếng Anh sang tiếng Việt để hiển thị.
+     *
+     * @param status Mã trạng thái từ server (ví dụ: "FINISHED", "RUNNING").
+     * @return Chuỗi trạng thái tiếng Việt tương ứng.
+     */
     private String translateStatus(String status) {
         return switch (status) {
             case "FINISHED" -> "Đã kết thúc";
@@ -165,6 +196,12 @@ public class BidChartViewController {
         };
     }
 
+    /**
+     * Định dạng số tiền double thành chuỗi có dấu phẩy phân cách hàng nghìn.
+     *
+     * @param value Số tiền cần định dạng.
+     * @return Chuỗi đã định dạng (vd: "1,234,567").
+     */
     private String formatMoney(double value) {
         return moneyFormat.format(new BigDecimal(String.valueOf(value)));
     }

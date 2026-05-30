@@ -9,8 +9,18 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * DAO cho bảng bids: truy vấn giá đặt cao nhất, đánh dấu người thắng,
+ * và lấy danh sách giá đặt thắng của người dùng.
+ */
 public class BidDAO {
 
+    /**
+     * Lấy lượt đặt giá có số tiền cao nhất cho một phiên đấu giá.
+     *
+     * @param auctionId ID của phiên đấu giá cần tra cứu.
+     * @return Đối tượng {@link Bid} có giá cao nhất, hoặc {@code null} nếu chưa có lượt đặt nào.
+     */
     public Bid getHighestBid(String auctionId) {
         String sql = "SELECT * FROM bids WHERE auction_id = ? ORDER BY amount DESC LIMIT 1";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -32,6 +42,11 @@ public class BidDAO {
         return null;
     }
 
+    /**
+     * Đánh dấu một lượt đặt giá là người thắng cuộc (is_winner = 1).
+     *
+     * @param bidId ID của lượt đặt giá cần đánh dấu.
+     */
     public void markAsWinner(String bidId) {
         String sql = "UPDATE bids SET is_winner = 1 WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -43,6 +58,12 @@ public class BidDAO {
         }
     }
 
+    /**
+     * Lấy danh sách các lượt đặt giá thắng của một người dùng.
+     *
+     * @param userId ID của người dùng cần tra cứu.
+     * @return Danh sách các đối tượng {@link Bid} có is_winner = 1.
+     */
     public List<Bid> getWinningBidsByUserId(String userId) {
         List<Bid> winningBids = new ArrayList<>();
         String sql = "SELECT * FROM bids WHERE bidder_id = ? AND Winner = 1";

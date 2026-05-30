@@ -12,7 +12,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-/** DAO cho bảng auction_sessions và bids: quản lý đấu giá, thanh toán, phạt, lịch sử. */
+/**
+ * DAO cho bảng auction_sessions và bids: quản lý đấu giá, đặt giá (có Sniper Protection),
+ * thanh toán, phạt quá hạn, lịch sử, và tìm kiếm nâng cao.
+ * <p>Sử dụng {@link ItemDAO} để nạp thông tin vật phẩm liên kết.</p>
+ */
 public class AuctionDAO {
     
     private final ItemDAO itemDAO = new ItemDAO();
@@ -103,7 +107,7 @@ public class AuctionDAO {
                 java.time.LocalDateTime now = java.time.LocalDateTime.now();
                 java.time.Duration duration = java.time.Duration.between(now, endTime);
                 long secondsRemaining = duration.getSeconds();
-                if (secondsRemaining > 0 && secondsRemaining <= 120) {
+                if (secondsRemaining > 0 && secondsRemaining < 120) {
                     updateAuctionEndTime(conn, auctionId);
                     System.out.println("[Sniper Protection] Gia hạn phiên đấu giá " + auctionId + " thêm 2 phút.");
                 }
@@ -120,7 +124,15 @@ public class AuctionDAO {
         }
     }
     
-    /** Cập nhật giá hiện tại và người đặt giá cao nhất của phiên đấu giá. */
+    /**
+     * Cập nhật giá hiện tại và người đặt giá cao nhất của phiên đấu giá trong cùng transaction.
+     *
+     * @param conn      Kết nối JDBC (đã thiết lập autoCommit=false).
+     * @param auctionId ID của phiên đấu giá.
+     * @param amount    Giá trị đặt giá mới (sẽ trở thành currentPrice).
+     * @param bidderId  ID của người đặt giá mới.
+     * @throws SQLException Nếu có lỗi khi thực thi câu lệnh SQL.
+     */
     private void updateAuctionPrice(Connection conn, String auctionId, double amount, String bidderId) throws SQLException {
         String sql = "UPDATE auction_sessions SET current_price = ?, highest_bidder_id = ? WHERE id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -131,7 +143,14 @@ public class AuctionDAO {
         }
     }
 
-    /** Gia hạn thời gian kết thúc của phiên đấu giá thêm 2 phút (Sniper Protection). */
+    /**
+     * Gia hạn thời gian kết thúc của phiên đấu giá thêm 2 phút (Sniper Protection).
+     * Được gọi tự động khi có lượt đặt giá trong 2 phút cuối của phiên.
+     *
+     * @param conn      Kết nối JDBC (đã thiết lập autoCommit=false).
+     * @param auctionId ID của phiên đấu giá cần gia hạn.
+     * @throws SQLException Nếu có lỗi khi thực thi câu lệnh SQL.
+     */
     private void updateAuctionEndTime(Connection conn, String auctionId) throws SQLException {
         String sql = "UPDATE auction_sessions SET end_time = DATE_ADD(end_time, INTERVAL 2 MINUTE) WHERE id = ?";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -140,7 +159,13 @@ public class AuctionDAO {
         }
     }
     
-    /** Gia hạn phiên đấu giá thêm 5 phút. */
+    /**
+     * Tạm dừng phiên đấu giá: gia hạn thêm 5 phút kể từ thời điểm hiện tại.
+     * Chỉ áp dụng cho phiên đang ở trạng thái RUNNING.
+     *
+     * @param auctionId ID của phiên đấu giá cần tạm dừng.
+     * @return {@code true} nếu cập nhật thành công, ngược lại {@code false}.
+     */
     public boolean stopAuction(String auctionId) {
         String sql = "UPDATE auction_sessions SET end_time = DATE_ADD(NOW(), INTERVAL 5 MINUTE) WHERE id = ? AND status = 'RUNNING'";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -153,7 +178,13 @@ public class AuctionDAO {
         }
     }
 
-    /** Bắt đầu phiên: chuyển trạng thái RUNNING, đặt start_time và end_time. */
+    /**
+     * Bắt đầu phiên đấu giá: chuyển trạng thái từ OPEN sang RUNNING,
+     * đặt start_time = NOW() và end_time = NOW() + duration_minutes.
+     *
+     * @param auctionId ID của phiên đấu giá cần bắt đầu.
+     * @return {@code true} nếu cập nhật thành công, ngược lại {@code false}.
+     */
     public boolean startAuction(String auctionId) {
         String sql = "UPDATE auction_sessions SET status = 'RUNNING', start_time = NOW(), end_time = DATE_ADD(NOW(), INTERVAL duration_minutes MINUTE) WHERE id = ? AND status = 'OPEN'";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -166,7 +197,14 @@ public class AuctionDAO {
         }
     }
     
-    /** Kết thúc phiên: nếu có highest_bidder -> PAYMENT_PENDING, nếu không -> FINISHED. */
+    /**
+     * Kết thúc phiên đấu giá đang chạy.
+     * Nếu có highest_bidder_id, chuyển sang PAYMENT_PENDING và gán winner_id.
+     * Nếu không có ai đặt giá, chuyển thẳng sang FINISHED.
+     *
+     * @param auctionId ID của phiên đấu giá cần kết thúc.
+     * @return {@code true} nếu cập nhật thành công, ngược lại {@code false}.
+     */
     public synchronized boolean finishAuction(String auctionId) {
         String checkSql = "SELECT highest_bidder_id FROM auction_sessions WHERE id = ? AND status = 'RUNNING'";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -244,7 +282,13 @@ public class AuctionDAO {
         return false;
     }
 
-    /** Phạt người thắng quá hạn thanh toán 50,000 và chuyển phiên về FINISHED. */
+    /**
+     * Phạt người thắng thanh toán quá hạn 50,000 VND và chuyển phiên về FINISHED.
+     * Số dư người thắng sẽ bị trừ tối đa đến 0 (GREATEST(balance - 50000, 0)).
+     *
+     * @param auctionId ID của phiên đấu giá cần phạt.
+     * @return {@code true} nếu xử lý thành công, ngược lại {@code false}.
+     */
     public boolean penalizeWinner(String auctionId) {
         String sql = "SELECT highest_bidder_id FROM auction_sessions WHERE id = ? AND status = 'PAYMENT_PENDING'";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -275,7 +319,11 @@ public class AuctionDAO {
         return false;
     }
 
-    /** Tìm các phiên PAYMENT_PENDING quá hạn >1 giờ kể từ endTime. */
+    /**
+     * Tìm các phiên đang ở trạng thái PAYMENT_PENDING quá hạn > 1 giờ kể từ endTime.
+     *
+     * @return Danh sách các phiên đấu giá quá hạn thanh toán.
+     */
     public List<AuctionSession> findOverduePaymentAuctions() {
         String sql = "SELECT * FROM auction_sessions WHERE status = 'PAYMENT_PENDING' AND end_time IS NOT NULL AND DATE_ADD(end_time, INTERVAL 1 HOUR) <= NOW()";
         List<AuctionSession> sessions = new ArrayList<>();
@@ -291,7 +339,13 @@ public class AuctionDAO {
         return sessions;
     }
     
-    /** Hủy phiên đấu giá. */
+    /**
+     * Hủy phiên đấu giá: chuyển trạng thái sang CANCELED.
+     *
+     * @param auctionId ID của phiên đấu giá cần hủy.
+     * @param content   Lý do hủy phiên (ghi log).
+     * @return {@code true} nếu hủy thành công, ngược lại {@code false}.
+     */
     public boolean cancelAuction(String auctionId, String content) {
         String sql = "UPDATE auction_sessions SET status = 'CANCELED' WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -304,7 +358,12 @@ public class AuctionDAO {
         }
     }
     
-    /** Tìm phiên đấu giá theo ID (join với items). */
+    /**
+     * Tìm phiên đấu giá theo ID, kết hợp với thông tin Item từ bảng items.
+     *
+     * @param auctionId ID của phiên đấu giá cần tìm.
+     * @return {@link Optional} chứa {@link AuctionSession} nếu tìm thấy, ngược lại {@link Optional#empty()}.
+     */
     public Optional<AuctionSession> findAuctionById(String auctionId) {
         String sql = "SELECT * FROM auction_sessions WHERE id = ?";
         try (Connection conn = DatabaseUtil.getConnection();
@@ -321,7 +380,11 @@ public class AuctionDAO {
         return Optional.empty();
     }
     
-    /** Tìm các phiên đang chạy (RUNNING) sắp kết thúc trước. */
+    /**
+     * Tìm các phiên đang chạy (RUNNING) sắp kết thúc trước.
+     *
+     * @return Danh sách các phiên đấu giá đang hoạt động, sắp xếp theo thời gian kết thúc tăng dần.
+     */
     public List<AuctionSession> findRunningAuctions() {
         String sql = "SELECT * FROM auction_sessions WHERE status = 'RUNNING' ORDER BY end_time ASC";
         List<AuctionSession> sessions = new ArrayList<>();
@@ -511,6 +574,15 @@ public class AuctionDAO {
         return BigDecimal.ZERO;
     }
     
+    /**
+     * Ánh xạ một dòng kết quả từ ResultSet thành đối tượng {@link AuctionSession}.
+     * <p>Tự động nạp thông tin {@link Item} từ {@link ItemDAO#findById(String)}.
+     * Nếu Item không tồn tại trong DB, tạo một placeholder với tên "[Deleted: itemId]".</p>
+     *
+     * @param rs ResultSet đang trỏ đến dòng dữ liệu cần ánh xạ.
+     * @return đối tượng AuctionSession đã được gán đầy đủ các trường.
+     * @throws SQLException nếu có lỗi đọc dữ liệu từ ResultSet.
+     */
     private AuctionSession mapResultSetToSession(ResultSet rs) throws SQLException {
         String id = rs.getString("id");
         String itemId = rs.getString("item_id");

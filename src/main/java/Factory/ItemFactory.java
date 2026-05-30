@@ -109,6 +109,15 @@ public class ItemFactory {
      */
     public static Item createItem(String category, String name, String description, 
                                    double startPrice, String sellerId) {
+        if (name == null) {
+            throw new IllegalArgumentException("Item name must not be null");
+        }
+        if (description == null) {
+            throw new IllegalArgumentException("Item description must not be null");
+        }
+        if (startPrice <= 0) {
+            throw new IllegalArgumentException("Start price must be positive: " + startPrice);
+        }
         switch (category.toUpperCase()) {
             case "ELECTRONICS":
                 return createElectronics(name, description, startPrice, sellerId, 

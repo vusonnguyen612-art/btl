@@ -16,7 +16,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<AnchorPane prefHeight="608.0" prefWidth="823.0" style="-fx-background-color: #1E1E1D;" xmlns="http://javafx.com/javafx/25" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.UserController">
+<AnchorPane prefHeight="608.0" prefWidth="823.0" style="-fx-background-color: #1E1E1D;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="Controller.UserController">
    <children>
       <BorderPane AnchorPane.bottomAnchor="0" AnchorPane.leftAnchor="0" AnchorPane.rightAnchor="0" AnchorPane.topAnchor="0">
          <left>
@@ -74,6 +74,11 @@
                         <Font size="16.0" />
                      </font>
                   </ToggleButton>
+                  <ToggleButton fx:id="AdminButton" managed="false" visible="false" mnemonicParsing="false" prefHeight="42.0" prefWidth="145.0" style="-fx-background-color: #8B0000; -fx-text-fill: #FFD700; -fx-border-color: #FFD700;" text="Admin">
+                     <font>
+                        <Font size="16.0" />
+                     </font>
+                  </ToggleButton>
                </children>
             </VBox>
          </left>
@@ -87,6 +92,7 @@
                     <fx:include fx:id="CaidatPane" source="panes/caidat_pane.fxml"/>
                     <fx:include fx:id="WatchlistPane" source="panes/watchlist_pane.fxml"/>
                     <fx:include fx:id="ThongkePane" source="panes/thongke_pane.fxml"/>
+                    <fx:include fx:id="AdminPane" source="panes/admin_pane.fxml"/>
                 </children>
              </StackPane>
          </center>
