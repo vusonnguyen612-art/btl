@@ -1,5 +1,10 @@
 package Controller;
 
+import Controller.utils.AlertUtils;
+import Controller.utils.CategoryMapper;
+import Controller.utils.FormatUtils;
+import Controller.utils.ResponseUtils;
+import Controller.utils.UIUtils;
 import Model.AuctionSession;
 import Model.Bid;
 import Model.Item;
@@ -9,7 +14,6 @@ import Model.ChatMessage;
 import DAO.UserDAO;
 import Network.Message;
 import Network.NetworkService;
-import Util.AlertUtils;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -30,15 +34,11 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.math.BigDecimal;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Locale;
 
 /** Controller cho phòng đấu giá chi tiết: đặt giá, auto-bid, timer, lịch sử, thanh toán. */
 public class AuctionRoomController {
@@ -152,6 +152,10 @@ public class AuctionRoomController {
     private XYChart.Series<Number, Number> bidSeries;
     private boolean bidChartInitialized = false;
 
+    /**
+     * Đăng ký lắng nghe thông báo từ server.
+     * Khi nhận được thông báo, hiển thị dialog thông báo cho người dùng.
+     */
     private void setupNotificationListener() {
         networkService.setOnNotifications(notifs -> {
             Platform.runLater(() -> {
@@ -181,6 +185,10 @@ public class AuctionRoomController {
         setupScrollFocus();
     }
 
+    /**
+     * Thiết lập sự kiện focus cho cácScrollPane khi di chuột vào.
+     * Cho phép cuộn bằng con lăn chuột mà không cần nhấp trước.
+     */
     private void setupScrollFocus() {
         if (auctionListScrollPane != null) {
             auctionListScrollPane.setOnMouseEntered(e -> auctionListScrollPane.requestFocus());
@@ -190,38 +198,29 @@ public class AuctionRoomController {
         }
     }
 
+    /**
+     * Khởi tạo các ComboBox tìm kiếm (danh mục, trạng thái, sắp xếp).
+     */
     private void initSearchCombos() {
-        if (searchCategoryCombo != null) {
-            searchCategoryCombo.getItems().add("Tất cả");
-            searchCategoryCombo.getItems().addAll("Điện tử", "Xe cộ", "Nghệ thuật", "Thời trang", "Sách", "Thể thao", "Trang sức", "Âm nhạc", "Nội thất");
-            searchCategoryCombo.getSelectionModel().select("Tất cả");
-        }
-        if (searchStatusCombo != null) {
-            searchStatusCombo.getItems().add("Tất cả");
-            searchStatusCombo.getItems().addAll("Đang diễn ra", "Sắp diễn ra", "Chờ thanh toán", "Đã kết thúc", "Đã hủy");
-            searchStatusCombo.getSelectionModel().select("Tất cả");
-        }
-        if (searchSortCombo != null) {
-            searchSortCombo.getItems().addAll("Mới nhất", "Cũ nhất", "Giá tăng dần", "Giá giảm dần", "Tên A-Z");
-            searchSortCombo.getSelectionModel().select("Mới nhất");
-        }
+        UIUtils.initSearchCombos(searchCategoryCombo, searchStatusCombo, searchSortCombo);
     }
 
     /** Gán user hiện tại, load số dư và danh sách phiên. */
     public void setCurrentUser(User user) {
         this.currentUser = user;
         if (user != null) {
-            Message response = networkService.getUserBalance();
-            if (response.getType() == Message.Type.SUCCESS && response.getData() != null) {
-                BigDecimal balance = (BigDecimal) response.getData();
-                if (userBalanceLabel != null) {
-                    userBalanceLabel.setText(formatMoney(balance) + " $");
-                }
+            BigDecimal balance = ResponseUtils.extractBalance(networkService.getUserBalance());
+            if (balance != null && userBalanceLabel != null) {
+                userBalanceLabel.setText(FormatUtils.formatMoney(balance) + " $");
             }
         }
         loadAuctions();
     }
 
+    /**
+     * Bắt đầu tự động làm mới danh sách phiên đấu giá mỗi 3 giây.
+     * Nếu đang tìm kiếm, thực hiện lại tìm kiếm; ngược lại tải lại toàn bộ danh sách.
+     */
     private void startAutoRefresh() {
         refreshTimeline = new Timeline();
         refreshTimeline.setCycleCount(Timeline.INDEFINITE);
@@ -237,14 +236,17 @@ public class AuctionRoomController {
         refreshTimeline.play();
     }
 
+    /**
+     * Tải danh sách tất cả phiên đấu giá từ server và hiển thị theo từng nhóm:
+     * Phiên đang diễn ra, chờ thanh toán, và sắp diễn ra.
+     */
     private void loadAuctions() {
         if (auctionList == null) return;
 
         auctionList.getChildren().clear();
 
         Message response = networkService.getAuctions();
-        List<AuctionSession> allAuctions = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
-                ? (List<AuctionSession>) response.getData() : List.of();
+        List<AuctionSession> allAuctions = ResponseUtils.extractList(response);
 
         List<AuctionSession> runningAuctions = allAuctions.stream()
                 .filter(AuctionSession::isRunning)
@@ -300,6 +302,10 @@ public class AuctionRoomController {
         }
     }
 
+    /**
+     * Xử lý sự kiện tìm kiếm khi người dùng nhấn nút tìm.
+     * Thu thập các tiêu chí tìm kiếm từ giao diện và gọi performSearch().
+     */
     @FXML
     private void searchAuctions() {
         isSearchActive = true;
@@ -314,34 +320,12 @@ public class AuctionRoomController {
 
         String category = searchCategoryCombo.getValue();
         if (category != null && !category.equals("Tất cả")) {
-            String catMap = switch (category) {
-                case "Điện tử" -> "ELECTRONICS";
-                case "Xe cộ" -> "VEHICLE";
-                case "Nghệ thuật" -> "ART";
-                case "Thời trang" -> "FASHION";
-                case "Sách" -> "BOOKS";
-                case "Thể thao" -> "SPORTS";
-                case "Trang sức" -> "JEWELRY";
-                case "Âm nhạc" -> "MUSIC";
-                case "Nội thất" -> "FURNITURE";
-                default -> null;
-            };
-            criteria.setCategory(catMap);
+            criteria.setCategory(CategoryMapper.toEnglish(category));
         }
 
         String status = searchStatusCombo.getValue();
         if (status != null && !status.equals("Tất cả")) {
-            List<AuctionSession.Status> statuses = new ArrayList<>();
-            switch (status) {
-                case "Đang diễn ra" -> statuses.add(AuctionSession.Status.RUNNING);
-                case "Sắp diễn ra" -> statuses.add(AuctionSession.Status.OPEN);
-                case "Chờ thanh toán" -> statuses.add(AuctionSession.Status.PAYMENT_PENDING);
-                case "Đã kết thúc" -> {
-                    statuses.add(AuctionSession.Status.FINISHED);
-                    statuses.add(AuctionSession.Status.PAID);
-                }
-                case "Đã hủy" -> statuses.add(AuctionSession.Status.CANCELED);
-            }
+            List<AuctionSession.Status> statuses = CategoryMapper.mapStatus(status);
             if (!statuses.isEmpty()) {
                 criteria.setStatuses(statuses);
             }
@@ -377,11 +361,15 @@ public class AuctionRoomController {
         performSearch(criteria);
     }
 
+    /**
+     * Thực hiện tìm kiếm phiên đấu giá theo tiêu chí đã cho và hiển thị kết quả.
+     *
+     * @param criteria đối tượng chứa các tiêu chí tìm kiếm
+     */
     private void performSearch(SearchCriteria criteria) {
         auctionList.getChildren().clear();
         Message response = networkService.searchAuctions(criteria);
-        List<AuctionSession> results = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
-                ? (List<AuctionSession>) response.getData() : List.of();
+        List<AuctionSession> results = ResponseUtils.extractList(response);
 
         if (results.isEmpty()) {
             Label emptyLabel = new Label("Không tìm thấy phiên đấu giá nào.");
@@ -399,19 +387,24 @@ public class AuctionRoomController {
         }
     }
 
+    /**
+     * Đặt lại tất cả tiêu chí tìm kiếm và tải lại danh sách phiên đấu giá mặc định.
+     */
     @FXML
     private void resetSearch() {
         isSearchActive = false;
         currentSearchCriteria = null;
-        if (searchKeywordField != null) searchKeywordField.clear();
-        if (searchCategoryCombo != null) searchCategoryCombo.getSelectionModel().select("Tất cả");
-        if (searchStatusCombo != null) searchStatusCombo.getSelectionModel().select("Tất cả");
-        if (searchMinPriceField != null) searchMinPriceField.clear();
-        if (searchMaxPriceField != null) searchMaxPriceField.clear();
-        if (searchSortCombo != null) searchSortCombo.getSelectionModel().select("Mới nhất");
+        UIUtils.resetSearchFields(searchKeywordField, searchCategoryCombo, searchStatusCombo, searchMinPriceField, searchMaxPriceField, searchSortCombo);
         loadAuctions();
     }
 
+    /**
+     * Tạo thẻ phiên đấu giá (auction card) từ file FXML và cấu hình dữ liệu hiển thị.
+     *
+     * @param auction   phiên đấu giá cần hiển thị
+     * @param statusType loại trạng thái: "running", "payment_pending", "open", hoặc "other"
+     * @return VBox chứa giao diện thẻ phiên đấu giá
+     */
     private VBox createAuctionCard(AuctionSession auction, String statusType) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/auction_card.fxml"));
@@ -431,42 +424,13 @@ public class AuctionRoomController {
         }
     }
 
-    private String formatDuration(long minutes) {
-        if (minutes >= 60) {
-            long hours = minutes / 60;
-            long mins = minutes % 60;
-            if (mins > 0) {
-                return hours + "h " + mins + "p";
-            }
-            return hours + "h";
-        }
-        return minutes + " phút";
-    }
-
-    private String getTimeRemaining(AuctionSession auction) {
-        if (auction.getEndTime() == null) {
-            return formatDuration(auction.getDurationMinutes());
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        if (now.isAfter(auction.getEndTime())) {
-            return "Đã kết thúc";
-        }
-
-        long totalSeconds = java.time.Duration.between(now, auction.getEndTime()).getSeconds();
-        long hours = totalSeconds / 3600;
-        long minutes = (totalSeconds % 3600) / 60;
-        long seconds = totalSeconds % 60;
-
-        if (hours > 0) {
-            return String.format("Còn %02d:%02d:%02d", hours, minutes, seconds);
-        } else if (minutes > 0) {
-            return String.format("Còn %02d:%02d", minutes, seconds);
-        } else {
-            return String.format("Còn %ds", seconds);
-        }
-    }
-
+    /**
+     * Chọn và hiển thị chi tiết phiên đấu giá.
+     * Cập nhật thông tin giá, người đặt cao nhất, thời gian, lịch sử đặt giá,
+     * nút thanh toán/ngừng đấu giá, và trạng thái auto-bid.
+     *
+     * @param auction phiên đấu giá được chọn
+     */
     public void selectAuction(AuctionSession auction) {
         this.selectedAuction = auction;
 
@@ -483,7 +447,7 @@ public class AuctionRoomController {
         }
 
         if (durationDisplayLabel != null) {
-            durationDisplayLabel.setText("Thời gian: " + formatDuration(auction.getDurationMinutes()));
+            durationDisplayLabel.setText("Thời gian: " + FormatUtils.formatDuration(auction.getDurationMinutes()));
         }
 
         if (startTimeLabel != null) {
@@ -503,7 +467,7 @@ public class AuctionRoomController {
         }
 
         if (currentPriceLabel != null) {
-            currentPriceLabel.setText(formatMoney(new BigDecimal(String.valueOf(auction.getCurrentPrice()))) + " $");
+            currentPriceLabel.setText(FormatUtils.formatMoney(new BigDecimal(String.valueOf(auction.getCurrentPrice()))) + " $");
         }
 
         if (highestBidderLabel != null) {
@@ -571,6 +535,12 @@ public class AuctionRoomController {
         updateAutoBidUI(auction.getId());
     }
 
+    /**
+     * Cập nhật giao diện auto-bid dựa trên trạng thái hiện tại của phiên đấu giá.
+     * Hiển thị số tiền tối đa và trạng thái bật/tắt auto-bid.
+     *
+     * @param auctionId ID của phiên đấu giá
+     */
     private void updateAutoBidUI(String auctionId) {
         Double maxAmount = activeAutoBids.get(auctionId);
         if (maxAmount != null) {
@@ -587,6 +557,12 @@ public class AuctionRoomController {
         }
     }
 
+    /**
+     * Bắt đầu bộ đếm ngược thời gian cho phiên đấu giá.
+     * Mỗi giây gọi updateTimer() để cập nhật hiển thị thời gian còn lại.
+     *
+     * @param auction phiên đấu giá đang được theo dõi
+     */
     private void startTimer(AuctionSession auction) {
         if (timerTimeline != null) {
             timerTimeline.stop();
@@ -600,6 +576,12 @@ public class AuctionRoomController {
         timerTimeline.play();
     }
 
+    /**
+     * Bắt đầu tự động làm mới thông tin phiên đấu giá đang chọn mỗi giây.
+     * Giúp cập nhật giá hiện tại và người đặt cao nhất theo thời gian thực.
+     *
+     * @param auction phiên đấu giá cần làm mới
+     */
     private void startSelectedAuctionRefresh(AuctionSession auction) {
         if (selectedAuctionRefreshTimeline != null) {
             selectedAuctionRefreshTimeline.stop();
@@ -613,6 +595,12 @@ public class AuctionRoomController {
         selectedAuctionRefreshTimeline.play();
     }
 
+    /**
+     * Làm mới thông tin phiên đấu giá từ server.
+     * Nếu trạng thái thay đổi, gọi lại selectAuction(); nếu không chỉ cập nhật giá và lịch sử đặt giá.
+     *
+     * @param auction phiên đấu giá cần làm mới
+     */
     private void refreshSelectedAuction(AuctionSession auction) {
         Message auctionResponse = networkService.getAuction(auction.getId());
         if (auctionResponse.getType() == Message.Type.SUCCESS && auctionResponse.getData() != null) {
@@ -627,7 +615,7 @@ public class AuctionRoomController {
                 }
 
                 if (currentPriceLabel != null) {
-                    currentPriceLabel.setText(formatMoney(new BigDecimal(String.valueOf(updatedAuction.getCurrentPrice()))) + " $");
+                    currentPriceLabel.setText(FormatUtils.formatMoney(new BigDecimal(String.valueOf(updatedAuction.getCurrentPrice()))) + " $");
                 }
                 if (highestBidderLabel != null) {
                     if (updatedAuction.getHighestBidderId() != null) {
@@ -643,6 +631,13 @@ public class AuctionRoomController {
         }
     }
 
+    /**
+     * Cập nhật hiển thị bộ đếm thời gian mỗi giây.
+     * Xử lý cả phiên đang diễn ra và phiên chờ thanh toán.
+     * Khi hết thời gian, gửi thông báo kết thúc và tải lại danh sách.
+     *
+     * @param auction phiên đấu giá cần cập nhật thời gian
+     */
     private void updateTimer(AuctionSession auction) {
         if (timerLabel == null) return;
 
@@ -713,14 +708,19 @@ public class AuctionRoomController {
         }
     }
 
+    /**
+     * Tải lịch sử đặt giá của phiên đấu giá từ server và hiển thị dưới dạng danh sách.
+     * Đồng thời cập nhật biểu đồ giá đấu.
+     *
+     * @param auctionId ID của phiên đấu giá
+     */
     private void loadBidHistory(String auctionId) {
         if (bidHistoryList == null) return;
 
         bidHistoryList.getChildren().clear();
 
         Message response = networkService.getBidHistory(auctionId);
-        List<Bid> bids = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
-                ? (List<Bid>) response.getData() : List.of();
+        List<Bid> bids = ResponseUtils.extractList(response);
 
         updateBidChart(bids);
 
@@ -737,6 +737,12 @@ public class AuctionRoomController {
         }
     }
 
+    /**
+     * Tạo thẻ hiển thị một lần đặt giá từ file FXML.
+     *
+     * @param bid đối tượng đặt giá
+     * @return HBox chứa giao diện thẻ đặt giá
+     */
     private HBox createBidCard(Bid bid) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/bid_card.fxml"));
@@ -750,6 +756,10 @@ public class AuctionRoomController {
         }
     }
 
+    /**
+     * Khởi tạo biểu đồ đường hiển thị lịch sử giá đấu.
+     * Thiết lập trục X (thời gian), trục Y (giá), và định dạng giao diện tối.
+     */
     private void initBidChart() {
         bidXAxis = new NumberAxis();
         bidXAxis.setLabel("Thời gian (giây)");
@@ -799,6 +809,12 @@ public class AuctionRoomController {
         bidChartInitialized = true;
     }
 
+    /**
+     * Cập nhật dữ liệu biểu đồ giá đấu từ danh sách các lần đặt giá.
+     * Trục X hiển thị thời gian tính bằng giây từ lúc bắt đầu phiên.
+     *
+     * @param bids danh sách các lần đặt giá
+     */
     private void updateBidChart(List<Bid> bids) {
         if (!bidChartInitialized) {
             initBidChart();
@@ -849,13 +865,13 @@ public class AuctionRoomController {
 
         if (bidAmount <= selectedAuction.getCurrentPrice()) {
             showAlert(Alert.AlertType.WARNING, "Lỗi",
-                    "Giá phải lớn hơn giá hiện tại: " + formatMoney(new BigDecimal(String.valueOf(selectedAuction.getCurrentPrice()))) + " $");
+                    "Giá phải lớn hơn giá hiện tại: " + FormatUtils.formatMoney(new BigDecimal(String.valueOf(selectedAuction.getCurrentPrice()))) + " $");
             return;
         }
 
         if (bidAmount < selectedAuction.getCurrentPrice() + selectedAuction.getMinIncrement()) {
             showAlert(Alert.AlertType.WARNING, "Lỗi",
-                    "Giá tối thiểu phải là: " + formatMoney(new BigDecimal(String.valueOf(selectedAuction.getCurrentPrice() + selectedAuction.getMinIncrement()))) + " $");
+                    "Giá tối thiểu phải là: " + FormatUtils.formatMoney(new BigDecimal(String.valueOf(selectedAuction.getCurrentPrice() + selectedAuction.getMinIncrement()))) + " $");
             return;
         }
 
@@ -863,7 +879,7 @@ public class AuctionRoomController {
 
         if (response.getType() == Message.Type.SUCCESS) {
             showAlert(Alert.AlertType.INFORMATION, "Thành công",
-                    "Đặt giá thành công: " + formatMoney(new BigDecimal(String.valueOf(bidAmount))) + " $");
+                    "Đặt giá thành công: " + FormatUtils.formatMoney(new BigDecimal(String.valueOf(bidAmount))) + " $");
 
             Message auctionResponse = networkService.getAuction(selectedAuction.getId());
             if (auctionResponse.getType() == Message.Type.SUCCESS && auctionResponse.getData() != null) {
@@ -872,10 +888,9 @@ public class AuctionRoomController {
             selectAuction(selectedAuction);
 
             if (userBalanceLabel != null) {
-                Message balanceResponse = networkService.getUserBalance();
-                if (balanceResponse.getType() == Message.Type.SUCCESS && balanceResponse.getData() != null) {
-                    BigDecimal newBalance = (BigDecimal) balanceResponse.getData();
-                    userBalanceLabel.setText(formatMoney(newBalance) + " $");
+                BigDecimal newBalance = ResponseUtils.extractBalance(networkService.getUserBalance());
+                if (newBalance != null) {
+                    userBalanceLabel.setText(FormatUtils.formatMoney(newBalance) + " $");
                 }
             }
         } else {
@@ -937,7 +952,7 @@ public class AuctionRoomController {
                 if (autoBidCheckBox != null) autoBidCheckBox.setSelected(true);
                 if (autoBidButton != null) autoBidButton.setText("Hủy");
                 showAlert(Alert.AlertType.INFORMATION, "Thành công",
-                        "Đã bật tự động trả giá (tối đa: " + formatMoney(new BigDecimal(String.valueOf(maxAmount))) + " $).");
+                        "Đã bật tự động trả giá (tối đa: " + FormatUtils.formatMoney(new BigDecimal(String.valueOf(maxAmount))) + " $).");
             } else {
                 showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể bật tự động trả giá.");
             }
@@ -954,6 +969,12 @@ public class AuctionRoomController {
         placeBid(event);
     }
 
+    /**
+     * Bắt đầu phiên đấu giá (chỉ dành cho người bán).
+     * Gửi yêu cầu lên server và tải lại danh sách nếu thành công.
+     *
+     * @param auction phiên đấu giá cần bắt đầu
+     */
     private void startAuction(AuctionSession auction) {
         Message response = networkService.startAuction(auction.getId());
         if (response.getType() == Message.Type.SUCCESS) {
@@ -969,6 +990,9 @@ public class AuctionRoomController {
     private HBox paymentBox;
     private HBox stopBox;
 
+    /**
+     * Xóa nút "Ngừng đấu giá" khỏi giao diện chi tiết phiên.
+     */
     private void removeStopButton() {
         if (stopBox != null && stopBox.getParent() != null) {
             ((javafx.scene.layout.Pane) stopBox.getParent()).getChildren().remove(stopBox);
@@ -977,6 +1001,9 @@ public class AuctionRoomController {
         stopButton = null;
     }
 
+    /**
+     * Xóa nút "Thanh toán" khỏi giao diện chi tiết phiên.
+     */
     private void removePaymentButton() {
         if (paymentBox != null && paymentBox.getParent() != null) {
             ((javafx.scene.layout.Pane) paymentBox.getParent()).getChildren().remove(paymentBox);
@@ -985,10 +1012,15 @@ public class AuctionRoomController {
         paymentButton = null;
     }
 
+    /**
+     * Hiển thị nút "Thanh toán" cho người thắng phiên đấu giá.
+     *
+     * @param auction phiên đấu giá chờ thanh toán
+     */
     private void showPaymentButton(AuctionSession auction) {
         if (auctionDetailPane == null) return;
         removePaymentButton();
-        paymentButton = new Button("Thanh toán " + formatMoney(new BigDecimal(String.valueOf(auction.getCurrentPrice()))) + " $");
+        paymentButton = new Button("Thanh toán " + FormatUtils.formatMoney(new BigDecimal(String.valueOf(auction.getCurrentPrice()))) + " $");
         paymentButton.setStyle("-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-font-size: 16px;");
         paymentButton.setPrefHeight(45);
         paymentButton.setPrefWidth(300);
@@ -1002,6 +1034,11 @@ public class AuctionRoomController {
         auctionDetailPane.getChildren().add(insertIndex, paymentBox);
     }
 
+    /**
+     * Hiển thị nút "Ngừng đấu giá" cho người bán.
+     *
+     * @param auction phiên đấu giá đang diễn ra
+     */
     private void showStopButton(AuctionSession auction) {
         if (auctionDetailPane == null) return;
         removeStopButton();
@@ -1019,6 +1056,10 @@ public class AuctionRoomController {
         auctionDetailPane.getChildren().add(insertIndex, stopBox);
     }
 
+    /**
+     * Xử lý ngừng đấu giá theo yêu cầu của người bán.
+     * Hiển thị hộp thoại xác nhận, gửi yêu cầu lên server, và cập nhật giao diện.
+     */
     private void stopAuction() {
         if (selectedAuction == null) return;
         boolean confirmed = showConfirm("Ngừng đấu giá",
@@ -1041,10 +1082,14 @@ public class AuctionRoomController {
         }
     }
 
+    /**
+     * Xử lý thanh toán cho phiên đấu giá đã thắng.
+     * Hiển thị hộp thoại xác nhận, gọi API thanh toán, cập nhật số dư và giao diện.
+     */
     private void processPayment() {
         if (selectedAuction == null) return;
         boolean confirmed = showConfirm("Xác nhận thanh toán",
-                "Bạn xác nhận thanh toán " + formatMoney(new BigDecimal(String.valueOf(selectedAuction.getCurrentPrice()))) + " $ cho sản phẩm này?");
+                "Bạn xác nhận thanh toán " + FormatUtils.formatMoney(new BigDecimal(String.valueOf(selectedAuction.getCurrentPrice()))) + " $ cho sản phẩm này?");
         if (!confirmed) return;
 
         Message response = networkService.processPayment(selectedAuction.getId());
@@ -1057,10 +1102,9 @@ public class AuctionRoomController {
             }
 
             if (userBalanceLabel != null) {
-                Message balanceResponse = networkService.getUserBalance();
-                if (balanceResponse.getType() == Message.Type.SUCCESS && balanceResponse.getData() != null) {
-                    BigDecimal newBalance = (BigDecimal) balanceResponse.getData();
-                    userBalanceLabel.setText(formatMoney(newBalance) + " $");
+                BigDecimal newBalance = ResponseUtils.extractBalance(networkService.getUserBalance());
+                if (newBalance != null) {
+                    userBalanceLabel.setText(FormatUtils.formatMoney(newBalance) + " $");
                 }
             }
 
@@ -1072,12 +1116,15 @@ public class AuctionRoomController {
         }
     }
 
+    /**
+     * Hiển thị hộp thoại xác nhận (Yes/No) và trả về kết quả lựa chọn.
+     *
+     * @param title   tiêu đề hộp thoại
+     * @param message nội dung thông báo
+     * @return true nếu người dùng chọn "Có", false nếu chọn "Không"
+     */
     private boolean showConfirm(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        return alert.showAndWait().filter(buttonType -> buttonType == ButtonType.OK).isPresent();
+        return AlertUtils.showConfirm(title, message);
     }
 
     @FXML
@@ -1105,16 +1152,15 @@ public class AuctionRoomController {
         selectedAuction = null;
     }
 
-    private String formatMoney(BigDecimal value) {
-        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
-        symbols.setGroupingSeparator(',');
-
-        DecimalFormat format = new DecimalFormat("#,###", symbols);
-        return format.format(value);
-    }
-
+    /**
+     * Hiển thị thông báo trên giao diện JavaFX (chạy trên FX Thread).
+     *
+     * @param type    loại thông báo (INFORMATION, WARNING, ERROR)
+     * @param title   tiêu đề thông báo
+     * @param message nội dung thông báo
+     */
     private void showAlert(Alert.AlertType type, String title, String message) {
-        AlertUtils.showAlert(type, title, message);
+        AlertUtils.showAlertOnFXThread(type, title, message);
     }
 
     /**

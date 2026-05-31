@@ -1,5 +1,7 @@
 package Controller;
 
+import Controller.utils.AlertUtils;
+
 import java.io.IOException;
 import java.net.URL;
 
@@ -8,36 +10,18 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextField;
-import javafx.scene.control.Toggle;
 import javafx.scene.control.ToggleGroup;
 import javafx.stage.Stage;
 
 import Network.NetworkService;
 import Model.User;
 
-/**
- * Controller cho màn hình đăng nhập và đăng ký (FXML: login.fxml, signin.fxml).
- * Quản lý form đăng nhập (tên đăng nhập + mật khẩu) và form đăng ký (họ tên, username,
- * email, SĐT, mật khẩu, xác nhận mật khẩu). Sau khi đăng nhập thành công, chuyển đến
- * giao diện chính (Indivisual.fxml / UserController).
- *
- * <p>Các {@code @FXML fields} chính:
- * <ul>
- *   <li>{@code loginUsernameField}, {@code loginPasswordField} — form đăng nhập</li>
- *   <li>{@code signupNameField}, {@code signupUsernameField}, {@code signupEmailField},
- *       {@code signupPhoneField}, {@code signupPasswordField}, {@code signupConfirmPasswordField}
- *       — form đăng ký</li>
- *   <li>{@code messageLabel} — hiển thị thông báo</li>
- * </ul></p>
- *
- * <p>Sử dụng {@link Network.NetworkService} để gọi API login/register.</p>
- */
-public class LoginController {
+/** Controller cho màn hình đăng nhập và đăng ký (FXML: login.fxml, signin.fxml). */
+public class logincontroller {
     @FXML
     private TextField loginUsernameField;
 
@@ -68,57 +52,21 @@ public class LoginController {
     @FXML
     private Label messageLabel;
 
-    @FXML
-    private Button loginButton;
-
     private static User currentUser;
 
-    /** Màu sắc gốc của nút đăng nhập. */
-    private static final String NORMAL_BUTTON_STYLE = "-fx-background-color: #d9b15f; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 30;";
-    /** Màu sắc cho nút admin. */
-    private static final String ADMIN_BUTTON_STYLE = "-fx-background-color: #8B0000; -fx-text-fill: #FFD700; -fx-font-weight: bold; -fx-background-radius: 30; -fx-border-color: #FFD700;";
-
-    @FXML
-    private void initialize() {
-        // Lắng nghe sự thay đổi trên ô tên đăng nhập (chỉ tồn tại trong login.fxml)
-        if (loginUsernameField != null) {
-            loginUsernameField.textProperty().addListener((obs, oldVal, newVal) -> {
-                if (newVal != null && newVal.toUpperCase().startsWith("ADM")) {
-                    // Nhập tài khoản admin → đổi nút thành Admin
-                    loginButton.setText("Admin");
-                    loginButton.setStyle(ADMIN_BUTTON_STYLE);
-                } else {
-                    // Tài khoản thường → giữ nút Đăng nhập
-                    loginButton.setText("Đăng nhập");
-                    loginButton.setStyle(NORMAL_BUTTON_STYLE);
-                }
-            });
-        }
-        // Gán action cho nút login (chỉ tồn tại trong login.fxml)
-        if (loginButton != null) {
-            loginButton.setOnAction(this::login);
-        }
-    }
-
-    /**
-     * Trả về người dùng đã đăng nhập hiện tại.
-     *
-     * @return Đối tượng User đã đăng nhập, hoặc null nếu chưa đăng nhập.
-     */
+    /** @return người dùng đã đăng nhập */
     public static User getCurrentUser() {
         return currentUser;
     }
 
-    /**
-     * Xóa thông tin người dùng hiện tại (đăng xuất).
-     */
+    /** Xóa thông tin người dùng hiện tại. */
     public static void logout() {
         currentUser = null;
     }
 
     @FXML
     /** Xử lý đăng nhập: kiểm tra đầu vào, gọi NetworkService.login(), chuyển sang màn hình chính. */
-    private void login(ActionEvent event) {
+    private void Login(ActionEvent event) {
         String username = read(loginUsernameField);
         String password = read(loginPasswordField);
 
@@ -153,7 +101,7 @@ public class LoginController {
 
     @FXML
     /** Xử lý đăng ký: kiểm tra đầu vào, gọi NetworkService.register(). */
-    private void signup(ActionEvent event) {
+    private void Signup(ActionEvent event) {
         String fullName = read(signupNameField);
         String username = read(signupUsernameField);
         String email = read(signupEmailField);
@@ -166,13 +114,14 @@ public class LoginController {
             return;
         }
 
-        if (username.contains(" ")) {
-            showMessage("Tên đăng nhập không được chứa khoảng trắng.");
+        if (!password.equals(confirmPassword)) {
+            showMessage("Mật khẩu nhập lại không khớp.");
             return;
         }
 
-        if (!password.equals(confirmPassword)) {
-            showMessage("Mật khẩu nhập lại không khớp.");
+        String role = getSelectedRole();
+        if (role == null) {
+            showMessage("Vui lòng chọn vai trò.");
             return;
         }
 
@@ -186,24 +135,10 @@ public class LoginController {
         }
 
         try {
-            // Xác định role từ radio button
-            String role = "BIDDER_SELLER";
-            if (roleToggleGroup != null) {
-                Toggle selected = roleToggleGroup.getSelectedToggle();
-                if (selected != null) {
-                    String roleId = selected.getUserData().toString();
-                    if ("bidderRadio".equals(roleId)) {
-                        role = "BIDDER";
-                    } else if ("sellerRadio".equals(roleId)) {
-                        role = "SELLER";
-                    }
-                }
-            }
-
             var response = networkService.register(username, password, email, phone, role);
             if (response.getType() == Network.Message.Type.SUCCESS) {
                 showMessage("Đăng ký thành công! Vui lòng đăng nhập.");
-                comeLogin(event);
+                ComeLogin(event);
             } else {
                 showMessage("Đăng ký thất bại: " + response.getContent());
             }
@@ -212,15 +147,25 @@ public class LoginController {
         }
     }
 
+    private String getSelectedRole() {
+        if (roleToggleGroup == null) return "BIDDER_SELLER";
+        RadioButton selected = (RadioButton) roleToggleGroup.getSelectedToggle();
+        if (selected == null) return "BIDDER_SELLER";
+        String userData = (String) selected.getUserData();
+        if ("bidderRadio".equals(userData)) return "BIDDER";
+        if ("sellerRadio".equals(userData)) return "SELLER";
+        return "BIDDER_SELLER";
+    }
+
     @FXML
     /** Chuyển sang form đăng ký. */
-    private void comeSignup(ActionEvent event) {
+    private void ComeSignup(ActionEvent event) {
         switchScene(event, "/signin.fxml", 450, 660);
     }
 
     @FXML
     /** Chuyển về form đăng nhập. */
-    private void comeLogin(ActionEvent event) {
+    private void ComeLogin(ActionEvent event) {
         switchScene(event, "/login.fxml", 600, 400);
     }
 
@@ -236,10 +181,7 @@ public class LoginController {
             return;
         }
 
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        AlertUtils.showInfo("Thông báo", message);
     }
 
     /** Chuyển scene JavaFX với kích thước cho trước. */
@@ -255,7 +197,7 @@ public class LoginController {
             Stage stage = (Stage) ((javafx.scene.Node) event.getSource()).getScene().getWindow();
             stage.setScene(new Scene(root, width, height));
             stage.show();
-        } catch (Exception e) {
+        } catch (IOException e) {
             showMessage("Không thể mở giao diện: " + e.getMessage());
         }
     }
@@ -274,7 +216,7 @@ public class LoginController {
             stage.setMinWidth(823);
             stage.setMinHeight(608);
             stage.show();
-        } catch (Exception e) {
+        } catch (IOException e) {
             showMessage("Không thể mở giao diện: " + e.getMessage());
         }
     }

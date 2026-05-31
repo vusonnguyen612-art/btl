@@ -11,14 +11,6 @@ import java.math.BigDecimal;
 import Network.Message;
 import Network.NetworkService;
 
-/**
- * Controller cho pane Nạp tiền (FXML: Indivisual.fxml -> NaptienPane).
- * Cho phép người dùng nhập thông tin ngân hàng, số tài khoản, số tiền cần nạp
- * và gửi yêu cầu nạp tiền lên server.
- *
- * <p>Implement {@link UserController.LinkedController} để nhận tham chiếu
- * đến {@link UserController} cha.</p>
- */
 public class NaptienPaneController implements UserController.LinkedController {
 
     @FXML private Label Sodutaikhoan;
@@ -29,28 +21,20 @@ public class NaptienPaneController implements UserController.LinkedController {
     private UserController userController;
     private NetworkService networkService = NetworkService.getInstance();
 
+    /** Gán UserController liên kết để truy cập thông tin người dùng và các phương thức hỗ trợ giao diện. */
     @Override
     public void setUserController(UserController uc) {
         this.userController = uc;
     }
 
-    /**
-     * Cập nhật số dư hiển thị trên Label Sodutaikhoan.
-     *
-     * @param balance Số dư mới của người dùng.
-     */
+    /** Cập nhật hiển thị số dư tài khoản trên giao diện nạp tiền. */
     public void updateBalance(BigDecimal balance) {
         if (Sodutaikhoan != null) {
             Sodutaikhoan.setText(userController.formatMoney(balance));
         }
     }
 
-    /**
-     * Xử lý nạp tiền: kiểm tra thông tin ngân hàng, số tài khoản, số tiền,
-     * gọi NetworkService.deposit() và cập nhật số dư.
-     *
-     * @param event ActionEvent kích hoạt.
-     */
+    /** Xử lý sự kiện nạp tiền: kiểm tra dữ liệu đầu vào, gửi yêu cầu nạp tiền lên server, cập nhật số dư nếu thành công. */
     @FXML
     private void naptien(ActionEvent event) {
         try {
@@ -92,14 +76,7 @@ public class NaptienPaneController implements UserController.LinkedController {
         }
     }
 
-    /**
-     * Chuyển đổi chuỗi số tiền thô (có thể chứa dấu cách, dấu phẩy, ký tự $, ₫)
-     * thành {@link BigDecimal}. Ném {@link IllegalArgumentException} nếu đầu vào không hợp lệ.
-     *
-     * @param rawText Chuỗi số tiền từ giao diện.
-     * @return Số tiền dạng BigDecimal.
-     * @throws IllegalArgumentException nếu chuỗi rỗng, không phải số, hoặc nhỏ hơn hoặc bằng 0.
-     */
+    /** Phân tích và chuyển đổi chuỗi tiền tệ thành BigDecimal, hỗ trợ định dạng có dấu phẩy, khoảng trắng, ký hiệu $ và ₫. */
     private BigDecimal parseMoney(String rawText) {
         if (rawText == null || rawText.trim().isEmpty()) {
             throw new IllegalArgumentException("Vui lòng nhập số tiền cần nạp!");

@@ -1,11 +1,10 @@
 package Controller;
 
-import javafx.application.Platform;
+import Controller.utils.ResponseUtils;
+import Controller.utils.UIUtils;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Cursor;
-import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.FlowPane;
@@ -20,15 +19,6 @@ import Model.User;
 import Network.Message;
 import Network.NetworkService;
 
-/**
- * Controller cho pane Kho (FXML: Indivisual.fxml -> KhoPane).
- * Hiển thị danh sách các phiên đấu giá thuộc sở hữu của người dùng hiện tại
- * dưới dạng các auction card. Cho phép bắt đầu phiên, chỉnh sửa sản phẩm,
- * và mở phòng đấu giá.
- *
- * <p>Implement {@link UserController.LinkedController} để nhận tham chiếu
- * đến {@link UserController} cha.</p>
- */
 public class KhoPaneController implements UserController.LinkedController {
 
     @FXML private FlowPane Items;
@@ -38,42 +28,38 @@ public class KhoPaneController implements UserController.LinkedController {
     private NetworkService networkService = NetworkService.getInstance();
 
     /**
-     * Khởi tạo: thiết lập màu nền viewport cho ScrollPane.
+     * Khởi tạo giao diện kho khi FXML được load.
+     * Sửa lỗi hiển thị viewport của ScrollPane để cuộn hoạt động chính xác.
      */
     @FXML
     private void initialize() {
-        fixScrollPaneViewport();
+        UIUtils.fixScrollPaneViewport(khoScrollPane);
     }
 
     /**
-     * Thiết lập màu nền cho viewport của ScrollPane để đồng bộ với theme tối.
+     * Gán {@link UserController} để controller kho có thể gọi lại
+     * các phương thức của controller chính (getCurrentUser, createEmptyLabel, v.v.).
+     *
+     * @param uc UserController quản lý điều khiển người dùng
      */
-    private void fixScrollPaneViewport() {
-        Platform.runLater(() -> {
-            Node viewport = khoScrollPane.lookup(".viewport");
-            if (viewport != null) {
-                viewport.setStyle("-fx-background-color: #1E1E1D;");
-            }
-        });
-    }
-
     @Override
     public void setUserController(UserController uc) {
         this.userController = uc;
     }
 
     /**
-     * Gán thông tin người dùng và tải lại danh sách vật phẩm trong kho.
+     * Nhận dữ liệu người dùng từ controller chính và tải danh sách sản phẩm trong kho.
      *
-     * @param user Đối tượng User hiện tại.
+     * @param user đối tượng người dùng hiện tại
      */
     public void setUserData(User user) {
         loadWarehouseItems();
     }
 
     /**
-     * Tải danh sách phiên đấu giá của người dùng hiện tại từ server và hiển thị
-     * dưới dạng các auction card trong FlowPane Items.
+     * Tải danh sách phiên đấu giá của người dùng hiện tại từ server.
+     * Hiển thị các card phiên đấu giá mà người dùng là người bán.
+     * Nếu chưa có phiên đấu giá nào, hiển thị thông báo hướng dẫn tạo sản phẩm.
      */
     public void loadWarehouseItems() {
         if (Items == null) return;
@@ -88,13 +74,8 @@ public class KhoPaneController implements UserController.LinkedController {
         }
 
         try {
-            Message itemsResponse = networkService.getItems();
-            Message auctionsResponse = networkService.getAuctions();
-
-            List<Item> userItems = (itemsResponse.getType() == Message.Type.SUCCESS && itemsResponse.getData() instanceof List)
-                    ? (List<Item>) itemsResponse.getData() : List.of();
-            List<AuctionSession> userAuctions = (auctionsResponse.getType() == Message.Type.SUCCESS && auctionsResponse.getData() instanceof List)
-                    ? (List<AuctionSession>) auctionsResponse.getData() : List.of();
+            List<Item> userItems = ResponseUtils.extractList(networkService.getItems());
+            List<AuctionSession> userAuctions = ResponseUtils.extractList(networkService.getAuctions());
 
             if (userItems.isEmpty() && userAuctions.isEmpty()) {
                 Label emptyLabel = userController.createEmptyLabel("Kho của bạn hiện chưa có sản phẩm.");
@@ -131,9 +112,10 @@ public class KhoPaneController implements UserController.LinkedController {
     }
 
     /**
-     * Xử lý sự kiện tạo sản phẩm mới, ủy quyền cho UserController cha.
+     * Xử lý sự kiện nhấp nút "Tạo sản phẩm".
+     * Delegate sang {@link UserController#createItems(ActionEvent)} để mở form tạo sản phẩm mới.
      *
-     * @param event ActionEvent kích hoạt.
+     * @param event sự kiện nhấp chuột
      */
     @FXML
     private void onCreateItems(ActionEvent event) {
@@ -142,6 +124,14 @@ public class KhoPaneController implements UserController.LinkedController {
         }
     }
 
+    /**
+     * Tạo card hiển thị thông tin phiên đấu giá từ file FXML auction_card.fxml.
+     * Gán dữ liệu phiên đấu giá và các callback: chọn phòng đấu giá,
+     * bắt đầu đấu giá, chỉnh sửa sản phẩm.
+     *
+     * @param auction phiên đấu giá cần hiển thị
+     * @return VBox chứa giao diện card phiên đấu giá, hoặc VBox rỗng nếu có lỗi
+     */
     private VBox createAuctionCard(AuctionSession auction) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/auction_card.fxml"));

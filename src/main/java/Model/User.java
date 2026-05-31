@@ -1,94 +1,111 @@
 package Model;
 
+import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
- * Lớp trừu tượng đại diện cho người dùng trong hệ thống đấu giá.
- * <p>
- * Kế thừa {@link Entity}, cung cấp các trường chung: username, password, email, balance, avatarPath.
- * </p>
- * <p>
- * Các lớp con triển khai cụ thể hóa vai trò:
- * <ul>
- *   <li>{@link RegularUser} — vừa là bidder vừa là seller (mặc định)</li>
- *   <li>{@link Bidder} — chỉ tham gia đấu giá</li>
- *   <li>{@link Seller} — chỉ đăng sản phẩm</li>
- *   <li>{@link Admin} — quản trị viên hệ thống</li>
- * </ul>
- * </p>
+ * Lớp đại diện cho người dùng trong hệ thống.
+ * Mặc định vừa là seller vừa là bidder, số dư ban đầu 0.
  */
-public abstract class User extends Entity {
+public class User implements Serializable {
     private static final long serialVersionUID = 1L;
+    private String id;
     private String username;
     private String password;
     private String email;
+    private boolean isSeller;
+    private boolean isBidder;
+    private boolean isBlocked;
     private BigDecimal balance;
     private String avatarPath;
 
-    /**
-     * @param id       mã người dùng
-     * @param username tên đăng nhập
-     * @param password mật khẩu
-     */
+    /** @param id       mã người dùng
+     *  @param username tên đăng nhập
+     *  @param password mật khẩu */
     public User(String id, String username, String password) {
-        super(id);
+        this.id = id;
         this.username = username;
         this.password = password;
+        this.isSeller = true;
+        this.isBidder = true;
         this.balance = BigDecimal.ZERO;
     }
 
-    // ── Abstract methods ────────────────────────────────────
+    public BigDecimal getBalance() {
+        return balance;
+    }
 
-    /** @return chuỗi vai trò (VD: "BIDDER_SELLER", "ADMIN", "SELLER", "BIDDER") */
-    @Override
-    public abstract String getSpecificInfo();
+    public void setBalance(BigDecimal balance) {
+        this.balance = balance;
+    }
 
-    /** @return vai trò người dùng */
-    public abstract String getRole();
+    public String getId() {
+        return id;
+    }
 
-    /** @return true nếu là quản trị viên */
-    public abstract boolean isAdmin();
+    public String getUsername() {
+        return username;
+    }
 
-    /** @return true nếu có quyền đấu giá */
-    public abstract boolean isBidder();
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
-    /** @return true nếu có quyền bán */
-    public abstract boolean isSeller();
+    public String getPassword() {
+        return password;
+    }
 
-    // ── Getters / Setters ───────────────────────────────────
+    public void setPassword(String password) {
+        this.password = password;
+    }
 
-    /** @return số dư tài khoản */
-    public BigDecimal getBalance() { return balance; }
+    public String getEmail() {
+        return email;
+    }
 
-    /** @param balance số dư mới */
-    public void setBalance(BigDecimal balance) { this.balance = balance; }
+    public void setEmail(String email) {
+        this.email = email;
+    }
 
-    /** @return tên đăng nhập */
-    public String getUsername() { return username; }
+    /** @return vai trò mặc định BIDDER_SELLER */
+    public String getRole() {
+        return "BIDDER_SELLER";
+    }
 
-    /** @param username tên đăng nhập mới */
-    public void setUsername(String username) { this.username = username; }
+    /** @return false vì User không phải Admin */
+    public boolean isAdmin() {
+        return false;
+    }
 
-    /** @return mật khẩu */
-    public String getPassword() { return password; }
+    public boolean isSeller() {
+        return isSeller;
+    }
 
-    /** @param password mật khẩu mới */
-    public void setPassword(String password) { this.password = password; }
+    public void setSeller(boolean seller) {
+        isSeller = seller;
+    }
 
-    /** @return email */
-    public String getEmail() { return email; }
+    public boolean isBidder() {
+        return isBidder;
+    }
 
-    /** @param email email mới */
-    public void setEmail(String email) { this.email = email; }
+    public void setBidder(boolean bidder) {
+        isBidder = bidder;
+    }
 
-    /** @return đường dẫn ảnh đại diện */
-    public String getAvatarPath() { return avatarPath; }
+    public boolean isBlocked() {
+        return isBlocked;
+    }
 
-    /** @param avatarPath đường dẫn ảnh đại diện mới */
-    public void setAvatarPath(String avatarPath) { this.avatarPath = avatarPath; }
+    public void setBlocked(boolean blocked) {
+        isBlocked = blocked;
+    }
 
-    @Override
-    public String toString() {
-        return String.format("[%s] %s - %s", getId(), getUsername(), getRole());
+    public String getAvatarPath() {
+        return avatarPath;
+    }
+
+    public void setAvatarPath(String avatarPath) {
+        this.avatarPath = avatarPath;
     }
 }

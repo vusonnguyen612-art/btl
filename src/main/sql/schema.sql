@@ -88,4 +88,4 @@ CREATE TABLE IF NOT EXISTS watchlist (
 
 -- Index cho chat và watchlist để tăng tốc truy vấn
 CREATE INDEX idx_chat_auction ON chat_messages(auction_id);
-CREATE INDEX idx_watchlist_user ON watchlist(user_id);
+CREATE INDEX idx_watchlist_user ON watchlist(user_id);

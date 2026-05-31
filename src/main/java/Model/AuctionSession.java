@@ -5,48 +5,22 @@ import Exception.InvalidBidException;
 import Observer.AuctionObserver;
 
 import java.io.Serializable;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Quản lý một phiên đấu giá với state machine: OPEN → RUNNING → FINISHED / CANCELED / PAID.
- * <p>
- * Các trạng thái:
- * <ul>
- *   <li>{@link Status#OPEN} — phiên mới tạo, chưa bắt đầu</li>
- *   <li>{@link Status#RUNNING} — đang diễn ra, có thể đặt giá</li>
- *   <li>{@link Status#PAYMENT_PENDING} — chờ xử lý thanh toán</li>
- *   <li>{@link Status#FINISHED} — đã kết thúc</li>
- *   <li>{@link Status#PAID} — đã thanh toán</li>
- *   <li>{@link Status#CANCELED} — đã hủy</li>
- * </ul>
- * Sử dụng {@link java.util.concurrent.ScheduledExecutorService} để tự động kết thúc phiên theo thời gian.
- * Áp dụng Observer pattern thông qua {@link Observer.AuctionObserver} để thông báo bid/status change.
- * </p>
- *
- * Các trường chính: id, item, sellerId, status, currentPrice, highestBidderId, winnerId,
- * startTime, endTime, durationMinutes, bidHistory, minIncrement.
- */
+/** Quản lý một phiên đấu giá: trạng thái, giá, lịch sử đặt giá, observer, auto-close timer. */
 public class AuctionSession implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    /**
-     * Các trạng thái của phiên đấu giá.
-     * <ul>
-     *   <li>{@link #OPEN} — phiên mới, chưa bắt đầu</li>
-     *   <li>{@link #RUNNING} — đang đấu giá</li>
-     *   <li>{@link #PAYMENT_PENDING} — chờ thanh toán</li>
-     *   <li>{@link #FINISHED} — đã kết thúc</li>
-     *   <li>{@link #PAID} — đã thanh toán</li>
-     *   <li>{@link #CANCELED} — đã hủy</li>
-     * </ul>
-     */
+    /** Các trạng thái của phiên đấu giá. */
     public enum Status {
         OPEN,
         RUNNING,
@@ -68,7 +42,7 @@ public class AuctionSession implements Serializable {
     private LocalDateTime endTime;
     private long durationMinutes;
     private List<Bid> bidHistory;
-    private transient List<AuctionObserver> observers;
+    private AuctionObservable observable;
     private transient ScheduledExecutorService scheduler;
     private transient ScheduledFuture<?> autoCloseTask;
     private double minIncrement;
@@ -87,7 +61,7 @@ public class AuctionSession implements Serializable {
         this.durationMinutes = durationMinutes;
         this.status = Status.OPEN;
         this.bidHistory = new CopyOnWriteArrayList<>();
-        this.observers = new CopyOnWriteArrayList<>();
+        this.observable = new AuctionObservable();
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
         this.minIncrement = 1.0;
     }
@@ -104,12 +78,8 @@ public class AuctionSession implements Serializable {
         scheduleAutoClose();
     }
 
-    /**
-     * Lên lịch tự động kết thúc phiên khi hết thời gian.
-     * Sử dụng {@link ScheduledExecutorService} để chạy {@link #finish()} sau khoảng thời gian còn lại.
-     */
     private void scheduleAutoClose() {
-        long remainingMillis = java.time.Duration.between(LocalDateTime.now(), endTime).toMillis();
+        long remainingMillis = Duration.between(LocalDateTime.now(), endTime).toMillis();
         if (remainingMillis > 0) {
             autoCloseTask = scheduler.schedule(this::finish, remainingMillis, TimeUnit.MILLISECONDS);
         } else {
@@ -118,13 +88,12 @@ public class AuctionSession implements Serializable {
     }
 
     /**
-     * Đặt giá cho phiên đấu giá.
-     * Chỉ hiệu lực khi phiên ở trạng thái {@link Status#RUNNING} và chưa hết thời gian.
+     * Đặt giá cho phiên. Chỉ hiệu lực khi phiên RUNNING và chưa hết giờ.
      *
      * @param bidderId ID người đặt giá
      * @param amount   số tiền muốn đặt
-     * @throws AuctionClosedException nếu phiên không ở trạng thái RUNNING hoặc đã hết giờ
-     * @throws InvalidBidException    nếu amount &le; currentPrice hoặc không đủ mức tăng tối thiểu
+     * @throws AuctionClosedException nếu phiên không ở trạng thái RUNNING
+     * @throws InvalidBidException    nếu amount <= currentPrice hoặc không đủ minIncrement
      */
     public synchronized void placeBid(String bidderId, double amount) 
             throws AuctionClosedException, InvalidBidException {
@@ -162,11 +131,7 @@ public class AuctionSession implements Serializable {
         notifyBidPlaced(bidderId, amount);
     }
 
-    /**
-     * Kết thúc phiên đấu giá.
-     * Chuyển trạng thái sang {@link Status#FINISHED}, ghi nhận winnerId nếu có,
-     * dọn dẹp scheduler và thông báo cho các observer.
-     */
+    /** Kết thúc phiên: chuyển FINISHED, ghi nhận winnerId, dọn dẹp scheduler, thông báo observer. */
     public synchronized void finish() {
         if (status == Status.PAYMENT_PENDING || status == Status.FINISHED || status == Status.PAID || status == Status.CANCELED) {
             return;
@@ -182,12 +147,7 @@ public class AuctionSession implements Serializable {
         notifyAuctionFinished(winnerId, currentPrice);
     }
 
-    /**
-     * Hủy phiên đấu giá với lý do cụ thể.
-     * Chuyển trạng thái sang {@link Status#CANCELED}, dọn dẹp scheduler và thông báo observer.
-     *
-     * @param reason lý do hủy phiên
-     */
+    /** Hủy phiên với lý do cụ thể. */
     public synchronized void cancel(String reason) {
         if (status == Status.PAID || status == Status.CANCELED) {
             return;
@@ -199,18 +159,8 @@ public class AuctionSession implements Serializable {
         notifyAuctionCanceled(reason);
     }
 
-    /**
-     * Xử lý thanh toán cho phiên đấu giá.
-     * Kiểm tra winnerId và số tiền, nếu hợp lệ thì chuyển trạng thái sang {@link Status#PAID}.
-     *
-     * @param winnerId ID người thắng cần xác thực
-     * @param amount   số tiền thanh toán
-     * @return true nếu thanh toán thành công, false nếu thất bại (sai winnerId, sai số tiền hoặc đã PAID)
-     */
+    /** Xử lý thanh toán: kiểm tra winnerId và amount, chuyển trạng thái PAID. */
     public synchronized boolean processPayment(String winnerId, double amount) {
-        if (status == Status.PAID) {
-            return false; // Tránh double payment
-        }
         if (!winnerId.equals(this.winnerId)) {
             return false;
         }
@@ -221,9 +171,6 @@ public class AuctionSession implements Serializable {
         return false;
     }
 
-    /**
-     * Dọn dẹp tài nguyên: hủy autoCloseTask nếu đang chạy, shutdown scheduler.
-     */
     private void cleanup() {
         if (autoCloseTask != null && !autoCloseTask.isDone()) {
             autoCloseTask.cancel(false);
@@ -236,246 +183,146 @@ public class AuctionSession implements Serializable {
         }
     }
 
-    /**
-     * Đăng ký observer để nhận thông báo từ phiên đấu giá.
-     *
-     * @param observer observer cần đăng ký
-     */
     public void addObserver(AuctionObserver observer) {
-        if (observers == null) {
-            observers = new CopyOnWriteArrayList<>();
-        }
-        observers.add(observer);
+        observable.addObserver(observer);
     }
 
-    /**
-     * Hủy đăng ký observer khỏi phiên đấu giá.
-     *
-     * @param observer observer cần hủy
-     */
     public void removeObserver(AuctionObserver observer) {
-        if (observers != null) {
-            observers.remove(observer);
-        }
+        observable.removeObserver(observer);
     }
 
-    /**
-     * Thông báo cho tất cả observer khi có bid mới được đặt.
-     *
-     * @param bidderId ID người đặt bid
-     * @param amount   số tiền bid
-     */
     private void notifyBidPlaced(String bidderId, double amount) {
-        if (observers != null) {
-            for (AuctionObserver observer : observers) {
-                observer.onBidPlaced(id, bidderId, amount);
-            }
-        }
+        observable.notifyBidPlaced(id, bidderId, amount);
     }
 
-    /**
-     * Thông báo cho tất cả observer khi phiên bắt đầu.
-     */
     private void notifyAuctionStarted() {
-        if (observers != null) {
-            for (AuctionObserver observer : observers) {
-                observer.onAuctionStarted(id);
-            }
-        }
+        observable.notifyAuctionStarted(id);
     }
 
-    /**
-     * Thông báo cho tất cả observer khi phiên kết thúc.
-     *
-     * @param winnerId   ID người thắng (có thể null nếu không ai đặt giá)
-     * @param finalPrice giá cuối cùng
-     */
     private void notifyAuctionFinished(String winnerId, double finalPrice) {
-        if (observers != null) {
-            for (AuctionObserver observer : observers) {
-                observer.onAuctionFinished(id, winnerId, finalPrice);
-            }
-        }
+        observable.notifyAuctionFinished(id, winnerId, finalPrice);
     }
 
-    /**
-     * Thông báo cho tất cả observer khi phiên bị hủy.
-     *
-     * @param reason lý do hủy
-     */
     private void notifyAuctionCanceled(String reason) {
-        if (observers != null) {
-            for (AuctionObserver observer : observers) {
-                observer.onAuctionCanceled(id, reason);
-            }
-        }
+        observable.notifyAuctionCanceled(id, reason);
     }
 
-    /** @return mã phiên đấu giá */
     public String getId() {
         return id;
     }
 
-    /** @return vật phẩm đang được đấu giá */
     public Item getItem() {
         return item;
     }
 
-    /** @return ID người bán */
     public String getSellerId() {
         return sellerId;
     }
 
-    /** @return trạng thái hiện tại của phiên */
     public Status getStatus() {
         return status;
     }
 
-    /** @return giá hiện tại */
     public double getCurrentPrice() {
         return currentPrice;
     }
 
-    /** @return giá khởi điểm */
     public double getStartPrice() {
         return startPrice;
     }
 
-    /** @return ID người đặt giá cao nhất hiện tại */
     public String getHighestBidderId() {
         return highestBidderId;
     }
 
-    /** @return ID người thắng cuộc (chỉ có sau khi phiên kết thúc) */
     public String getWinnerId() {
         return winnerId;
     }
 
-    /** @return thời điểm bắt đầu phiên */
     public LocalDateTime getStartTime() {
         return startTime;
     }
 
-    /** @return thời điểm kết thúc phiên */
     public LocalDateTime getEndTime() {
         return endTime;
     }
 
-    /** @return thời lượng phiên (phút) */
     public long getDurationMinutes() {
         return durationMinutes;
     }
 
-    /** @return danh sách lịch sử các bid đã đặt (bản sao) */
     public List<Bid> getBidHistory() {
         return new ArrayList<>(bidHistory);
     }
 
-    /** @return mức tăng tối thiểu giữa các bid */
     public double getMinIncrement() {
         return minIncrement;
     }
 
-    /** @param minIncrement mức tăng tối thiểu mới */
     public void setMinIncrement(double minIncrement) {
         this.minIncrement = minIncrement;
     }
 
-    /** @param status trạng thái mới cho phiên */
     public void setStatus(Status status) {
         this.status = status;
     }
 
-    /** @param currentPrice giá hiện tại mới */
     public void setCurrentPrice(double currentPrice) {
         this.currentPrice = currentPrice;
     }
 
-    /** @param highestBidderId ID người đặt giá cao nhất mới */
     public void setHighestBidderId(String highestBidderId) {
         this.highestBidderId = highestBidderId;
     }
 
-    /** @param winnerId ID người thắng cuộc mới */
     public void setWinnerId(String winnerId) {
         this.winnerId = winnerId;
     }
 
-    /** @param startTime thời điểm bắt đầu mới */
     public void setStartTime(LocalDateTime startTime) {
         this.startTime = startTime;
     }
 
-    /** @param endTime thời điểm kết thúc mới */
     public void setEndTime(LocalDateTime endTime) {
         this.endTime = endTime;
     }
 
-    /**
-     * Tính thời gian còn lại của phiên đấu giá.
-     *
-     * @return số milliseconds còn lại (luôn &ge; 0)
-     */
     public long getRemainingTimeMillis() {
         if (endTime == null) {
             return durationMinutes * 60 * 1000;
         }
-        long remaining = java.time.Duration.between(LocalDateTime.now(), endTime).toMillis();
+        long remaining = Duration.between(LocalDateTime.now(), endTime).toMillis();
         return Math.max(0, remaining);
     }
 
-    /** @return true nếu phiên đang ở trạng thái {@link Status#OPEN} */
     public boolean isOpen() {
         return status == Status.OPEN;
     }
 
-    /** @return true nếu phiên đang ở trạng thái {@link Status#RUNNING} */
     public boolean isRunning() {
         return status == Status.RUNNING;
     }
 
-    /** @return true nếu phiên đang ở trạng thái {@link Status#PAYMENT_PENDING} */
     public boolean isPaymentPending() {
         return status == Status.PAYMENT_PENDING;
     }
 
-    /** @return true nếu phiên đang ở trạng thái {@link Status#FINISHED} */
     public boolean isFinished() {
         return status == Status.FINISHED;
     }
 
-    /** @return true nếu phiên đang ở trạng thái {@link Status#PAID} */
     public boolean isPaid() {
         return status == Status.PAID;
     }
 
-    /** @return true nếu phiên đang ở trạng thái {@link Status#CANCELED} */
     public boolean isCanceled() {
         return status == Status.CANCELED;
     }
 
     @Override
-    /**
-     * Trả về chuỗi biểu diễn của phiên đấu giá.
-     *
-     * @return chuỗi định dạng "[id] name - status - Current: $currentPrice - startTime"
-     */
     public String toString() {
-        return String.format("[%s] %s - %s - Current: $%.2f - %s", 
+        return String.format(Locale.US, "[%s] %s - %s - Current: $%.2f - %s", 
             id, item.getName(), status, currentPrice, 
             startTime != null ? startTime.toString() : "Not started");
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        AuctionSession that = (AuctionSession) o;
-        return java.util.Objects.equals(id, that.id);
-    }
-
-    @Override
-    public int hashCode() {
-        return java.util.Objects.hash(id);
     }
 }
