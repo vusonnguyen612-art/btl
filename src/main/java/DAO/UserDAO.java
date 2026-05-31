@@ -37,20 +37,40 @@ public class UserDAO {
     /** Đăng nhập với username/password, trả về Optional<User>. */
     public Optional<User> login(String username, String password) {
         String hashedPassword = hashPassword(password);
-        String sql = "SELECT * FROM users WHERE BINARY username = ? AND BINARY password = ?";
+        String sql = "SELECT id, password FROM users WHERE BINARY username = ?";
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, username);
-            stmt.setString(2, hashedPassword);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    return Optional.of(mapResultSetToUser(rs));
+                    String storedHash = rs.getString("password");
+                    if (hashedPassword.equals(storedHash)) {
+                        return Optional.of(findById(rs.getString("id")).orElse(null));
+                    }
+                    for (String suffix : new String[]{"|BIDDER_SELLER", "|BIDDER", "|SELLER"}) {
+                        if (hashPassword(password + suffix).equals(storedHash)) {
+                            upgradePasswordHash(username, hashedPassword);
+                            return Optional.of(findById(rs.getString("id")).orElse(null));
+                        }
+                    }
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return Optional.empty();
+    }
+
+    private void upgradePasswordHash(String username, String newHash) {
+        String sql = "UPDATE users SET password = ? WHERE BINARY username = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, newHash);
+            stmt.setString(2, username);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     /** Xác thực đăng nhập, throw AuthenticationException nếu sai. */
