@@ -166,6 +166,9 @@ public class AuctionManager implements Serializable {
     }
 
     public Item getItem(String itemId) {
+        if (itemId == null) {
+            throw new IllegalArgumentException("ID cannot be null");
+        }
         return itemService.getItem(itemId);
     }
 
@@ -222,6 +225,9 @@ public class AuctionManager implements Serializable {
     }
 
     public User getUser(String userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("ID cannot be null");
+        }
         return userService.getUser(userId);
     }
 

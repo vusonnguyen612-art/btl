@@ -450,7 +450,7 @@ public class AuctionDAO {
     
     /** Lấy lịch sử đặt giá của một phiên, mới nhất trước. */
     public List<Bid> getBidHistory(String auctionId) {
-        String sql = "SELECT b.*, u.username FROM bids b JOIN users u ON b.bidder_id = u.id WHERE b.auction_id = ? ORDER BY b.timestamp DESC";
+        String sql = "SELECT b.*, u.username FROM bids b JOIN users u ON b.bidder_id = u.id WHERE b.auction_id = ? ORDER BY b.timestamp DESC, b.amount DESC";
         List<Bid> bids = new ArrayList<>();
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -477,7 +477,7 @@ public class AuctionDAO {
     
     /** Lấy lịch sử đặt giá của một người dùng (join với auction_sessions để lấy item_id). */
     public List<Bid> getUserBidHistory(String userId) {
-        String sql = "SELECT b.*, a.item_id, u.username FROM bids b JOIN auction_sessions a ON b.auction_id = a.id JOIN users u ON b.bidder_id = u.id WHERE b.bidder_id = ? ORDER BY b.timestamp DESC";
+        String sql = "SELECT b.*, a.item_id, u.username FROM bids b JOIN auction_sessions a ON b.auction_id = a.id JOIN users u ON b.bidder_id = u.id WHERE b.bidder_id = ? ORDER BY b.timestamp DESC, b.amount DESC";
         List<Bid> bids = new ArrayList<>();
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -507,7 +507,7 @@ public class AuctionDAO {
         String sql = "SELECT DISTINCT a.* FROM auction_sessions a " +
                      "LEFT JOIN bids b ON a.id = b.auction_id " +
                      "WHERE (b.bidder_id = ? OR a.seller_id = ?) " +
-                     "AND a.status IN ('FINISHED', 'PAID') " +
+                     "AND a.status IN ('FINISHED', 'PAID', 'PAYMENT_PENDING') " +
                      "ORDER BY a.end_time DESC";
         List<AuctionSession> sessions = new ArrayList<>();
         try (Connection conn = DatabaseUtil.getConnection();

@@ -38,9 +38,9 @@ public class UserFactory {
     }
 
     public static String getPasswordError(String password) {
-        if (password == null || password.isEmpty()) return "Password cannot be empty";
-        if (password.length() < MIN_PASSWORD_LENGTH) return "Password must be at least 6 characters";
-        if (containsWhitespace(password)) return "Password cannot contain whitespace";
+        if (password == null || password.isEmpty()) return "Mật khẩu không được để trống.";
+        if (password.length() < MIN_PASSWORD_LENGTH) return "Mật khẩu phải có ít nhất 6 ký tự.";
+        if (containsWhitespace(password)) return "Mật khẩu không được chứa khoảng trắng.";
         return null;
     }
 
@@ -56,12 +56,18 @@ public class UserFactory {
     }
 
     public static User createUser(String username, String password) {
+        if (username == null || username.isEmpty()) {
+            throw new IllegalArgumentException("Username cannot be empty");
+        }
         if (!initialized) initializeCounter();
         String id = "USR" + String.format("%04d", userCounter.incrementAndGet());
         return new User(id, username, password);
     }
 
     public static Admin createAdmin(String username, String password) {
+        if (username == null || username.isEmpty()) {
+            throw new IllegalArgumentException("Username cannot be empty");
+        }
         if (!initialized) initializeCounter();
         String id = "ADM" + String.format("%04d", userCounter.incrementAndGet());
         return new Admin(id, username, password);

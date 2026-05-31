@@ -39,31 +39,7 @@ public class ItemFactory {
         Map.entry("FURNITURE", ItemCategory.FURNITURE)
     );
 
-    @FunctionalInterface
-    private interface ItemCreator extends BiFunction<String, String[], Item> {}
 
-    private static final Map<ItemCategory, ItemCreator> CREATORS = new EnumMap<>(ItemCategory.class);
-
-    static {
-        CREATORS.put(ItemCategory.ELECTRONICS, (id, params) -> new Electronics(id, params[0], params[1], Double.parseDouble(params[2]), params[3],
-                params[4], Integer.parseInt(params[5]), params[6], params[7]));
-        CREATORS.put(ItemCategory.ART, (id, params) -> new Art(id, params[0], params[1], Double.parseDouble(params[2]), params[3],
-                params[4], Integer.parseInt(params[5]), params[6], params[7]));
-        CREATORS.put(ItemCategory.VEHICLE, (id, params) -> new Vehicle(id, params[0], params[1], Double.parseDouble(params[2]), params[3],
-                params[4], params[5], Integer.parseInt(params[6]), Integer.parseInt(params[7]), params[8], params[9], params[10], params[11]));
-        CREATORS.put(ItemCategory.FASHION, (id, params) -> new Fashion(id, params[0], params[1], Double.parseDouble(params[2]), params[3],
-                params[4], params[5], params[6], params[7], params[8]));
-        CREATORS.put(ItemCategory.BOOKS, (id, params) -> new Books(id, params[0], params[1], Double.parseDouble(params[2]), params[3],
-                params[4], params[5], params[6], Integer.parseInt(params[7]), params[8]));
-        CREATORS.put(ItemCategory.SPORTS, (id, params) -> new Sports(id, params[0], params[1], Double.parseDouble(params[2]), params[3],
-                params[4], params[5], params[6], params[7]));
-        CREATORS.put(ItemCategory.JEWELRY, (id, params) -> new Jewelry(id, params[0], params[1], Double.parseDouble(params[2]), params[3],
-                params[4], params[5], Double.parseDouble(params[6]), params[7], params[8]));
-        CREATORS.put(ItemCategory.MUSIC, (id, params) -> new Music(id, params[0], params[1], Double.parseDouble(params[2]), params[3],
-                params[4], params[5], params[6], Integer.parseInt(params[7]), params[8]));
-        CREATORS.put(ItemCategory.FURNITURE, (id, params) -> new Furniture(id, params[0], params[1], Double.parseDouble(params[2]), params[3],
-                params[4], params[5], params[6], params[7], params[8]));
-    }
 
     private static String nextId(ItemCategory category) {
         int nextValue = counters.getOrDefault(category, 0) + 1;
@@ -154,6 +130,15 @@ public class ItemFactory {
 
     public static Item createItem(String category, String name, String description,
                                    double startPrice, String sellerId) {
+        if (name == null || name.isBlank()) {
+            throw new IllegalArgumentException("Name cannot be empty");
+        }
+        if (description == null) {
+            throw new IllegalArgumentException("Description cannot be null");
+        }
+        if (startPrice <= 0) {
+            throw new IllegalArgumentException("Start price must be positive");
+        }
         return switch (resolveCategory(category)) {
             case ELECTRONICS -> createElectronics(name, description, startPrice, sellerId,
                         "Unknown", 12, "Unknown", "New");

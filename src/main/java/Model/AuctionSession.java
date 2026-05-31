@@ -161,6 +161,9 @@ public class AuctionSession implements Serializable {
 
     /** Xử lý thanh toán: kiểm tra winnerId và amount, chuyển trạng thái PAID. */
     public synchronized boolean processPayment(String winnerId, double amount) {
+        if (status == Status.PAID) {
+            return false;
+        }
         if (!winnerId.equals(this.winnerId)) {
             return false;
         }
