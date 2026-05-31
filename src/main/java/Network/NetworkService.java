@@ -199,13 +199,21 @@ public class NetworkService {
     }
 
     /** Gửi yêu cầu đăng ký tài khoản mới. */
-    public Message register(String username, String password, String email, String phone) {
+    public Message register(String username, String password, String email, String phone, String role) {
+        if (role == null || role.isBlank()) {
+            role = "BIDDER_SELLER";
+        }
         User user = new User(null, username, password);
         user.setEmail(email);
         Message message = new Message(Message.Type.REGISTER);
         message.setData(user);
-        message.setContent(password);
+        message.setContent(password + "|" + role);
         return sendMessage(message);
+    }
+
+    /** Gửi yêu cầu đăng ký (overload, mặc định BIDDER_SELLER). */
+    public Message register(String username, String password, String email, String phone) {
+        return register(username, password, email, phone, "BIDDER_SELLER");
     }
 
     /** Lấy danh sách tất cả phiên đấu giá. */
@@ -397,6 +405,40 @@ public class NetworkService {
      */
     public Message getWatchlist() {
         Message msg = new Message(Message.Type.GET_WATCHLIST);
+        return sendMessage(msg);
+    }
+
+    /** Đổi mật khẩu. */
+    public Message changePassword(String oldPassword, String newPassword) {
+        Message message = new Message(Message.Type.CHANGE_PASSWORD);
+        message.setContent(oldPassword + "|" + newPassword);
+        return sendMessage(message);
+    }
+
+    /** Lấy danh sách tất cả người dùng. */
+    public Message getUsers() {
+        return sendMessage(new Message(Message.Type.GET_USERS));
+    }
+
+    /** Xóa người dùng theo ID. */
+    public Message deleteUser(String userId) {
+        Message msg = new Message(Message.Type.DELETE_USER);
+        msg.setContent(userId);
+        return sendMessage(msg);
+    }
+
+    /** Chặn/mở chặn người dùng. */
+    public Message blockUser(String userId, boolean blocked) {
+        Message msg = new Message(Message.Type.BLOCK_USER);
+        msg.setData(blocked);
+        msg.setContent(userId);
+        return sendMessage(msg);
+    }
+
+    /** Xóa vật phẩm theo ID. */
+    public Message deleteItem(String itemId) {
+        Message msg = new Message(Message.Type.DELETE_ITEM);
+        msg.setContent(itemId);
         return sendMessage(msg);
     }
 

@@ -39,13 +39,7 @@ public class UserController {
     private ToggleButton TrangchuButton;
 
     @FXML
-    private ToggleButton KhoButton;
-
-    @FXML
     private ToggleButton NaptienButton;
-
-    @FXML
-    private ToggleButton BidHistory;
 
     @FXML
     private ToggleButton CaidatButton;
@@ -54,25 +48,13 @@ public class UserController {
     private AnchorPane TrangchuPane;
 
     @FXML
-    private AnchorPane KhoPane;
-
-    @FXML
     private AnchorPane NaptienPane;
-
-    @FXML
-    private AnchorPane LichsudaugiaPane;
 
     @FXML
     private AnchorPane CaidatPane;
 
     @FXML
     private TrangchuPaneController TrangchuPaneController;
-
-    @FXML
-    private KhoPaneController KhoPaneController;
-
-    @FXML
-    private LichsudaugiaPaneController LichsudaugiaPaneController;
 
     @FXML
     private NaptienPaneController NaptienPaneController;
@@ -97,6 +79,33 @@ public class UserController {
 
     @FXML
     private ThongkePaneController ThongkePaneController;
+
+    @FXML
+    private ToggleButton KhoButton;
+
+    @FXML
+    private AnchorPane KhoPane;
+
+    @FXML
+    private KhoPaneController KhoPaneController;
+
+    @FXML
+    private ToggleButton LichsudaugiaButton;
+
+    @FXML
+    private AnchorPane LichsudaugiaPane;
+
+    @FXML
+    private LichsudaugiaPaneController LichsudaugiaPaneController;
+
+    @FXML
+    private ToggleButton AdminButton;
+
+    @FXML
+    private AnchorPane AdminPane;
+
+    @FXML
+    private AdminPaneController AdminPaneController;
 
     @FXML
     private ImageView avatarImageView;
@@ -240,58 +249,40 @@ public class UserController {
     private MenuItem[] menuItems() {
         return new MenuItem[]{
                 new MenuItem(TrangchuButton, TrangchuPane, null),
-                new MenuItem(KhoButton, KhoPane, null),
-                new MenuItem(NaptienButton, NaptienPane, null),
-                new MenuItem(BidHistory, LichsudaugiaPane, () -> {
-                    if (LichsudaugiaPaneController != null) {
-                        LichsudaugiaPaneController.loadBidHistory();
-                    }
+                new MenuItem(KhoButton, KhoPane, () -> {
+                    if (KhoPaneController != null) KhoPaneController.loadWarehouseItems();
                 }),
+                new MenuItem(NaptienButton, NaptienPane, null),
                 new MenuItem(WatchlistButton, WatchlistPane, () -> {
-                    if (WatchlistPaneController != null) {
-                        WatchlistPaneController.loadWatchlist();
-                    }
+                    if (WatchlistPaneController != null) WatchlistPaneController.loadWatchlist();
+                }),
+                new MenuItem(LichsudaugiaButton, LichsudaugiaPane, () -> {
+                    if (LichsudaugiaPaneController != null) LichsudaugiaPaneController.loadBidHistory();
                 }),
                 new MenuItem(ThongkeButton, ThongkePane, () -> {
-                    if (ThongkePaneController != null) {
-                        ThongkePaneController.loadStatistics();
-                    }
+                    if (ThongkePaneController != null) ThongkePaneController.loadStatistics();
                 }),
-                new MenuItem(CaidatButton, CaidatPane, null)
+                new MenuItem(CaidatButton, CaidatPane, null),
+                new MenuItem(AdminButton, AdminPane, () -> {
+                    if (AdminPaneController != null) {
+                        AdminPaneController.loadUsers();
+                        AdminPaneController.loadItems();
+                    }
+                })
         };
     }
 
-    /**
-     * Trả về danh sách tất cả các nút toggle menu trong giao diện.
-     *
-     * @return Mảng chứa tất cả các ToggleButton của menu
-     */
     private ToggleButton[] menuButtons() {
         return new ToggleButton[]{
-                TrangchuButton,
-                KhoButton,
-                NaptienButton,
-                BidHistory,
-                WatchlistButton,
-                ThongkeButton,
-                CaidatButton
+                TrangchuButton, KhoButton, NaptienButton, WatchlistButton,
+                LichsudaugiaButton, ThongkeButton, CaidatButton, AdminButton
         };
     }
 
-    /**
-     * Trả về danh sách tất cả các pane nội dung trong giao diện.
-     *
-     * @return Mảng chứa tất cả các AnchorPane nội dung
-     */
     private AnchorPane[] contentPanes() {
         return new AnchorPane[]{
-                TrangchuPane,
-                KhoPane,
-                NaptienPane,
-                LichsudaugiaPane,
-                CaidatPane,
-                WatchlistPane,
-                ThongkePane
+                TrangchuPane, KhoPane, NaptienPane, CaidatPane,
+                WatchlistPane, LichsudaugiaPane, ThongkePane, AdminPane
         };
     }
 
@@ -304,11 +295,12 @@ public class UserController {
         return new Object[]{
                 TrangchuPaneController,
                 KhoPaneController,
-                LichsudaugiaPaneController,
                 NaptienPaneController,
                 CaidatPaneController,
                 WatchlistPaneController,
-                ThongkePaneController
+                LichsudaugiaPaneController,
+                ThongkePaneController,
+                AdminPaneController
         };
     }
 
@@ -493,6 +485,43 @@ public class UserController {
         if (TrangchuPaneController != null) TrangchuPaneController.setUserData(user);
         if (KhoPaneController != null) KhoPaneController.setUserData(user);
         if (LichsudaugiaPaneController != null) LichsudaugiaPaneController.setUserData(user);
+
+        final ToggleButton adminBtn = AdminButton;
+        if (adminBtn != null && user != null) {
+            boolean isAdmin = user.isAdmin();
+            javafx.application.Platform.runLater(() -> {
+                adminBtn.setManaged(isAdmin);
+                adminBtn.setVisible(isAdmin);
+                adminBtn.setDisable(!isAdmin);
+
+                if (NaptienButton != null) {
+                    NaptienButton.setManaged(!isAdmin);
+                    NaptienButton.setVisible(!isAdmin);
+                }
+                if (WatchlistButton != null) {
+                    WatchlistButton.setManaged(!isAdmin);
+                    WatchlistButton.setVisible(!isAdmin);
+                }
+                if (KhoButton != null) {
+                    KhoButton.setManaged(!isAdmin);
+                    KhoButton.setVisible(!isAdmin);
+                }
+                if (LichsudaugiaButton != null) {
+                    LichsudaugiaButton.setManaged(!isAdmin);
+                    LichsudaugiaButton.setVisible(!isAdmin);
+                }
+
+                if (isAdmin) {
+                    showPane(AdminPane);
+                    if (AdminButton != null) menuGroup.selectToggle(AdminButton);
+                    updateMenuStyle();
+                    if (AdminPaneController != null) {
+                        AdminPaneController.loadUsers();
+                        AdminPaneController.loadItems();
+                    }
+                }
+            });
+        }
     }
 
     /**

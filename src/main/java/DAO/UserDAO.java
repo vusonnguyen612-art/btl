@@ -116,7 +116,7 @@ public class UserDAO {
         String id = rs.getString("id");
         String username = rs.getString("username");
         String password = rs.getString("password");
-        
+
         User user;
         if (id != null && id.startsWith("ADM")) {
             user = new Admin(id, username, password);
@@ -125,6 +125,19 @@ public class UserDAO {
         }
         user.setEmail(rs.getString("email"));
         user.setBalance(rs.getBigDecimal("balance"));
+        try {
+            user.setSeller(rs.getBoolean("is_seller"));
+            user.setBidder(rs.getBoolean("is_bidder"));
+        } catch (SQLException e) {
+        }
+        try {
+            user.setAvatarPath(rs.getString("avatar_path"));
+        } catch (SQLException e) {
+        }
+        try {
+            user.setBlocked(rs.getBoolean("is_blocked"));
+        } catch (SQLException e) {
+        }
         return user;
     }
 
@@ -213,6 +226,49 @@ public class UserDAO {
         try (Connection conn = DatabaseUtil.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, avatarPath);
+            stmt.setString(2, userId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /** Lấy danh sách tất cả người dùng. */
+    public java.util.List<User> findAllUsers() {
+        java.util.List<User> users = new java.util.ArrayList<>();
+        String sql = "SELECT * FROM users ORDER BY created_at DESC";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+            while (rs.next()) {
+                users.add(mapResultSetToUser(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return users;
+    }
+
+    /** Xóa người dùng theo ID (không cho xóa admin). */
+    public boolean deleteUser(String userId) {
+        String sql = "DELETE FROM users WHERE id = ? AND id NOT LIKE 'ADM%'";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, userId);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /** Chặn/mở chặn người dùng. */
+    public boolean blockUser(String userId, boolean blocked) {
+        String sql = "UPDATE users SET is_blocked = ? WHERE id = ? AND id NOT LIKE 'ADM%'";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setBoolean(1, blocked);
             stmt.setString(2, userId);
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {

@@ -282,6 +282,11 @@ public class AuctionServer {
                     case ADD_WATCHLIST -> handleAddWatchlist(message);
                     case REMOVE_WATCHLIST -> handleRemoveWatchlist(message);
                     case GET_WATCHLIST -> handleGetWatchlist();
+                    case GET_USERS -> handleGetUsers();
+                    case DELETE_USER -> handleDeleteUser(message);
+                    case BLOCK_USER -> handleBlockUser(message);
+                    case DELETE_ITEM -> handleDeleteItem(message);
+                    case CHANGE_PASSWORD -> handleChangePassword(message);
                     default -> createErrorMessage("Unknown message type");
                 };
                 if (response.getType() == Message.Type.SUCCESS && currentUser != null) {
@@ -743,6 +748,73 @@ public class AuctionServer {
             }
             WatchlistDAO watchlistDAO = new WatchlistDAO();
             return createSuccessMessage(watchlistDAO.getWatchlist(currentUser.getId()));
+        }
+
+        private Message handleGetUsers() {
+            if (currentUser == null || !currentUser.isAdmin()) {
+                return createErrorMessage("Chi admin moi co quyen xem danh sach.");
+            }
+            return createSuccessMessage(userDAO.findAllUsers());
+        }
+
+        private Message handleDeleteUser(Message message) {
+            if (currentUser == null || !currentUser.isAdmin()) {
+                return createErrorMessage("Chi admin moi co quyen xoa nguoi dung.");
+            }
+            String userId = message.getContent();
+            if (userId == null || userId.isBlank()) {
+                return createErrorMessage("ID khong hop le.");
+            }
+            boolean success = userDAO.deleteUser(userId);
+            if (success) return createSuccessMessage("Da xoa nguoi dung.");
+            return createErrorMessage("Khong the xoa nguoi dung.");
+        }
+
+        private Message handleBlockUser(Message message) {
+            if (currentUser == null || !currentUser.isAdmin()) {
+                return createErrorMessage("Chi admin moi co quyen chan nguoi dung.");
+            }
+            String userId = message.getContent();
+            boolean blocked = (Boolean) message.getData();
+            if (userId == null || userId.isBlank()) {
+                return createErrorMessage("ID khong hop le.");
+            }
+            boolean success = userDAO.blockUser(userId, blocked);
+            if (success) {
+                return createSuccessMessage(blocked ? "Da chan nguoi dung." : "Da bo chan nguoi dung.");
+            }
+            return createErrorMessage("Khong the thay doi trang thai.");
+        }
+
+        private Message handleDeleteItem(Message message) {
+            if (currentUser == null || !currentUser.isAdmin()) {
+                return createErrorMessage("Chi admin moi co quyen xoa vat pham.");
+            }
+            String itemId = message.getContent();
+            if (itemId == null || itemId.isBlank()) {
+                return createErrorMessage("ID khong hop le.");
+            }
+            boolean success = itemDAO.delete(itemId);
+            if (success) return createSuccessMessage("Da xoa vat pham.");
+            return createErrorMessage("Khong the xoa vat pham.");
+        }
+
+        private Message handleChangePassword(Message message) {
+            if (currentUser == null) {
+                return createErrorMessage("Vui long dang nhap.");
+            }
+            String content = message.getContent();
+            if (content == null || !content.contains("|")) {
+                return createErrorMessage("Du lieu khong hop le.");
+            }
+            int sep = content.indexOf("|");
+            String oldPassword = content.substring(0, sep);
+            String newPassword = content.substring(sep + 1);
+            boolean success = userDAO.changePassword(currentUser.getUsername(), oldPassword, newPassword);
+            if (success) {
+                return createSuccessMessage("Doi mat khau thanh cong.");
+            }
+            return createErrorMessage("Mat khau cu khong dung.");
         }
 
         private Message createErrorMessage(String error) {

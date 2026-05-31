@@ -44,7 +44,10 @@ public class Message implements Serializable {
         GET_CHAT_HISTORY,
         ADD_WATCHLIST,
         REMOVE_WATCHLIST,
-        GET_WATCHLIST
+        GET_WATCHLIST,
+        DELETE_USER,
+        CHANGE_PASSWORD,
+        BLOCK_USER
     }
 
     private Type type;

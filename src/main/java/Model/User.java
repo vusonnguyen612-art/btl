@@ -15,6 +15,7 @@ public class User implements Serializable {
     private String email;
     private boolean isSeller;
     private boolean isBidder;
+    private boolean isBlocked;
     private BigDecimal balance;
     private String avatarPath;
 
@@ -80,8 +81,24 @@ public class User implements Serializable {
         return isSeller;
     }
 
+    public void setSeller(boolean seller) {
+        isSeller = seller;
+    }
+
     public boolean isBidder() {
         return isBidder;
+    }
+
+    public void setBidder(boolean bidder) {
+        isBidder = bidder;
+    }
+
+    public boolean isBlocked() {
+        return isBlocked;
+    }
+
+    public void setBlocked(boolean blocked) {
+        isBlocked = blocked;
     }
 
     public String getAvatarPath() {

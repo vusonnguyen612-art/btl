@@ -1,3 +1,4 @@
+D:\JDK W1\btl\src\main\java\Controller\AdminPaneController.java
 D:\JDK W1\btl\src\main\java\Controller\AuctionCardController.java
 D:\JDK W1\btl\src\main\java\Controller\AuctionRoomController.java
 D:\JDK W1\btl\src\main\java\Controller\BidCardController.java
@@ -17,6 +18,7 @@ D:\JDK W1\btl\src\main\java\Controller\utils\AlertUtils.java
 D:\JDK W1\btl\src\main\java\Controller\utils\CategoryMapper.java
 D:\JDK W1\btl\src\main\java\Controller\utils\FormatUtils.java
 D:\JDK W1\btl\src\main\java\Controller\utils\ResponseUtils.java
+D:\JDK W1\btl\src\main\java\Controller\utils\SearchCriteriaBuilder.java
 D:\JDK W1\btl\src\main\java\Controller\utils\UIUtils.java
 D:\JDK W1\btl\src\main\java\Controller\WatchlistPaneController.java
 D:\JDK W1\btl\src\main\java\DAO\AuctionDAO.java
