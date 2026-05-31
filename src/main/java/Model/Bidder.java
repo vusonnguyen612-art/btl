@@ -21,7 +21,6 @@ public class Bidder extends User {
         super(id, username, password);
     }
 
-    @Override
     public String getSpecificInfo() {
         return "Bidder - can participate in auctions";
     }

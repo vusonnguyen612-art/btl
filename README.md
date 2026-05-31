@@ -31,10 +31,17 @@
 
 ## Mô tả dự án
 
-Đây là một hệ thống **đấu giá trực tuyến** (online auction) được xây dựng bằng Java, cho phép người dùng đăng ký tài khoản, tạo vật phẩm, tổ chức phiên đấu giá, và tham gia đặt giá theo thời gian thực.
+Đây là một hệ thống **đấu giá trực tuyến** (online auction) được xây dựng bằng Java, cho phép người dùng đăng ký tài khoản, tạo vật phẩm, tổ chức phiên đấu giá, và tham gia đặt giá theo thời gian thực qua kết nối TCP Socket.
+
+**Phạm vi hệ thống:**
+- Hỗ trợ 3 vai trò: **Admin**, **Seller** (người bán), **Bidder** (người mua)
+- Quản lý vòng đời phiên đấu giá đầy đủ: OPEN → RUNNING → PAYMENT_PENDING → PAID / FINISHED / CANCELED
+- Đấu giá thời gian thực với cơ chế **Sniper Protection** và **AutoBid (Second-Price)**
+- Chat trực tiếp theo phiên, watchlist, thống kê, biểu đồ giá
+- Quản trị viên: quản lý người dùng, vật phẩm, khóa/mở tài khoản, xem lịch sử đấu giá
 
 Hệ thống sử dụng mô hình **Client — Server** qua giao thức TCP Socket:
-- **Server** xử lý tất cả nghiệp vụ (đấu giá, thanh toán, AutoBid, chat, watchlist)
+- **Server** xử lý tất cả nghiệp vụ (đấu giá, thanh toán, AutoBid, chat, watchlist, admin)
 - **Client** là ứng dụng JavaFX desktop kết nối tới Server
 
 ### Ví dụ luồng đơn giản
@@ -48,44 +55,47 @@ Hệ thống sử dụng mô hình **Client — Server** qua giao thức TCP Soc
 ## Kiến trúc hệ thống
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        CLIENT (JavaFX)                              │
-│  ┌──────────┐  ┌────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ LoginApp │  │ Controller │  │ FXML Views   │  │ NetworkService│  │
-│  │ (Launcher)│  │ (JavaFX)   │  │ (.fxml)      │  │ (Socket)     │  │
-│  └──────────┘  └────────────┘  └──────────────┘  └──────┬───────┘  │
-│                                                          │          │
-└──────────────────────────────────────────────────────────┼──────────┘
-                                                           │
-                                                    TCP Socket
-                                                   (port 8989)
-                                                           │
-┌──────────────────────────────────────────────────────────┼──────────┐
-│                        SERVER                         ┌──┴───────┐ │
-│  ┌──────────────────────────────────────────────────┐ │ Ngrok    │ │
-│  │              AuctionServer                       │ │ Tunnel   │ │
-│  │  ┌──────────────┐  ┌───────────────────────────┐ │ └──────────┘ │
-│  │  │ ClientHandler │  │ ClientHandler │ ...      │ │              │
-│  │  │ (Thread #1)   │  │ (Thread #N)              │ │              │
-│  │  └──────┬───────┘  └──────────┬────────────────┘ │              │
-│  │         │                     │                    │              │
-│  │         └─────────┬───────────┘                    │              │
-│  │                   ▼                                │              │
-│  │          ┌──────────────────┐                      │              │
-│  │          │    AuctionDAO    │  (synchronized)       │              │
-│  │          │  + UserDAO       │                      │              │
-│  │          │  + ItemDAO       │                      │              │
-│  │          │  + ChatDAO       │                      │              │
-│  │          │  + WatchlistDAO  │                      │              │
-│  │          │  + DatabaseUtil  │                      │              │
-│  │          └────────┬─────────┘                      │              │
-│  └───────────────────┼────────────────────────────────┘              │
-│                      ▼                                               │
-│            ┌──────────────────┐                                      │
-│            │     MySQL DB     │                                      │
-│            │   (auction_db)   │                                      │
-│            └──────────────────┘                                      │
-└──────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────┐
+│                          CLIENT (JavaFX)                                  │
+│  ┌──────────┐  ┌────────────┐  ┌──────────────┐  ┌──────────────────┐    │
+│  │ LoginApp │  │ Controller │  │ FXML Views   │  │ NetworkService   │    │
+│  │ (Launcher)│  │ (JavaFX)   │  │ (.fxml)      │  │ (Socket Client)  │    │
+│  └──────────┘  └────────────┘  └──────────────┘  └────────┬─────────┘    │
+│                                                            │              │
+└────────────────────────────────────────────────────────────┼──────────────┘
+                                                             │
+                                                      TCP Socket
+                                                     (port 8989)
+                                                             │
+┌────────────────────────────────────────────────────────────┼──────────────┐
+│                          SERVER                            │              │
+│  ┌────────────────────────────────────────────────────┐    │              │
+│  │                AuctionServer                       │    │              │
+│  │  ┌──────────────┐  ┌───────────────────────────┐  │    │              │
+│  │  │ ClientHandler │  │ ClientHandler │ ...      │  │    │              │
+│  │  │ (Thread #1)   │  │ (Thread #N)              │  │    │              │
+│  │  └──────┬───────┘  └──────────┬────────────────┘  │    │              │
+│  │         │                     │                    │    │              │
+│  │         └─────────┬───────────┘                    │    │              │
+│  │                   ▼                                │    │              │
+│  │          ┌──────────────────┐                      │    │              │
+│  │          │    AuctionDAO    │  (synchronized)       │    │              │
+│  │          │  + UserDAO       │                      │    │              │
+│  │          │  + ItemDAO       │                      │    │              │
+│  │          │  + ChatDAO       │                      │    │              │
+│  │          │  + WatchlistDAO  │                      │    │              │
+│  │          │  + BidDAO        │                      │    │              │
+│  │          │  + AuctionSessionDAO                    │    │              │
+│  │          │  + AutoBidEngine │                      │    │              │
+│  │          │  + DatabaseUtil  │                      │    │              │
+│  │          └────────┬─────────┘                      │    │              │
+│  └───────────────────┼────────────────────────────────┘    │              │
+│                      ▼                                     │              │
+│            ┌──────────────────┐                            │              │
+│            │     MySQL DB     │                            │              │
+│            │   (auction_db)   │                            │              │
+│            └──────────────────┘                            │              │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -98,10 +108,13 @@ Hệ thống sử dụng mô hình **Client — Server** qua giao thức TCP Soc
 | Giao diện | JavaFX 21 (FXML + Scene Builder) |
 | Cơ sở dữ liệu | MySQL 8+ |
 | Connection Pool | HikariCP 5.1.0 |
-| Build tool | Maven 3.9+ |
+| Build tool | Maven 3.9+ (kèm Maven Wrapper `./mvnw`) |
 | Mạng | TCP Socket (ObjectOutputStream/InputStream) |
 | Tunnel | Ngrok (tùy chọn, cho truy cập từ internet) |
 | Testing | JUnit Jupiter 5.12 |
+| Code Coverage | JaCoCo 0.8.14 (ngưỡng ≥30%) |
+| Vulnerability Check | OWASP Dependency-Check 10.0.4 (opt-in) |
+| Design Patterns | Singleton, Factory, Observer, DAO, Template Method |
 
 ---
 
@@ -116,16 +129,22 @@ Hệ thống sử dụng mô hình **Client — Server** qua giao thức TCP Soc
 | **Maven** | 3.9+ | Hoặc dùng `mvnw` (Maven Wrapper) đã kèm trong project |
 | **JavaFX SDK** | 21 | Maven tự tải qua plugin `javafx-maven-plugin` |
 
-> **Lưu ý:** Tất cả lệnh dưới đây đều chạy được trên **Windows** (cmd/PowerShell/Git Bash), **Linux** và **macOS**. Chỉ cần Java 21+ và Maven 3.9+ (hoặc `./mvnw`).
+> **Lưu ý:** Tất cả lệnh dưới đây đều chạy được trên **Windows** (Git Bash / cmd), **Linux** và **macOS**. Chỉ cần Java 21+ và Maven 3.9+ (hoặc `./mvnw` / `mvnw.cmd`).
 
 ---
 
 ### 1. Tạo database
 
-Đăng nhập MySQL và tạo database:
+**Cách 1 — Dùng schema file (khuyên dùng):**
 
 ```bash
-# Trên mọi OS (MySQL CLI)
+# Trên mọi OS
+mysql -u root -p < src/main/sql/schema.sql
+```
+
+**Cách 2 — Thủ công:**
+
+```bash
 mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS auction_db"
 ```
 
@@ -151,7 +170,7 @@ config.setPassword("123456789");
 # Linux / macOS
 ./mvnw clean package -DskipTests
 
-# Windows
+# Windows (Git Bash / cmd)
 mvnw.cmd clean package -DskipTests
 
 # Hoặc nếu đã cài Maven toàn cục (mọi OS)
@@ -167,20 +186,25 @@ Kết quả: file `target/auction-system-1.0-SNAPSHOT.jar` (fat-JAR ~17MB, chứ
 Server TCP lắng nghe trên cổng **8989**:
 
 ```bash
-# Cách 1 — Dùng fat-JAR (khuyên dùng)
+# Cách 1 — Dùng fat-JAR (khuyên dùng, chạy trên mọi OS)
 java -cp target/auction-system-1.0-SNAPSHOT.jar Network.AuctionServer
 
-# Cách 2 — Dùng Maven
+# Cách 2 — Dùng Maven (mọi OS)
 ./mvnw exec:java -Dexec.mainClass="Network.AuctionServer"
+# hoặc trên Windows
+mvnw.cmd exec:java -Dexec.mainClass="Network.AuctionServer"
 
-# Cách 3 — Windows (script batch)
-run-server.bat
+# Cách 3 — Dùng Maven toàn cục (mọi OS)
+mvn exec:java -Dexec.mainClass="Network.AuctionServer"
 ```
 
 Khi Server chạy thành công, bạn sẽ thấy:
 ```
 Server started on port 8989
+Server initialized with DAO pattern (MySQL)
 ```
+
+> **Lưu ý:** Trên **Linux/macOS**, nếu port 8989 bị chiếm, kiểm tra bằng `lsof -i :8989` hoặc `netstat -an | grep 8989`. Trên **Windows**, dùng `netstat -ano | grep 8989`.
 
 ---
 
@@ -189,13 +213,16 @@ Server started on port 8989
 Mở một terminal **khác** và chạy:
 
 ```bash
-# Cách 1 — Dùng Maven (khuyên dùng)
+# Cách 1 — Dùng Maven Wrapper (khuyên dùng, mọi OS)
 ./mvnw javafx:run
 
-# Cách 2 — Windows (script batch)
-run-client.bat
+# Trên Windows
+mvnw.cmd javafx:run
 
-# Cách 3 — Fat-JAR (chạy giao diện JavaFX)
+# Cách 2 — Dùng Maven toàn cục (mọi OS)
+mvn javafx:run
+
+# Cách 3 — Fat-JAR (chạy giao diện JavaFX, mọi OS)
 java -jar target/auction-system-1.0-SNAPSHOT.jar
 ```
 
@@ -221,11 +248,23 @@ private static final int SERVER_PORT = 12345;
 
 ---
 
+### 7. (Tùy chọn) Migrate mật khẩu cũ
+
+Nếu đã có dữ liệu cũ với mật khẩu plain text, chạy script một lần:
+
+```bash
+./mvnw exec:java -Dexec.mainClass="DAO.MigratePasswords"
+```
+
+Script này hash toàn bộ mật khẩu plain text bằng SHA-256 + salt.
+
+---
+
 ### Tóm tắt thứ tự chạy
 
 ```
-1. MySQL    → chạy sẵn trên localhost:3306
-2. Build    → mvn clean package -DskipTests
+1. MySQL    → chạy sẵn trên localhost:3306 (hoặc mysql -u root -p < src/main/sql/schema.sql)
+2. Build    → ./mvnw clean package -DskipTests
 3. Server   → java -cp target/auction-system-1.0-SNAPSHOT.jar Network.AuctionServer
 4. Client   → ./mvnw javafx:run         (mở terminal mới)
 ```
@@ -238,6 +277,8 @@ private static final int SERVER_PORT = 12345;
 btl/
 ├── pom.xml                              # Maven config
 ├── README.md                            # Bạn đang đọc đây
+├── mvnw, mvnw.cmd                       # Maven Wrapper (chạy không cần cài Maven)
+├── run-server.bat                       # Script Windows chạy server
 ├── auction_data.ser                     # File serialize cho in-memory mode
 │
 ├── src/
@@ -247,8 +288,8 @@ btl/
 │   │   │   ├── LoginApp.java               # JavaFX Application starter
 │   │   │   │
 │   │   │   ├── Controller/                 # JavaFX Controllers
-│   │   │   │   ├── LoginController.java    # Đăng nhập & Đăng ký (đã refactor đặt tên chuẩn)
-│   │   │   │   ├── UserController.java
+│   │   │   │   ├── LoginController.java    # Đăng nhập & Đăng ký
+│   │   │   │   ├── UserController.java     # Điều hướng chính (trang chủ, pane quản lý)
 │   │   │   │   ├── AuctionRoomController.java
 │   │   │   │   ├── AuctionCardController.java
 │   │   │   │   ├── BidCardController.java
@@ -256,55 +297,64 @@ btl/
 │   │   │   │   ├── BidChartViewController.java
 │   │   │   │   ├── CreateItemsController.java
 │   │   │   │   ├── ItemCardController.java
-│   │   │   │   ├── TrangchuPaneController.java   # Trang chủ
-│   │   │   │   ├── KhoPaneController.java         # Kho hàng
-│   │   │   │   ├── CaidatPaneController.java      # Cài đặt
-│   │   │   │   ├── NaptienPaneController.java     # Nạp tiền
+│   │   │   │   ├── AdminPaneController.java        # ⭐ Admin: quản lý user/item
+│   │   │   │   ├── TrangchuPaneController.java     # Trang chủ
+│   │   │   │   ├── KhoPaneController.java          # Kho hàng
+│   │   │   │   ├── CaidatPaneController.java       # Cài đặt
+│   │   │   │   ├── NaptienPaneController.java      # Nạp tiền
 │   │   │   │   ├── LichsudaugiaPaneController.java # Lịch sử đấu giá
-│   │   │   │   ├── WatchlistPaneController.java
-│   │   │   │   └── ThongkePaneController.java     # Thống kê
+│   │   │   │   ├── WatchlistPaneController.java    # Theo dõi
+│   │   │   │   ├── ThongkePaneController.java      # Thống kê
+│   │   │   │   └── utils/                          # ⭐ Tiện ích Controller
+│   │   │   │       ├── UIUtils.java                #   UI helper (ScrollPane, ImageView...)
+│   │   │   │       ├── ResponseUtils.java          #   Parse Message response
+│   │   │   │       ├── SearchCriteriaBuilder.java  #   Builder tìm kiếm từ UI
+│   │   │   │       ├── FormatUtils.java            #   Format tiền, thời gian
+│   │   │   │       ├── CategoryMapper.java         #   Ánh xạ danh mục Việt-Anh
+│   │   │   │       └── AlertUtils.java             #   Alert dialog dùng chung
+│   │   │   │
+│   │   │   ├── Service/                        # ⭐ Lớp Service (in-memory, cho test/offline)
+│   │   │   │   ├── AuctionManager.java          #   Quản lý đấu giá in-memory (singleton)
+│   │   │   │   ├── UserService.java             #   Service xử lý User
+│   │   │   │   ├── ItemService.java             #   Service xử lý Item
+│   │   │   │   └── DataService.java             #   Serialize/deserialize dữ liệu
 │   │   │   │
 │   │   │   ├── DAO/                          # Data Access Objects
-│   │   │   │   ├── DatabaseUtil.java          # HikariCP connection pool
-│   │   │   │   ├── UserDAO.java               # users table
-│   │   │   │   ├── ItemDAO.java               # items table
-│   │   │   │   ├── AuctionDAO.java            # auction_sessions + bids
-│   │   │   │   ├── AuctionSessionDAO.java
-│   │   │   │   ├── BidDAO.java
-│   │   │   │   ├── ChatDAO.java               # chat_messages
-│   │   │   │   └── WatchlistDAO.java          # watchlist
+│   │   │   │   ├── DatabaseUtil.java          #   HikariCP connection pool
+│   │   │   │   ├── UserDAO.java               #   users table (login, register, balance...)
+│   │   │   │   ├── ItemDAO.java               #   items table
+│   │   │   │   ├── AuctionDAO.java            #   auction_sessions + bids (placeBid, finish...)
+│   │   │   │   ├── AuctionSessionDAO.java     #   ⭐ CRUD cơ bản cho auction_sessions
+│   │   │   │   ├── BidDAO.java                #   ⭐ Truy vấn bids (winner, lịch sử)
+│   │   │   │   ├── ChatDAO.java               #   chat_messages
+│   │   │   │   ├── WatchlistDAO.java          #   watchlist
+│   │   │   │   └── MigratePasswords.java      #   ⭐ Script migration password (SHA-256)
 │   │   │   │
-│   │   │   ├── Model/                        # Domain models (thêm equals & hashCode)
-│   │   │   │   ├── Entity.java (abstract)     # Lớp cơ sở chứa id, createdAt
-│   │   │   │   ├── User.java                  # Người dùng (số dư mặc định 0)
-│   │   │   │   ├── Admin.java                 # Quản trị viên
-│   │   │   │   ├── Bidder.java                # Người mua
-│   │   │   │   ├── Seller.java                # Người bán
-│   │   │   │   ├── Item.java (abstract)       # Vật phẩm đấu giá
-│   │   │   │   ├── Art.java                   # Tranh ảnh
-│   │   │   │   ├── Books.java                 # Sách
-│   │   │   │   ├── Electronics.java           # Điện tử
-│   │   │   │   ├── Fashion.java               # Thời trang
-│   │   │   │   ├── Furniture.java             # Nội thất
-│   │   │   │   ├── Jewelry.java               # Trang sức
-│   │   │   │   ├── Music.java                 # Nhạc cụ
-│   │   │   │   ├── Sports.java                # Thể thao
-│   │   │   │   ├── Vehicle.java               # Xe cộ
-│   │   │   │   ├── AuctionSession.java        # Phiên đấu giá
-│   │   │   │   ├── Bid.java                   # Lượt đặt giá
-│   │   │   │   ├── AutoBid.java               # Tự động trả giá
-│   │   │   │   ├── ChatMessage.java           # Tin nhắn chat
-│   │   │   │   └── SearchCriteria.java        # Tiêu chí tìm kiếm
+│   │   │   ├── Model/                        # Domain models
+│   │   │   │   ├── Entity.java (abstract)     #   ⭐ Lớp cơ sở (id, createdAt, equals/hashCode)
+│   │   │   │   ├── User.java                  #   Người dùng
+│   │   │   │   ├── Admin.java                 #   Quản trị viên
+│   │   │   │   ├── Bidder.java                #   Người mua
+│   │   │   │   ├── Seller.java                #   Người bán
+│   │   │   │   ├── Item.java (abstract)       #   Vật phẩm
+│   │   │   │   ├── Art.java, Books.java, Electronics.java, Fashion.java,
+│   │   │   │   │   Furniture.java, Jewelry.java, Music.java, Sports.java,
+│   │   │   │   │   Vehicle.java               #   9 danh mục con
+│   │   │   │   ├── AuctionSession.java        #   Phiên đấu giá
+│   │   │   │   ├── Bid.java                   #   Lượt đặt giá
+│   │   │   │   ├── AutoBid.java               #   ⭐ Cấu hình tự động trả giá
+│   │   │   │   ├── ChatMessage.java           #   ⭐ Tin nhắn chat
+│   │   │   │   ├── SearchCriteria.java        #   ⭐ Tiêu chí tìm kiếm
+│   │   │   │   └── AuctionObservable.java     #   ⭐ Observer pattern base
 │   │   │   │
 │   │   │   ├── Network/                      # Mạng & giao tiếp
-│   │   │   │   ├── AuctionServer.java         # Server TCP (đa luồng)
-│   │   │   │   ├── AuctionClient.java         # Client CLI (test)
-│   │   │   │   ├── NetworkService.java        # Client singleton (JavaFX)
- guide   │   │   │   ├── Message.java               # Giao thức message
-│   │   │   │   └── NgrokTunnel.java           # Ngrok tunnel
-│   │   │   │
-│   │   │   ├── Service/
-│   │   │   │   └── AuctionManager.java        # In-memory manager (singleton)
+│   │   │   │   ├── AuctionServer.java         #   Server TCP đa luồng
+│   │   │   │   ├── AuctionClient.java         #   Client CLI (test)
+│   │   │   │   ├── NetworkService.java        #   Client singleton (JavaFX)
+│   │   │   │   ├── Message.java               #   Giao thức message
+│   │   │   │   ├── MessageFactory.java        #   ⭐ Factory tạo message chuẩn
+│   │   │   │   ├── AutoBidEngine.java         #   ⭐ Engine xử lý AutoBid
+│   │   │   │   └── NgrokTunnel.java           #   Ngrok tunnel
 │   │   │   │
 │   │   │   ├── Factory/
 │   │   │   │   ├── ItemFactory.java           # Factory pattern cho Item
@@ -318,41 +368,50 @@ btl/
 │   │   │   │   ├── AuthenticationException.java
 │   │   │   │   └── ItemNotFoundException.java
 │   │   │   │
-│   │   │   ├── Observer/
-│   │   │   │   └── AuctionObserver.java       # Observer pattern
-│   │   │   │
-│   │   │   └── Util/
-│   │   │       └── AlertUtils.java            # Tiện ích hiển thị Alert dialog dùng chung
+│   │   │   └── Observer/
+│   │   │       └── AuctionObserver.java       # Observer pattern
 │   │   │
-│   │   └── resources/                        # FXML & assets
-│   │       ├── login.fxml
-│   │       ├── signin.fxml
-│   │       ├── auctionRoom.fxml
-│   │       ├── CreateItems.fxml
-│   │       ├── Indivisual.fxml
-│   │       ├── item_card.fxml
-│   │       ├── auction_card.fxml
-│   │       ├── bid_card.fxml
-│   │       ├── bid_history_card.fxml
-│   │       ├── bid_chart_view.fxml
-│   │       └── panes/
-│   │           ├── trangchu_pane.fxml
-│   │           ├── kho_pane.fxml
-│   │           ├── caidat_pane.fxml
-│   │           ├── naptien_pane.fxml
-│   │           ├── lichsudaugia_pane.fxml
-│   │           ├── thongke_pane.fxml
-│   │           └── watchlist_pane.fxml
+│   │   ├── resources/                        # FXML & assets
+│   │   │   ├── login.fxml
+│   │   │   ├── signin.fxml
+│   │   │   ├── auctionRoom.fxml
+│   │   │   ├── CreateItems.fxml
+│   │   │   ├── Indivisual.fxml               # Giao diện chính (chứa các pane)
+│   │   │   ├── item_card.fxml
+│   │   │   ├── auction_card.fxml
+│   │   │   ├── bid_card.fxml
+│   │   │   ├── bid_history_card.fxml
+│   │   │   ├── bid_chart_view.fxml
+│   │   │   └── panes/
+│   │   │       ├── trangchu_pane.fxml
+│   │   │       ├── kho_pane.fxml
+│   │   │       ├── caidat_pane.fxml
+│   │   │       ├── naptien_pane.fxml
+│   │   │       ├── lichsudaugia_pane.fxml
+│   │   │       ├── thongke_pane.fxml
+│   │   │       ├── watchlist_pane.fxml
+│   │   │       └── admin_pane.fxml           # ⭐ Admin panel
+│   │   │
+│   │   └── sql/
+│   │       └── schema.sql                    # ⭐ Script tạo database & tables
 │   │
 │   └── test/java/test/
-│       ├── AuctionManagerTest.java           # 23 tests
-│       ├── AuctionSessionTest.java           # 20 tests
-│       ├── ItemFactoryTest.java              # 15 tests
-│       ├── UserFactoryTest.java              # 13 tests
+│       ├── AuctionManagerTest.java           # 34 tests
+│       ├── AuctionSessionTest.java           # 26 tests
+│       ├── ItemFactoryTest.java              # 19 tests
+│       ├── UserFactoryTest.java              # 15 tests
+│       ├── NewFeaturesTest.java              # 11 tests (DB integration)
 │       ├── ExceptionTest.java                # 6 tests
-│       ├── ItemSubclassTest.java             # 4 tests
-│       └── NewFeaturesTest.java              # 4 tests (DB integration)
+│       └── ItemSubclassTest.java             # 4 tests
+│
+├── .github/workflows/
+│   ├── ci.yml                               # GitHub Actions CI
+│   └── qodana_code_quality.yml              # Qodana code quality
+│
+└── owasp-suppressions.xml                   # OWASP false-positive suppressions
 ```
+
+> ⭐ = file/package mới bổ sung so với phiên bản đầu.
 
 ---
 
@@ -360,20 +419,22 @@ btl/
 
 ### Model — Lớp dữ liệu
 
-Mỗi lớp model implements `Serializable` để truyền qua socket.
+Mỗi lớp model implements `Serializable` để truyền qua socket. `Entity` là lớp cơ sở trừu tượng chứa `id` và `createdAt`, cung cấp `equals()`/`hashCode()` chuẩn.
 
 | Lớp | Vai trò |
 |-----|---------|
-| `User` | Người dùng: ID, username, password (hashed), email, balance (mặc định khởi tạo bằng 0$), roles |
+| `Entity` (abstract) | Lớp cơ sở: id, createdAt, equals/hashCode, getSpecificInfo() |
+| `User` | Người dùng: ID, username, password (hashed SHA-256), email, balance, roles |
 | `Admin` | Kế thừa User, có quyền quản trị |
 | `Bidder` | Người mua |
 | `Seller` | Người bán |
 | `Item` (abstract) | Vật phẩm: ID, tên, mô tả, giá khởi điểm, sellerId, category. 9 subclass: Art, Books, Electronics, Fashion, Furniture, Jewelry, Music, Sports, Vehicle |
-| `AuctionSession` | Phiên đấu giá: trạng thái (OPEN → RUNNING → PAYMENT_PENDING/FINISHED → PAID), giá hiện tại, highestBidder, winner, thời gian, sniper protection |
-| `Bid` | Một lượt đặt giá: auctionId, bidderId, amount, timestamp |
+| `AuctionSession` | Phiên đấu giá: trạng thái (OPEN → RUNNING → PAYMENT_PENDING/FINISHED → PAID/CANCELED), giá hiện tại, highestBidder, winner, thời gian, sniper protection |
+| `Bid` | Một lượt đặt giá: auctionId, bidderId, amount, timestamp, isWinner |
 | `AutoBid` | Cấu hình tự động trả giá: userId, auctionId, maxAmount, increment |
-| `SearchCriteria` | Tiêu chí tìm kiếm: keyword, category, status, price range, sort |
-| `ChatMessage` | Tin nhắn trong phòng đấu giá |
+| `SearchCriteria` | Tiêu chí tìm kiếm: keyword, category, statuses, price range, sort, sellerId |
+| `ChatMessage` | Tin nhắn trong phòng đấu giá (id, auctionId, senderId, senderName, message, timestamp) |
+| `AuctionObservable` | Observable pattern base (sử dụng CopyOnWriteArrayList) |
 
 ### DAO — Truy xuất dữ liệu
 
@@ -381,9 +442,11 @@ Tất cả DAO đều dùng **HikariCP connection pool** (max 10 connections). C
 
 | DAO | Bảng | Method chính |
 |-----|------|-------------|
-| `UserDAO` | `users` | register, login, authenticate, getBalance, addBalance, changePassword, updateAvatarPath |
+| `UserDAO` | `users` | register, login, authenticate, getBalance, addBalance, changePassword, resetPassword, blockUser, updateAvatarPath, getAllUsers, deleteUser |
 | `ItemDAO` | `items` | save, update, findById, findBySellerId, findAll, delete |
-| `AuctionDAO` | `auction_sessions`, `bids` | **placeBid** (synchronized + transaction), startAuction, finishAuction, processPayment, penalizeWinner, stopAuction, getBidHistory, searchAuctions |
+| `AuctionDAO` | `auction_sessions`, `bids` | **placeBid** (synchronized + transaction), startAuction, finishAuction, processPayment, penalizeWinner, stopAuction, getBidHistory, searchAuctions, getAuctionByItemId |
+| `AuctionSessionDAO` | `auction_sessions` | save, update, findById, findByStatus, findBySellerId, findAll |
+| `BidDAO` | `bids` | getHighestBid, markAsWinner, getWinningBidsByUserId |
 | `ChatDAO` | `chat_messages` | saveChatMessage, getChatHistory |
 | `WatchlistDAO` | `watchlist` | addWatchlist, removeWatchlist, getWatchlist |
 
@@ -391,16 +454,27 @@ Tất cả DAO đều dùng **HikariCP connection pool** (max 10 connections). C
 
 Là một **TCP Server** đa luồng. Mỗi client kết nối được xử lý bởi 1 `ClientHandler` (extends Thread riêng).
 
-Cơ chế đồng bộ:
+**Cơ chế đồng bộ:**
 - `AuctionDAO.placeBid()` — **`synchronized`** (chỉ 1 thread đặt giá tại 1 thời điểm)
 - `AuctionDAO.finishAuction()` — **`synchronized`**
 - `AuctionDAO.processPayment()` — **`synchronized`**
 - `AutoBid` list — **`synchronized(autoBidLock)`**
-- Transaction atomic cho INSERT+UPDATE bid
+- Transaction atomic cho INSERT + UPDATE bid
 
-Các scheduler chạy nền:
-- **Penalty timer** (30s): phạt người thắng quá hạn thanh toán 50,000đ
-- **Watchlist timer** (10s): gửi notification khi phiên sắp kết thúc (≤5 phút)
+**Các scheduler chạy nền:**
+- **Penalty timer** (30s interval): phạt người thắng quá hạn thanh toán 50,000đ
+- **Watchlist timer** (10s interval): gửi notification khi phiên sắp kết thúc (≤5 phút)
+
+**Các message type server xử lý (đầy đủ):**
+- Đăng nhập/đăng ký: LOGIN, REGISTER
+- Vật phẩm: CREATE_ITEM, GET_ITEMS, DELETE_ITEM
+- Phiên đấu giá: CREATE_AUCTION, GET_AUCTIONS, GET_AUCTION, START_AUCTION, FINISH_AUCTION, CANCEL_AUCTION
+- Đặt giá: PLACE_BID, PROCESS_PAYMENT, SET_AUTOBID, REMOVE_AUTOBID
+- Tìm kiếm: SEARCH_AUCTIONS, GET_BID_HISTORY
+- Chat: SEND_CHAT_MESSAGE, GET_CHAT_HISTORY
+- Watchlist: ADD_WATCHLIST, REMOVE_WATCHLIST, GET_WATCHLIST
+- Tài khoản: DEPOSIT, CHANGE_PASSWORD, UPDATE_AVATAR
+- **Admin: GET_USERS, DELETE_USER, GET_USER_BID_HISTORY, BLOCK_USER, UNBLOCK_USER**
 
 ---
 
@@ -477,7 +551,7 @@ Cơ chế Second-Price (Vickrey):
       │   PAID   │
       └──────────┘
 
-Nếu quá 1 giờ không thanh toán → phạt 50,000đ → FINISHED
+Nếu quá 1 giờ không thanh toán → phạt 50,000đ → FINISHED.
 
 Có thể hủy (CANCELED) bất kỳ lúc nào trước khi PAID.
 ```
@@ -498,14 +572,17 @@ processPayment()  [synchronized + transaction]
 ## Các tính năng
 
 ### ✅ Đăng ký / Đăng nhập
-- Mật khẩu mã hóa SHA-256 + salt
-- Phân quyền Seller/Bidder
+- Mật khẩu mã hóa SHA-256 + salt (`AuCtIoNaPpSaLt!#`)
+- Phân quyền Seller/Bidder/Admin
 - Số dư mặc định ban đầu: 0$
+- Tự động tạo tài khoản Admin mặc định khi server khởi động
+- Script migration `MigratePasswords` để hash mật khẩu cũ
 
 ### ✅ Quản lý vật phẩm (Item)
 - 9 danh mục: Art, Books, Electronics, Fashion, Furniture, Jewelry, Music, Sports, Vehicle
-- Factory Pattern để tạo Item
+- Factory Pattern (`ItemFactory`) để tạo Item
 - Chỉ seller được tạo, sửa, xóa
+- Xem kho hàng cá nhân
 
 ### ✅ Phiên đấu giá (Auction Session)
 - Trạng thái: OPEN → RUNNING → PAYMENT_PENDING → PAID / FINISHED / CANCELED
@@ -519,8 +596,9 @@ processPayment()  [synchronized + transaction]
 
 ### ✅ AutoBid (Tự động trả giá)
 - Người dùng cài đặt mức giá tối đa
-- Hệ thống tự động đặt giá theo cơ chế Second-Price
+- Hệ thống tự động đặt giá theo cơ chế Second-Price (Vickrey)
 - Tự động gỡ nếu không đủ số dư
+- Engine riêng (`AutoBidEngine`) tách khỏi ClientHandler
 
 ### ✅ Watchlist (Theo dõi)
 - Thêm/xóa phiên yêu thích
@@ -529,19 +607,39 @@ processPayment()  [synchronized + transaction]
 ### ✅ Chat theo phiên
 - Phòng chat riêng cho mỗi phiên đấu giá
 - Lưu lịch sử tin nhắn
+- Hiển thị tên người gửi
 
 ### ✅ Nạp tiền & Thanh toán
 - Nạp tiền vào tài khoản
-- Thanh toán tự động trừ/số dư người thắng, cộng cho người bán
+- Thanh toán tự động trừ số dư người thắng, cộng cho người bán
 - Phạt 50,000đ nếu quá 1 giờ không thanh toán
 
 ### ✅ Tìm kiếm & Lọc
 - Theo từ khóa, danh mục, trạng thái, khoảng giá, người bán
 - Sắp xếp: giá tăng/giảm, mới nhất/cũ nhất, tên
+- Builder pattern (`SearchCriteriaBuilder`) thống nhất giữa các Controller
 
 ### ✅ Thống kê & Lịch sử
 - Xem lịch sử đấu giá đã tham gia
-- Biểu đồ giá theo thời gian
+- Biểu đồ giá theo thời gian (`BidChartViewController`)
+- Thống kê tổng quan (`ThongkePaneController`)
+
+### ✅ Quản trị (Admin)
+- **AdminPanel**: giao diện quản trị riêng (`admin_pane.fxml`)
+- Xem danh sách tất cả người dùng (ID, username, email, role, balance, trạng thái block)
+- Xem danh sách tất cả vật phẩm
+- **Block/Unblock** người dùng
+- **Xóa** người dùng (không xóa được admin)
+- **Xóa** vật phẩm
+- Xem lịch sử đấu giá của từng người dùng
+- 3-layer access control: FXML visibility + event guard + server-side admin check
+
+### ✅ Bảo mật nâng cao
+- Mật khẩu: SHA-256 + salt, không lưu plain text
+- Connection pool: HikariCP, không lộ credentials
+- Admin check phía server: không thể leo thang qua REGISTER
+- Chặn seller tự đặt giá sản phẩm của mình
+- Transaction atomic cho đặt giá và thanh toán
 
 ---
 
@@ -561,7 +659,7 @@ class Message {
 }
 ```
 
-Các loại Message (`Message.Type`):
+### Message types
 
 | Message type | Chiều | Mô tả |
 |-------------|-------|-------|
@@ -576,17 +674,25 @@ Các loại Message (`Message.Type`):
 | `CANCEL_AUCTION` | C→S | Hủy phiên |
 | `GET_ITEMS` | C→S | Lấy danh sách vật phẩm |
 | `CREATE_ITEM` | C→S | Tạo vật phẩm |
+| `DELETE_ITEM` | C→S | Xóa vật phẩm (admin) |
 | `SET_AUTOBID` | C→S | Cài AutoBid |
 | `REMOVE_AUTOBID` | C→S | Gỡ AutoBid |
 | `PROCESS_PAYMENT` | C→S | Thanh toán |
 | `DEPOSIT` | C→S | Nạp tiền |
 | `SEARCH_AUCTIONS` | C→S | Tìm kiếm |
 | `GET_BID_HISTORY` | C→S | Lịch sử giá |
+| `CHANGE_PASSWORD` | C→S | Đổi mật khẩu |
+| `UPDATE_AVATAR` | C→S | Cập nhật avatar |
 | `SEND_CHAT_MESSAGE` | C→S | Gửi chat |
 | `GET_CHAT_HISTORY` | C→S | Lịch sử chat |
 | `ADD_WATCHLIST` | C→S | Thêm theo dõi |
 | `REMOVE_WATCHLIST` | C→S | Bỏ theo dõi |
 | `GET_WATCHLIST` | C→S | DS theo dõi |
+| `GET_USERS` | C→S | DS người dùng (admin) |
+| `DELETE_USER` | C→S | Xóa người dùng (admin) |
+| `GET_USER_BID_HISTORY` | C→S | LS đấu giá user (admin) |
+| `BLOCK_USER` | C→S | Chặn người dùng (admin) |
+| `UNBLOCK_USER` | C→S | Mở chặn (admin) |
 | `NOTIFICATION` | S→C | Thông báo |
 | `SUCCESS` | S→C | Thành công |
 | `ERROR` | S→C | Thất bại |
@@ -595,6 +701,14 @@ Các loại Message (`Message.Type`):
 
 ## Cơ sở dữ liệu
 
+### Tạo database
+
+```bash
+mysql -u root -p < src/main/sql/schema.sql
+```
+
+File `schema.sql` tạo đầy đủ 6 bảng: `users`, `items`, `auction_sessions`, `bids`, `chat_messages`, `watchlist` kèm indexes.
+
 ### Các bảng
 
 ```sql
@@ -602,11 +716,12 @@ Các loại Message (`Message.Type`):
 users (
     id VARCHAR(50) PRIMARY KEY,
     username VARCHAR(100) UNIQUE,
-    password VARCHAR(64),         -- SHA-256 hash
+    password VARCHAR(255),             -- SHA-256 hash (64 hex chars)
     email VARCHAR(255),
     balance DECIMAL(15,2) DEFAULT 0,
     is_seller BOOLEAN DEFAULT TRUE,
     is_bidder BOOLEAN DEFAULT TRUE,
+    is_blocked BOOLEAN DEFAULT FALSE,  -- ⭐ Admin block
     avatar_path VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )
@@ -677,6 +792,17 @@ watchlist (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
 ```
 
+### Indexes
+
+```sql
+CREATE INDEX idx_auction_session_item ON auction_sessions(item_id);
+CREATE INDEX idx_auction_session_status ON auction_sessions(status);
+CREATE INDEX idx_bid_auction ON bids(auction_id);
+CREATE INDEX idx_item_seller ON items(seller_id);
+CREATE INDEX idx_chat_auction ON chat_messages(auction_id);
+CREATE INDEX idx_watchlist_user ON watchlist(user_id);
+```
+
 ---
 
 ## Bảo mật & Xử lý lỗi
@@ -689,10 +815,14 @@ watchlist (
 | **Mất dữ liệu khi crash** | Transaction atomic (`commit`/`rollback`) cho INSERT+UPDATE bid |
 | **Xung đột finishAuction + placeBid** | `synchronized` trên cả 2 method |
 | **Xung đột thanh toán + kết thúc** | `synchronized` trên cả `finishAuction` và `processPayment` |
-| **Password plain text** | SHA-256 + salt |
+| **Password plain text** | SHA-256 + salt (`AuCtIoNaPpSaLt!#`) |
 | **AutoBid inconsistent** | `processAutoBids` chạy trong `synchronized(autoBidLock)` |
 | **NullPointer item bị xóa** | Fallback placeholder item |
 | **Trùng ID auction** | Timestamp + random suffix |
+| **Break-on-ERROR khiến client mất kết nối** | Client handler giữ kết nối sau lỗi, gửi ERROR message thay vì throw exception |
+| **Leo thang ADMIN qua REGISTER** | Server-side: chỉ `seedDefaultAdmin()` tạo được admin, REGISTER luôn tạo user thường |
+| **Cột password VARCHAR(64) bị tràn** | Mở rộng lên VARCHAR(255) để hỗ trợ hash dài |
+| **Null AutoBid data** | Null check trước khi xử lý |
 
 ### Các exception nghiệp vụ
 
@@ -704,6 +834,13 @@ watchlist (
 | `InsufficientBalanceException` | Số dư không đủ |
 | `UnauthorizedException` | Seller tự đặt giá sản phẩm của mình |
 | `ItemNotFoundException` | Vật phẩm không tồn tại |
+
+### Các biện pháp bảo mật khác
+
+- **Admin check 3 lớp**: FXML ẩn button + event guard + server-side `isAdmin()` kiểm tra
+- **Không thể tạo admin qua REGISTER**: chỉ seed tự động khi server khởi động
+- **Chặn seller tự bid**: kiểm tra `senderId != sellerId`
+- **Block user**: user bị block không thể đăng nhập (kiểm tra `is_blocked` trong `authenticate`)
 
 ---
 
@@ -727,16 +864,22 @@ Toàn bộ test chạy được qua Maven (không cần DB cho unit test, cần 
 
 ```bash
 # Chỉ chạy unit test (không cần DB)
-mvn test -Dtest='!NewFeaturesTest'
+./mvnw test -Dtest='!NewFeaturesTest'
 
 # Chạy tất cả (cần MySQL)
-mvn test
+./mvnw test
 ```
 
 Với code coverage (JaCoCo):
 ```bash
-mvn verify
+./mvnw verify
 # Báo cáo HTML tại target/site/jacoco/index.html
+```
+
+Kiểm tra lỗ hổng bảo mật dependencies (opt-in):
+```bash
+./mvnw verify -P vulnerability-check
+# Báo cáo HTML tại target/dependency-check-report.html
 ```
 
 ---
@@ -755,11 +898,12 @@ Hệ thống dùng 3 cơ chế đồng bộ chính:
 
 | Pattern | Vị trí |
 |---------|--------|
-| **Singleton** | `NetworkService`, `AuctionManager`, `DatabaseUtil` (HikariCP datasource) |
-| **Factory** | `ItemFactory`, `UserFactory` |
-| **Observer** | `AuctionObserver`, `AuctionSession.notify*()` |
+| **Singleton** | `NetworkService`, `AuctionManager`, `DatabaseUtil` (HikCP datasource) |
+| **Factory** | `ItemFactory`, `UserFactory`, `MessageFactory` |
+| **Observer** | `AuctionObserver`, `AuctionObservable`, `AuctionSession.notify*()` |
 | **DAO** | `*DAO` classes |
-| **Template Method** | `Item.getSpecificInfo()` (abstract) |
+| **Template Method** | `Entity.getSpecificInfo()` (abstract), `Item.getSpecificInfo()` |
+| **Builder** | `SearchCriteriaBuilder` |
 
 ### Hạn chế & Cải tiến có thể
 
@@ -768,3 +912,5 @@ Hệ thống dùng 3 cơ chế đồng bộ chính:
 - **AutoBid loop**: Giới hạn 100 iterations, có thể thêm cơ chế exponential backoff
 - **Penalty timer**: 1 giờ hardcode, có thể đưa vào config
 - **In-memory mode**: `AuctionManager` singleton chỉ dùng cho test, không đồng bộ với DB
+- **Admin audit log**: Chưa có log hành động admin
+- **Real-time push**: Hiện tại client phải gửi request để nhận notification, có thể nâng lên WebSocket hoặc Server-Sent Events

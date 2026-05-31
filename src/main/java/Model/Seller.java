@@ -20,7 +20,6 @@ public class Seller extends User {
         super(id, username, password);
     }
 
-    @Override
     public String getSpecificInfo() {
         return "Seller - can list items for auction";
     }

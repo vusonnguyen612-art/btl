@@ -21,7 +21,7 @@ import Network.NetworkService;
 import Model.User;
 
 /** Controller cho màn hình đăng nhập và đăng ký (FXML: login.fxml, signin.fxml). */
-public class logincontroller {
+public class LoginController {
     @FXML
     private TextField loginUsernameField;
 

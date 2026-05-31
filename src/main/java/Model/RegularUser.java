@@ -24,7 +24,6 @@ public class RegularUser extends User {
         return "BIDDER_SELLER";
     }
 
-    @Override
     public String getSpecificInfo() {
         return "Regular user - both bidder and seller";
     }
