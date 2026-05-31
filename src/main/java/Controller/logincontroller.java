@@ -135,7 +135,7 @@ public class logincontroller {
     @FXML
     /** Chuyển sang form đăng ký. */
     private void ComeSignup(ActionEvent event) {
-        switchScene(event, "/signin.fxml", 450, 605);
+        switchScene(event, "/signin.fxml", 450, 660);
     }
 
     @FXML
