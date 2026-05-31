@@ -1,5 +1,7 @@
 package Controller;
 
+import Controller.utils.FormatUtils;
+import Controller.utils.UIUtils;
 import Model.AuctionSession;
 import DAO.AuctionDAO;
 import javafx.animation.KeyFrame;
@@ -7,17 +9,9 @@ import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
-
-import java.io.File;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.Locale;
 
 /** Controller cho card phiên đấu giá: hiển thị thông tin, nút Vào phòng / Bắt đầu, countdown. */
 public class    AuctionCardController {
@@ -38,13 +32,7 @@ public class    AuctionCardController {
     private Label timeRemainingLabel;
     private Timeline timeUpdateTimeline;
 
-    private static final DecimalFormat moneyFormat;
 
-    static {
-        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
-        symbols.setGroupingSeparator(',');
-        moneyFormat = new DecimalFormat("#,###", symbols);
-    }
 
     /** Gán dữ liệu phiên (3 tham số). */
     public void setAuction(AuctionSession auction, boolean isRunning, boolean canStart) {
@@ -60,6 +48,7 @@ public class    AuctionCardController {
         updateCard(isRunning, canStart, isPaymentPending);
     }
 
+    /** Dừng bộ đếm thời gian countdown nếu đang chạy. */
     private void stopTimeUpdate() {
         if (timeUpdateTimeline != null) {
             timeUpdateTimeline.stop();
@@ -67,6 +56,7 @@ public class    AuctionCardController {
         }
     }
 
+    /** Khởi chạy bộ đếm thời gian countdown, cập nhật nhãn thời gian mỗi giây. */
     private void startTimeUpdate() {
         stopTimeUpdate();
         timeUpdateTimeline = new Timeline();
@@ -77,9 +67,10 @@ public class    AuctionCardController {
         timeUpdateTimeline.play();
     }
 
+    /** Cập nhật nội dung nhãn hiển thị thời gian còn lại của phiên đấu giá. */
     private void updateTimeLabel() {
         if (timeRemainingLabel == null || auction == null) return;
-        timeRemainingLabel.setText(getTimeRemaining(auction));
+        timeRemainingLabel.setText(FormatUtils.getTimeRemaining(auction));
     }
 
     /** Đăng ký callback khi nhấn "Vào phòng". */
@@ -97,12 +88,13 @@ public class    AuctionCardController {
         this.onEditAuction = callback;
     }
 
+    /** Cập nhật toàn bộ giao diện card: tên vật phẩm, giá, trạng thái, nút thao tác và countdown. */
     private void updateCard(boolean isRunning, boolean canStart, boolean isPaymentPending) {
         String itemName = auction.getItem() != null ? auction.getItem().getName() : "Unknown";
         nameLabel.setText(itemName);
         updateItemImage();
 
-        priceLabel.setText("Giá hiện tại: " + moneyFormat.format(auction.getCurrentPrice()) + " $");
+        priceLabel.setText("Giá hiện tại: " + FormatUtils.formatMoney(auction.getCurrentPrice()) + " $");
 
         String statusText;
         String statusColor;
@@ -128,7 +120,7 @@ public class    AuctionCardController {
         statusLabel.setText(statusText);
         statusLabel.setStyle("-fx-text-fill: " + statusColor + "; -fx-font-size: 12px; -fx-font-weight: bold;");
 
-        String durationText = formatDuration(auction.getDurationMinutes());
+        String durationText = FormatUtils.formatDuration(auction.getDurationMinutes());
         timeInfoLabel.setText("Thời gian: " + durationText);
 
         actionBox.getChildren().clear();
@@ -180,67 +172,13 @@ public class    AuctionCardController {
         }
     }
 
+    /** Tải và hiển thị hình ảnh vật phẩm trong phiên đấu giá lên ImageView. */
     private void updateItemImage() {
-        if (auction.getItem() == null || auction.getItem().getImagePath() == null || auction.getItem().getImagePath().isBlank()) {
-            itemImageView.setImage(null);
-            itemImageView.setVisible(false);
-            itemImageView.setManaged(false);
+        if (auction.getItem() == null) {
+            UIUtils.resolveAndSetImage(itemImageView, null);
             return;
         }
-
-        String imagePath = auction.getItem().getImagePath();
-        String imageUrl;
-        File imageFile = new File(imagePath);
-        if (imageFile.exists()) {
-            imageUrl = imageFile.toURI().toString();
-        } else if (imagePath.startsWith("file:") || imagePath.startsWith("http:") || imagePath.startsWith("https:")) {
-            imageUrl = imagePath;
-        } else {
-            itemImageView.setImage(null);
-            itemImageView.setVisible(false);
-            itemImageView.setManaged(false);
-            return;
-        }
-
-        itemImageView.setImage(new Image(imageUrl, true));
-        itemImageView.setVisible(true);
-        itemImageView.setManaged(true);
-    }
-
-    private String formatDuration(long minutes) {
-        if (minutes >= 60) {
-            long hours = minutes / 60;
-            long mins = minutes % 60;
-            if (mins > 0) {
-                return hours + "h " + mins + "p";
-            }
-            return hours + "h";
-        }
-        return minutes + " phút";
-    }
-
-    private String getTimeRemaining(AuctionSession auction) {
-        if (auction.getEndTime() == null) {
-            return formatDuration(auction.getDurationMinutes());
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        if (now.isAfter(auction.getEndTime())) {
-            return "Đã kết thúc";
-        }
-
-        long totalSeconds = java.time.Duration.between(now, auction.getEndTime()).getSeconds();
-        long hours = totalSeconds / 3600;
-        long minutes = (totalSeconds % 3600) / 60;
-        long seconds = totalSeconds % 60;
-
-        if (hours > 0) {
-            return String.format("Còn %02d:%02d:%02d", hours, minutes, seconds);
-        } else if (minutes > 0) {
-            return String.format("Còn %02d:%02d", minutes, seconds);
-        } else {
-            return String.format("Còn %ds", seconds);
-        }
+        UIUtils.resolveAndSetImage(itemImageView, auction.getItem().getImagePath());
     }
 
     /** @return root VBox của card */

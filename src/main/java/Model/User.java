@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 
 /**
  * Lớp đại diện cho người dùng trong hệ thống.
- * Mặc định vừa là seller vừa là bidder, số dư ban đầu 300,000.
+ * Mặc định vừa là seller vừa là bidder, số dư ban đầu 0.
  */
 public class User implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -15,6 +15,7 @@ public class User implements Serializable {
     private String email;
     private boolean isSeller;
     private boolean isBidder;
+    private boolean isBlocked;
     private BigDecimal balance;
     private String avatarPath;
 
@@ -27,7 +28,7 @@ public class User implements Serializable {
         this.password = password;
         this.isSeller = true;
         this.isBidder = true;
-        this.balance = new BigDecimal("300000");
+        this.balance = BigDecimal.ZERO;
     }
 
     public BigDecimal getBalance() {
@@ -80,8 +81,24 @@ public class User implements Serializable {
         return isSeller;
     }
 
+    public void setSeller(boolean seller) {
+        isSeller = seller;
+    }
+
     public boolean isBidder() {
         return isBidder;
+    }
+
+    public void setBidder(boolean bidder) {
+        isBidder = bidder;
+    }
+
+    public boolean isBlocked() {
+        return isBlocked;
+    }
+
+    public void setBlocked(boolean blocked) {
+        isBlocked = blocked;
     }
 
     public String getAvatarPath() {

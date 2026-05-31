@@ -1,8 +1,9 @@
 package Controller;
 
+import Controller.utils.FormatUtils;
+import Controller.utils.ResponseUtils;
 import Model.AuctionSession;
 import Model.Bid;
-import Network.Message;
 import Network.NetworkService;
 
 import javafx.fxml.FXML;
@@ -15,14 +16,10 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
-import java.math.BigDecimal;
-import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
-import java.util.Locale;
 
 public class BidChartViewController {
 
@@ -36,19 +33,13 @@ public class BidChartViewController {
     private NetworkService networkService = NetworkService.getInstance();
     private AuctionSession auction;
 
-    private static final DecimalFormat moneyFormat;
-
-    static {
-        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
-        symbols.setGroupingSeparator(',');
-        moneyFormat = new DecimalFormat("#,###", symbols);
-    }
-
+    /** Gán phiên đấu giá cần hiển thị biểu đồ và tải dữ liệu liên quan. */
     public void setAuction(AuctionSession auction) {
         this.auction = auction;
         loadData();
     }
 
+    /** Tải dữ liệu phiên đấu giá từ server: thông tin phiên, danh sách đặt giá, rồi xây dựng biểu đồ và danh sách bid. */
     private void loadData() {
         if (auction == null) return;
 
@@ -56,19 +47,18 @@ public class BidChartViewController {
             auctionNameLabel.setText(auction.getItem().getName());
         }
         statusLabel.setText("Trạng thái: " + translateStatus(auction.getStatus().name()));
-        priceLabel.setText("Giá cuối: " + formatMoney(auction.getCurrentPrice()) + " $");
+        priceLabel.setText("Giá cuối: " + FormatUtils.formatMoney(auction.getCurrentPrice()) + " $");
         if (auction.getEndTime() != null) {
             endTimeLabel.setText("Kết thúc: " + auction.getEndTime().format(DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy")));
         }
 
-        Message response = networkService.getBidHistory(auction.getId());
-        List<Bid> bids = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
-                ? (List<Bid>) response.getData() : List.of();
+        List<Bid> bids = ResponseUtils.extractList(networkService.getBidHistory(auction.getId()));
 
         buildChart(bids);
         buildBidList(bids);
     }
 
+    /** Xây dựng biểu đồ đường thể hiện lịch sử giá đặt theo thời gian. */
     private void buildChart(List<Bid> bids) {
         NumberAxis xAxis = new NumberAxis();
         xAxis.setLabel("Thời gian (giây)");
@@ -129,6 +119,7 @@ public class BidChartViewController {
         }
     }
 
+    /** Xây dựng danh sách hiển thị chi tiết từng lượt đặt giá (thời gian, số tiền, người đặt). */
     private void buildBidList(List<Bid> bids) {
         bidList.getChildren().clear();
 
@@ -144,7 +135,7 @@ public class BidChartViewController {
                     ? bid.getTimestamp().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
                     : "--:--";
             String bidderStr = bid.getBidderUsername() != null ? bid.getBidderUsername() : bid.getBidderId();
-            String text = timeStr + "  |  " + formatMoney(bid.getAmount()) + " $  |  " + bidderStr;
+            String text = timeStr + "  |  " + FormatUtils.formatMoney(bid.getAmount()) + " $  |  " + bidderStr;
 
             Label bidLabel = new Label(text);
             bidLabel.setStyle("-fx-text-fill: #eacd8f; -fx-font-size: 12px; -fx-background-color: #111111; -fx-padding: 8 12; -fx-background-radius: 5;");
@@ -153,6 +144,7 @@ public class BidChartViewController {
         }
     }
 
+    /** Dịch trạng thái phiên đấu giá từ tiếng Anh sang tiếng Việt. */
     private String translateStatus(String status) {
         return switch (status) {
             case "FINISHED" -> "Đã kết thúc";
@@ -165,10 +157,7 @@ public class BidChartViewController {
         };
     }
 
-    private String formatMoney(double value) {
-        return moneyFormat.format(new BigDecimal(String.valueOf(value)));
-    }
-
+    /** Đóng cửa sổ popup hiển thị biểu đồ. */
     @FXML
     private void close() {
         ((Stage) auctionNameLabel.getScene().getWindow()).close();

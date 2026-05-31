@@ -21,17 +21,20 @@ public class NaptienPaneController implements UserController.LinkedController {
     private UserController userController;
     private NetworkService networkService = NetworkService.getInstance();
 
+    /** Gán UserController liên kết để truy cập thông tin người dùng và các phương thức hỗ trợ giao diện. */
     @Override
     public void setUserController(UserController uc) {
         this.userController = uc;
     }
 
+    /** Cập nhật hiển thị số dư tài khoản trên giao diện nạp tiền. */
     public void updateBalance(BigDecimal balance) {
         if (Sodutaikhoan != null) {
             Sodutaikhoan.setText(userController.formatMoney(balance));
         }
     }
 
+    /** Xử lý sự kiện nạp tiền: kiểm tra dữ liệu đầu vào, gửi yêu cầu nạp tiền lên server, cập nhật số dư nếu thành công. */
     @FXML
     private void naptien(ActionEvent event) {
         try {
@@ -73,6 +76,7 @@ public class NaptienPaneController implements UserController.LinkedController {
         }
     }
 
+    /** Phân tích và chuyển đổi chuỗi tiền tệ thành BigDecimal, hỗ trợ định dạng có dấu phẩy, khoảng trắng, ký hiệu $ và ₫. */
     private BigDecimal parseMoney(String rawText) {
         if (rawText == null || rawText.trim().isEmpty()) {
             throw new IllegalArgumentException("Vui lòng nhập số tiền cần nạp!");

@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(100),
     is_seller BOOLEAN DEFAULT TRUE,
     is_bidder BOOLEAN DEFAULT TRUE,
-    balance DECIMAL(15,2) DEFAULT 300000,
+    balance DECIMAL(15,2) DEFAULT 0,
     avatar_path VARCHAR(255),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

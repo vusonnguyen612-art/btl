@@ -1,5 +1,6 @@
 package Controller;
 
+import Controller.utils.ResponseUtils;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Cursor;
@@ -32,15 +33,18 @@ public class LichsudaugiaPaneController implements UserController.LinkedControll
     private UserController userController;
     private NetworkService networkService = NetworkService.getInstance();
 
+    /** Gán UserController liên kết để truy cập thông tin người dùng và các phương thức hỗ trợ giao diện. */
     @Override
     public void setUserController(UserController uc) {
         this.userController = uc;
     }
 
+    /** Thiết lập dữ liệu người dùng và tải lịch sử đấu giá. */
     public void setUserData(User user) {
         loadBidHistory();
     }
 
+    /** Tải lịch sử đấu giá của người dùng từ server và hiển thị danh sách các phiên đã tham gia. */
     public void loadBidHistory() {
         if (bidHistoryList == null) return;
         bidHistoryList.getChildren().clear();
@@ -48,8 +52,7 @@ public class LichsudaugiaPaneController implements UserController.LinkedControll
         if (userController == null || userController.getCurrentUser() == null) return;
 
         Message response = networkService.getUserAuctions(userController.getCurrentUser().getId());
-        List<AuctionSession> auctions = (response.getType() == Message.Type.SUCCESS && response.getData() instanceof List)
-                ? (List<AuctionSession>) response.getData() : List.of();
+        List<AuctionSession> auctions = ResponseUtils.extractList(response);
 
         if (auctions.isEmpty()) {
             Label emptyLabel = new Label("Chưa có lịch sử đấu giá");
@@ -64,6 +67,7 @@ public class LichsudaugiaPaneController implements UserController.LinkedControll
         }
     }
 
+    /** Tạo card giao diện hiển thị thông tin một phiên đấu giá đã kết thúc (tên vật phẩm, trạng thái, giá, thời gian). */
     private HBox createFinishedAuctionCard(AuctionSession auction) {
         HBox card = new HBox(15);
         card.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
@@ -105,6 +109,7 @@ public class LichsudaugiaPaneController implements UserController.LinkedControll
         return card;
     }
 
+    /** Mở popup hiển thị biểu đồ và lịch sử chi tiết các lượt đặt giá của phiên đấu giá được chọn. */
     private void openBidChartPopup(AuctionSession auction) {
         try {
             URL resourceUrl = getClass().getResource("/bid_chart_view.fxml");

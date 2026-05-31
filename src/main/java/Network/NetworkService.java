@@ -24,6 +24,12 @@ public class NetworkService {
     private static final int READ_TIMEOUT = 10000;
     private Consumer<List<Message>> onNotifications;
 
+    /**
+     * Constructor riêng tư cho singleton.
+     *
+     * @param serverAddress Địa chỉ máy chủ auction server.
+     * @param port          Cổng kết nối tới máy chủ.
+     */
     private NetworkService(String serverAddress, int port) {
         this.serverAddress = serverAddress;
         this.port = port;
@@ -77,51 +83,70 @@ public class NetworkService {
         }
     }
 
-    /** Gửi message và nhận response. Tự động xử lý notification nếu có. */
+    /** Gửi message và nhận response. Tự động reconnect nếu mất kết nối. */
     public Message sendMessage(Message message) {
         if (!isConnected()) {
-            if (message.getType() != Message.Type.LOGIN && message.getType() != Message.Type.REGISTER) {
-                System.out.println("[Auto-Reconnect] Socket offline. Attempting to reconnect...");
-                boolean reconnected = connect();
-                if (reconnected) {
-                    if (currentUser != null && lastUsername != null && lastPassword != null) {
-                        System.out.println("[Auto-Reconnect] Connection re-established. Attempting auto-relogin...");
-                        Message reloginMsg = new Message(Message.Type.LOGIN);
-                        reloginMsg.setData(lastUsername);
-                        reloginMsg.setContent(lastPassword);
-                        try {
-                            output.writeObject(reloginMsg);
-                            output.flush();
-                            Message reloginRes = (Message) input.readObject();
-                            if (reloginRes.getType() == Message.Type.SUCCESS) {
-                                System.out.println("[Auto-Reconnect] Auto-relogin successful.");
-                                if (reloginRes.getData() != null) {
-                                    currentUser = (User) reloginRes.getData();
-                                }
-                            } else {
-                                System.err.println("[Auto-Reconnect] Auto-relogin failed: " + reloginRes.getContent());
-                                closeQuietly();
-                                Message error = new Message(Message.Type.ERROR);
-                                error.setContent("Kết nối lại thành công nhưng không thể tự động đăng nhập: " + reloginRes.getContent());
-                                return error;
-                            }
-                        } catch (Exception e) {
-                            System.err.println("[Auto-Reconnect] Exception during auto-relogin: " + e.getMessage());
-                            closeQuietly();
-                            Message error = new Message(Message.Type.ERROR);
-                            error.setContent("Không thể đăng nhập lại sau khi kết nối lại: " + e.getMessage());
-                            return error;
-                        }
-                    }
-                } else {
-                    System.err.println("[Auto-Reconnect] Reconnection failed.");
-                    Message error = new Message(Message.Type.ERROR);
-                    error.setContent("Mất kết nối tới máy chủ. Vui lòng kiểm tra lại kết nối mạng.");
-                    return error;
-                }
-            }
+            Message reconnectResult = attemptReconnect();
+            if (reconnectResult != null) return reconnectResult;
         }
 
+        return doSendMessage(message);
+    }
+
+    /**
+     * Thử kết nối lại tự động khi socket bị ngắt.
+     * Nếu kết nối thành công và có thông tin đăng nhập trước đó,
+     * phương thức sẽ tự động gửi yêu cầu đăng nhập lại.
+     *
+     * @return Message lỗi nếu reconnect thất bại hoặc không thể tự động đăng nhập lại,
+     *         null nếu reconnect và relogin thành công.
+     */
+    private Message attemptReconnect() {
+        System.out.println("[Auto-Reconnect] Socket offline. Attempting to reconnect...");
+        if (!connect()) {
+            System.err.println("[Auto-Reconnect] Reconnection failed.");
+            return MessageFactory.error("Mất kết nối tới máy chủ. Vui lòng kiểm tra lại kết nối mạng.");
+        }
+
+        if (currentUser == null || lastUsername == null || lastPassword == null) {
+            return null;
+        }
+
+        System.out.println("[Auto-Reconnect] Connection re-established. Attempting auto-relogin...");
+        Message reloginMsg = new Message(Message.Type.LOGIN);
+        reloginMsg.setData(lastUsername);
+        reloginMsg.setContent(lastPassword);
+        try {
+            output.writeObject(reloginMsg);
+            output.flush();
+            Message reloginRes = (Message) input.readObject();
+            if (reloginRes.getType() == Message.Type.SUCCESS) {
+                System.out.println("[Auto-Reconnect] Auto-relogin successful.");
+                if (reloginRes.getData() != null) {
+                    currentUser = (User) reloginRes.getData();
+                }
+                return null;
+            } else {
+                System.err.println("[Auto-Reconnect] Auto-relogin failed: " + reloginRes.getContent());
+                closeQuietly();
+                return MessageFactory.error("Kết nối lại thành công nhưng không thể tự động đăng nhập: " + reloginRes.getContent());
+            }
+        } catch (Exception e) {
+            System.err.println("[Auto-Reconnect] Exception during auto-relogin: " + e.getMessage());
+            closeQuietly();
+            return MessageFactory.error("Không thể đăng nhập lại sau khi kết nối lại: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Gửi message thực tế qua ObjectOutputStream và đọc response từ server.
+     * Xử lý các thông báo (notifications) nếu có trong response.
+     * Xử lý timeout và lỗi kết nối, tự động đóng kết nối khi gặp lỗi.
+     *
+     * @param message Message cần gửi đi.
+     * @return Message phản hồi từ server, hoặc Message lỗi nếu gặp sự cố.
+     */
+    private Message doSendMessage(Message message) {
         try {
             output.writeObject(message);
             output.flush();
@@ -133,15 +158,11 @@ public class NetworkService {
         } catch (SocketTimeoutException e) {
             System.err.println("Send message timeout: " + e.getMessage());
             closeQuietly();
-            Message error = new Message(Message.Type.ERROR);
-            error.setContent("Kết nối đến server bị timeout, vui lòng thử lại.");
-            return error;
+            return MessageFactory.error("Kết nối đến server bị timeout, vui lòng thử lại.");
         } catch (IOException | ClassNotFoundException e) {
             System.err.println("Send message error: " + e.getMessage());
             closeQuietly();
-            Message error = new Message(Message.Type.ERROR);
-            error.setContent("Lỗi kết nối: " + e.getMessage());
-            return error;
+            return MessageFactory.error("Lỗi kết nối: " + e.getMessage());
         }
     }
 
@@ -163,11 +184,8 @@ public class NetworkService {
         this.onNotifications = listener;
     }
 
-    /** Gửi yêu cầu đăng nhập, tự động reconnect nếu mất kết nối. */
+    /** Gửi yêu cầu đăng nhập. */
     public Message login(String username, String password) {
-        if (!isConnected()) {
-            connect();
-        }
         Message message = new Message(Message.Type.LOGIN);
         message.setData(username);
         message.setContent(password);
@@ -180,17 +198,22 @@ public class NetworkService {
         return response;
     }
 
-    /** Gửi yêu cầu đăng ký tài khoản mới, tự động reconnect nếu mất kết nối. */
-    public Message register(String username, String password, String email, String phone) {
-        if (!isConnected()) {
-            connect();
+    /** Gửi yêu cầu đăng ký tài khoản mới. */
+    public Message register(String username, String password, String email, String phone, String role) {
+        if (role == null || role.isBlank()) {
+            role = "BIDDER_SELLER";
         }
         User user = new User(null, username, password);
         user.setEmail(email);
         Message message = new Message(Message.Type.REGISTER);
         message.setData(user);
-        message.setContent(password);
+        message.setContent(password + "|" + role);
         return sendMessage(message);
+    }
+
+    /** Gửi yêu cầu đăng ký (overload, mặc định BIDDER_SELLER). */
+    public Message register(String username, String password, String email, String phone) {
+        return register(username, password, email, phone, "BIDDER_SELLER");
     }
 
     /** Lấy danh sách tất cả phiên đấu giá. */
@@ -310,13 +333,6 @@ public class NetworkService {
         return sendMessage(message);
     }
 
-    /** @return người dùng hiện tại */
-    public Message getUserBidHistory(String userId) {
-        Message message = new Message(Message.Type.GET_USER_BID_HISTORY);
-        message.setSenderId(userId);
-        return sendMessage(message);
-    }
-
     /** Gửi yêu cầu cập nhật ảnh đại diện. */
     public Message updateAvatar(String avatarPath) {
         Message message = new Message(Message.Type.UPDATE_AVATAR);
@@ -328,18 +344,8 @@ public class NetworkService {
         return response;
     }
 
-    /** Lấy đường dẫn ảnh đại diện từ server. */
-    public Message getAvatarPath() {
-        return sendMessage(new Message(Message.Type.GET_AVATAR));
-    }
-
     public User getCurrentUser() {
         return currentUser;
-    }
-
-    /** Ghi đè người dùng hiện tại. */
-    public void setCurrentUser(User user) {
-        this.currentUser = user;
     }
 
     /**
@@ -399,6 +405,40 @@ public class NetworkService {
      */
     public Message getWatchlist() {
         Message msg = new Message(Message.Type.GET_WATCHLIST);
+        return sendMessage(msg);
+    }
+
+    /** Đổi mật khẩu. */
+    public Message changePassword(String oldPassword, String newPassword) {
+        Message message = new Message(Message.Type.CHANGE_PASSWORD);
+        message.setContent(oldPassword + "|" + newPassword);
+        return sendMessage(message);
+    }
+
+    /** Lấy danh sách tất cả người dùng. */
+    public Message getUsers() {
+        return sendMessage(new Message(Message.Type.GET_USERS));
+    }
+
+    /** Xóa người dùng theo ID. */
+    public Message deleteUser(String userId) {
+        Message msg = new Message(Message.Type.DELETE_USER);
+        msg.setContent(userId);
+        return sendMessage(msg);
+    }
+
+    /** Chặn/mở chặn người dùng. */
+    public Message blockUser(String userId, boolean blocked) {
+        Message msg = new Message(Message.Type.BLOCK_USER);
+        msg.setData(blocked);
+        msg.setContent(userId);
+        return sendMessage(msg);
+    }
+
+    /** Xóa vật phẩm theo ID. */
+    public Message deleteItem(String itemId) {
+        Message msg = new Message(Message.Type.DELETE_ITEM);
+        msg.setContent(itemId);
         return sendMessage(msg);
     }
 
