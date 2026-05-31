@@ -3,16 +3,15 @@ package Factory;
 import Model.User;
 import Model.Admin;
 import DAO.DatabaseUtil;
+
 import java.sql.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-/** Factory tạo User mới và validate mật khẩu. */
 public class UserFactory {
     private static final int MIN_PASSWORD_LENGTH = 6;
     private static final AtomicInteger userCounter = new AtomicInteger(0);
     private static boolean initialized = false;
 
-    /** Khởi tạo counter từ DB để tránh trùng ID khi server restart. */
     public static synchronized void initializeCounter() {
         if (initialized) return;
         long maxId = 0;
@@ -38,12 +37,15 @@ public class UserFactory {
         System.out.println("UserFactory counter initialized to: " + maxId);
     }
 
-    /** Kiểm tra lỗi mật khẩu. */
     public static String getPasswordError(String password) {
-        if (password == null || password.isEmpty()) return "Mật khẩu không được để trống.";
-        if (password.length() < MIN_PASSWORD_LENGTH) return "Mật khẩu phải có ít nhất 6 ký tự.";
-        if (containsWhitespace(password)) return "Mật khẩu không được chứa khoảng trắng.";
+        if (password == null || password.isEmpty()) return "Password cannot be empty";
+        if (password.length() < MIN_PASSWORD_LENGTH) return "Password must be at least 6 characters";
+        if (containsWhitespace(password)) return "Password cannot contain whitespace";
         return null;
+    }
+
+    public static boolean isValidPassword(String password) {
+        return getPasswordError(password) == null;
     }
 
     private static boolean containsWhitespace(String value) {
@@ -53,14 +55,12 @@ public class UserFactory {
         return false;
     }
 
-    /** Tạo user mới với ID "USRxxxx". */
     public static User createUser(String username, String password) {
         if (!initialized) initializeCounter();
         String id = "USR" + String.format("%04d", userCounter.incrementAndGet());
         return new User(id, username, password);
     }
 
-    /** Tạo admin mới với ID "ADMxxxx". */
     public static Admin createAdmin(String username, String password) {
         if (!initialized) initializeCounter();
         String id = "ADM" + String.format("%04d", userCounter.incrementAndGet());

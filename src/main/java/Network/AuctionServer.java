@@ -93,6 +93,7 @@ public class AuctionServer {
     /** Khởi động server, lắng nghe kết nối và chạy penalty scheduler 30 giây. */
     public void start() throws IOException {
         initializeDatabaseTables();
+        seedDefaultAdmin();
         serverSocket = new ServerSocket(port);
         running = true;
         System.out.println("Server started on port " + port);
@@ -109,6 +110,34 @@ public class AuctionServer {
                     System.err.println("Error accepting client: " + e.getMessage());
                 }
             }
+        }
+    }
+
+    /** Tạo/reset tài khoản admin mặc định với password đã hash đúng. */
+    private void seedDefaultAdmin() {
+        String adminUsername = "admin";
+        String adminPassword = "admin123";
+
+        String checkSql = "SELECT id FROM users WHERE BINARY username = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(checkSql)) {
+            stmt.setString(1, adminUsername);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    userDAO.resetPassword(adminUsername, adminPassword);
+                    System.out.println("Admin password reset. username=" + adminUsername + ", password=" + adminPassword);
+                } else {
+                    Admin admin = UserFactory.createAdmin(adminUsername, adminPassword);
+                    admin.setEmail("admin@auction.com");
+                    if (userDAO.register(admin)) {
+                        System.out.println("Admin account created. username=" + adminUsername + ", password=" + adminPassword);
+                    } else {
+                        System.err.println("Failed to create admin account.");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error seeding admin account: " + e.getMessage());
         }
     }
 
@@ -330,7 +359,18 @@ public class AuctionServer {
 
         /** Xử lý đăng ký: validate password, kiểm tra trùng username, tạo user, lưu DB. */
         private Message handleRegister(Message message) {
-            String passwordError = UserFactory.getPasswordError(message.getContent());
+            String content = message.getContent();
+            int separatorIndex = content.lastIndexOf('|');
+            String password;
+            String role = "BIDDER_SELLER";
+            if (separatorIndex > 0 && separatorIndex < content.length() - 1) {
+                password = content.substring(0, separatorIndex);
+                role = content.substring(separatorIndex + 1);
+            } else {
+                password = content;
+            }
+
+            String passwordError = UserFactory.getPasswordError(password);
             if (passwordError != null) {
                 return createErrorMessage(passwordError);
             }
@@ -338,7 +378,6 @@ public class AuctionServer {
             User userData = (User) message.getData();
             String username = userData.getUsername();
             String email = userData.getEmail();
-            String password = message.getContent();
 
             if (userDAO.existsByUsername(username)) {
                 return createErrorMessage("TÃªn Ä‘Äƒng nháº­p Ä‘Ã£ tá»“n táº¡i.");
@@ -346,6 +385,7 @@ public class AuctionServer {
 
             User newUser = UserFactory.createUser(username, password);
             newUser.setEmail(email);
+            applyRole(newUser, role);
 
             boolean registered = userDAO.register(newUser);
             if (!registered) {
@@ -355,6 +395,23 @@ public class AuctionServer {
             Message response = createSuccessMessage("Registration successful");
             response.setData(newUser);
             return response;
+        }
+
+        private void applyRole(User user, String role) {
+            switch (role) {
+                case "BIDDER":
+                    user.setSeller(false);
+                    user.setBidder(true);
+                    break;
+                case "SELLER":
+                    user.setSeller(true);
+                    user.setBidder(false);
+                    break;
+                default:
+                    user.setSeller(true);
+                    user.setBidder(true);
+                    break;
+            }
         }
 
         /** Lấy danh sách tất cả phiên đấu giá. */

@@ -283,6 +283,21 @@ public class UserDAO {
         }
     }
 
+    /** Reset mật khẩu về password mới (không cần mật khẩu cũ). */
+    public boolean resetPassword(String username, String newPassword) {
+        String hashed = hashPassword(newPassword);
+        String sql = "UPDATE users SET password = ? WHERE BINARY username = ?";
+        try (Connection conn = DatabaseUtil.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, hashed);
+            stmt.setString(2, username);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     /** Chặn/mở chặn người dùng. */
     public boolean blockUser(String userId, boolean blocked) {
         String sql = "UPDATE users SET is_blocked = ? WHERE id = ? AND id NOT LIKE 'ADM%'";

@@ -1,6 +1,7 @@
 package Model;
 
 import java.io.Serializable;
+import java.util.Locale;
 
 /**
  * Lớp trừu tượng đại diện cho một vật phẩm đấu giá.
@@ -84,6 +85,6 @@ public abstract class Item implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("[%s] %s - %s - Start: $%.2f", id, name, description, startPrice);
+        return String.format(Locale.US, "[%s] %s - %s - Start: $%.2f", id, name, description, startPrice);
     }
 }

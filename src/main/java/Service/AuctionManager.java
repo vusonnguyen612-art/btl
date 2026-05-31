@@ -10,11 +10,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-/** Quản lý toàn bộ dữ liệu hệ thống (users, items, auctions) in-memory với ReadWriteLock. Singleton. */
 public class AuctionManager implements Serializable {
     private static final long serialVersionUID = 1L;
     private static AuctionManager instance;
-    
+
     private final Map<String, User> users;
     private final Map<String, Item> items;
     private final Map<String, AuctionSession> auctions;
@@ -23,6 +22,10 @@ public class AuctionManager implements Serializable {
     private int auctionCounter;
     private static final String DATA_FILE = "auction_data.ser";
 
+    private transient UserService userService;
+    private transient ItemService itemService;
+    private transient DataService dataService;
+
     private AuctionManager() {
         this.users = new ConcurrentHashMap<>();
         this.items = new ConcurrentHashMap<>();
@@ -30,9 +33,15 @@ public class AuctionManager implements Serializable {
         this.globalObservers = new CopyOnWriteArrayList<>();
         this.lock = new ReentrantReadWriteLock();
         this.auctionCounter = 0;
+        initServices();
     }
 
-    /** Lấy instance singleton (tạo mới nếu chưa có). */
+    private void initServices() {
+        this.userService = new UserService(users, lock);
+        this.itemService = new ItemService(items, lock);
+        this.dataService = new DataService();
+    }
+
     public static synchronized AuctionManager getInstance() {
         if (instance == null) {
             instance = new AuctionManager();
@@ -40,11 +49,15 @@ public class AuctionManager implements Serializable {
         return instance;
     }
 
-    /** Reset instance về trạng thái mới. */
-    public static synchronized void resetInstance() {
+    public static synchronized void setInstance(AuctionManager manager) {
+        instance = manager;
         if (instance != null) {
-            instance = new AuctionManager();
+            instance.initServices();
         }
+    }
+
+    public static synchronized void resetInstance() {
+        instance = new AuctionManager();
     }
 
     /** Tạo phiên đấu giá mới từ itemId. */
@@ -148,60 +161,24 @@ public class AuctionManager implements Serializable {
         }
     }
 
-    /** Thêm vật phẩm vào danh sách. */
     public void addItem(Item item) {
-        lock.writeLock().lock();
-        try {
-            items.put(item.getId(), item);
-        } finally {
-            lock.writeLock().unlock();
-        }
+        itemService.addItem(item);
     }
 
-    /** Lấy vật phẩm theo ID. */
     public Item getItem(String itemId) {
-        lock.readLock().lock();
-        try {
-            return items.get(itemId);
-        } finally {
-            lock.readLock().unlock();
-        }
+        return itemService.getItem(itemId);
     }
 
-    /** Lấy tất cả vật phẩm. */
     public List<Item> getAllItems() {
-        lock.readLock().lock();
-        try {
-            return new ArrayList<>(items.values());
-        } finally {
-            lock.readLock().unlock();
-        }
+        return itemService.getAllItems();
     }
 
-    /** Cập nhật thông tin vật phẩm. */
     public boolean updateItem(String itemId, String name, String description, Double startPrice) {
-        lock.writeLock().lock();
-        try {
-            Item item = items.get(itemId);
-            if (item == null) return false;
-            
-            if (name != null) item.setName(name);
-            if (description != null) item.setDescription(description);
-            if (startPrice != null) item.setStartPrice(startPrice);
-            return true;
-        } finally {
-            lock.writeLock().unlock();
-        }
+        return itemService.updateItem(itemId, name, description, startPrice);
     }
 
-    /** Xóa vật phẩm theo ID. */
     public boolean deleteItem(String itemId) {
-        lock.writeLock().lock();
-        try {
-            return items.remove(itemId) != null;
-        } finally {
-            lock.writeLock().unlock();
-        }
+        return itemService.deleteItem(itemId);
     }
 
     /** Lấy phiên đấu giá theo ID. */
@@ -240,42 +217,16 @@ public class AuctionManager implements Serializable {
         }
     }
 
-    /** Thêm người dùng. */
     public void addUser(User user) {
-        lock.writeLock().lock();
-        try {
-            users.put(user.getId(), user);
-        } finally {
-            lock.writeLock().unlock();
-        }
+        userService.addUser(user);
     }
 
-    /** Lấy người dùng theo ID. */
     public User getUser(String userId) {
-        lock.readLock().lock();
-        try {
-            return users.get(userId);
-        } finally {
-            lock.readLock().unlock();
-        }
+        return userService.getUser(userId);
     }
 
-    /** Xác thực username/password. */
     public User authenticate(String username, String password) throws AuthenticationException {
-        lock.readLock().lock();
-        try {
-            for (User user : users.values()) {
-                if (user.getUsername().equals(username)) {
-                    if (user.getPassword().equals(password)) {
-                        return user;
-                    }
-                    throw new AuthenticationException("Invalid password", username);
-                }
-            }
-            throw new AuthenticationException("User not found", username);
-        } finally {
-            lock.readLock().unlock();
-        }
+        return userService.authenticate(username, password);
     }
 
     /** Đăng ký observer toàn cục. */
@@ -288,27 +239,17 @@ public class AuctionManager implements Serializable {
         globalObservers.remove(observer);
     }
 
-    /** Lưu toàn bộ dữ liệu ra file auction_data.ser. */
     public void saveData() throws IOException {
         lock.readLock().lock();
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(DATA_FILE))) {
-            oos.writeObject(this);
+        try {
+            dataService.saveData(this);
         } finally {
             lock.readLock().unlock();
         }
     }
 
-    /** Tải dữ liệu từ file auction_data.ser. */
     public static AuctionManager loadData() throws IOException, ClassNotFoundException {
-        File file = new File(DATA_FILE);
-        if (!file.exists()) {
-            return getInstance();
-        }
-        
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
-            instance = (AuctionManager) ois.readObject();
-            return instance;
-        }
+        return new DataService().loadData();
     }
 
     private void readObject(ObjectInputStream in) throws IOException, ClassNotFoundException {
@@ -316,5 +257,6 @@ public class AuctionManager implements Serializable {
         if (globalObservers == null) {
             globalObservers = new CopyOnWriteArrayList<>();
         }
+        initServices();
     }
 }

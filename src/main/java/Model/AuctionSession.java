@@ -5,9 +5,11 @@ import Exception.InvalidBidException;
 import Observer.AuctionObserver;
 
 import java.io.Serializable;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -40,7 +42,7 @@ public class AuctionSession implements Serializable {
     private LocalDateTime endTime;
     private long durationMinutes;
     private List<Bid> bidHistory;
-    private transient List<AuctionObserver> observers;
+    private AuctionObservable observable;
     private transient ScheduledExecutorService scheduler;
     private transient ScheduledFuture<?> autoCloseTask;
     private double minIncrement;
@@ -59,7 +61,7 @@ public class AuctionSession implements Serializable {
         this.durationMinutes = durationMinutes;
         this.status = Status.OPEN;
         this.bidHistory = new CopyOnWriteArrayList<>();
-        this.observers = new CopyOnWriteArrayList<>();
+        this.observable = new AuctionObservable();
         this.scheduler = Executors.newSingleThreadScheduledExecutor();
         this.minIncrement = 1.0;
     }
@@ -77,7 +79,7 @@ public class AuctionSession implements Serializable {
     }
 
     private void scheduleAutoClose() {
-        long remainingMillis = java.time.Duration.between(LocalDateTime.now(), endTime).toMillis();
+        long remainingMillis = Duration.between(LocalDateTime.now(), endTime).toMillis();
         if (remainingMillis > 0) {
             autoCloseTask = scheduler.schedule(this::finish, remainingMillis, TimeUnit.MILLISECONDS);
         } else {
@@ -182,48 +184,27 @@ public class AuctionSession implements Serializable {
     }
 
     public void addObserver(AuctionObserver observer) {
-        if (observers == null) {
-            observers = new CopyOnWriteArrayList<>();
-        }
-        observers.add(observer);
+        observable.addObserver(observer);
     }
 
     public void removeObserver(AuctionObserver observer) {
-        if (observers != null) {
-            observers.remove(observer);
-        }
+        observable.removeObserver(observer);
     }
 
     private void notifyBidPlaced(String bidderId, double amount) {
-        if (observers != null) {
-            for (AuctionObserver observer : observers) {
-                observer.onBidPlaced(id, bidderId, amount);
-            }
-        }
+        observable.notifyBidPlaced(id, bidderId, amount);
     }
 
     private void notifyAuctionStarted() {
-        if (observers != null) {
-            for (AuctionObserver observer : observers) {
-                observer.onAuctionStarted(id);
-            }
-        }
+        observable.notifyAuctionStarted(id);
     }
 
     private void notifyAuctionFinished(String winnerId, double finalPrice) {
-        if (observers != null) {
-            for (AuctionObserver observer : observers) {
-                observer.onAuctionFinished(id, winnerId, finalPrice);
-            }
-        }
+        observable.notifyAuctionFinished(id, winnerId, finalPrice);
     }
 
     private void notifyAuctionCanceled(String reason) {
-        if (observers != null) {
-            for (AuctionObserver observer : observers) {
-                observer.onAuctionCanceled(id, reason);
-            }
-        }
+        observable.notifyAuctionCanceled(id, reason);
     }
 
     public String getId() {
@@ -306,12 +287,11 @@ public class AuctionSession implements Serializable {
         this.endTime = endTime;
     }
 
-    /** @return số milliseconds còn lại trước khi phiên kết thúc */
     public long getRemainingTimeMillis() {
         if (endTime == null) {
             return durationMinutes * 60 * 1000;
         }
-        long remaining = java.time.Duration.between(LocalDateTime.now(), endTime).toMillis();
+        long remaining = Duration.between(LocalDateTime.now(), endTime).toMillis();
         return Math.max(0, remaining);
     }
 
@@ -341,7 +321,7 @@ public class AuctionSession implements Serializable {
 
     @Override
     public String toString() {
-        return String.format("[%s] %s - %s - Current: $%.2f - %s", 
+        return String.format(Locale.US, "[%s] %s - %s - Current: $%.2f - %s", 
             id, item.getName(), status, currentPrice, 
             startTime != null ? startTime.toString() : "Not started");
     }

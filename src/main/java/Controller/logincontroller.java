@@ -12,7 +12,9 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextField;
+import javafx.scene.control.ToggleGroup;
 import javafx.stage.Stage;
 
 import Network.NetworkService;
@@ -30,6 +32,9 @@ public class logincontroller {
     private TextField signupNameField;
 
     @FXML
+    private TextField signupUsernameField;
+
+    @FXML
     private TextField signupEmailField;
 
     @FXML
@@ -40,6 +45,9 @@ public class logincontroller {
 
     @FXML
     private PasswordField signupConfirmPasswordField;
+
+    @FXML
+    private ToggleGroup roleToggleGroup;
 
     @FXML
     private Label messageLabel;
@@ -95,18 +103,25 @@ public class logincontroller {
     /** Xử lý đăng ký: kiểm tra đầu vào, gọi NetworkService.register(). */
     private void Signup(ActionEvent event) {
         String fullName = read(signupNameField);
+        String username = read(signupUsernameField);
         String email = read(signupEmailField);
         String phone = read(signupPhoneField);
         String password = read(signupPasswordField);
         String confirmPassword = read(signupConfirmPasswordField);
 
-        if (fullName.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
+        if (fullName.isBlank() || username.isBlank() || email.isBlank() || phone.isBlank() || password.isBlank() || confirmPassword.isBlank()) {
             showMessage("Vui lòng nhập đầy đủ thông tin đăng ký.");
             return;
         }
 
         if (!password.equals(confirmPassword)) {
             showMessage("Mật khẩu nhập lại không khớp.");
+            return;
+        }
+
+        String role = getSelectedRole();
+        if (role == null) {
+            showMessage("Vui lòng chọn vai trò.");
             return;
         }
 
@@ -120,7 +135,7 @@ public class logincontroller {
         }
 
         try {
-            var response = networkService.register(fullName, password, email, phone);
+            var response = networkService.register(username, password, email, phone, role);
             if (response.getType() == Network.Message.Type.SUCCESS) {
                 showMessage("Đăng ký thành công! Vui lòng đăng nhập.");
                 ComeLogin(event);
@@ -130,6 +145,16 @@ public class logincontroller {
         } catch (Exception e) {
             showMessage("Lỗi đăng ký: " + e.getMessage());
         }
+    }
+
+    private String getSelectedRole() {
+        if (roleToggleGroup == null) return "BIDDER_SELLER";
+        RadioButton selected = (RadioButton) roleToggleGroup.getSelectedToggle();
+        if (selected == null) return "BIDDER_SELLER";
+        String userData = (String) selected.getUserData();
+        if ("bidderRadio".equals(userData)) return "BIDDER";
+        if ("sellerRadio".equals(userData)) return "SELLER";
+        return "BIDDER_SELLER";
     }
 
     @FXML
