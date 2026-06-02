@@ -9,7 +9,9 @@
 - Nguyễn Vũ Sơn — MSSV: 25020352
 - Lê Quang Nghĩa — MSSV: 25020292
 - Nguyễn Duy Quang — MSSV: 25020330
--link báo cáo: https://docs.google.com/document/d/1O1B5amQt7WYo7mAMbZHexnLg_KSKnJSDsh08kB1QP1Y/edit?usp=sharing
+
+  
+-link báo cáo: https://drive.google.com/file/d/1jNMlYV-1TlZCKRZs2b7QegoEDIjpZXFH/view?usp=sharing
 -link video: https://drive.google.com/file/d/1iTeP5XMywBPlTEgVGyPKDpn5wZeVkg01/view?usp=sharing
 ---
 
